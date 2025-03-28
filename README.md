@@ -1,8 +1,8 @@
 # Supplementary Code for MFS Paper
 
 <div>
-  <img src="https://github.com/user-attachments/assets/5547c218-049f-411e-ae09-5e1fb6eeedc8" alt="Image 1" style="height: 40vh; width: auto;">
-  <img src="https://github.com/user-attachments/assets/477610d9-1b39-4cdc-b768-c3db5d595f23" alt="Image 2" style="height: 40vh; width: auto;">
+  <img src="https://github.com/user-attachments/assets/5547c218-049f-411e-ae09-5e1fb6eeedc8" alt="Image 1" style="height: 30vh; width: auto;">
+  <img src="https://github.com/user-attachments/assets/477610d9-1b39-4cdc-b768-c3db5d595f23" alt="Image 2" style="height: 30vh; width: auto;">
 </div>
 
 ---
