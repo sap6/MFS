@@ -20,7 +20,7 @@
 
 The project applies the Method of Fundamental Solutions (MFS) to:
 
-- **2D problems:** IInterior and exterior Helmholtz problems on a disc.
+- **2D problems:** Interior and exterior Helmholtz problems on a disc.
 - **3D problems:** Implementation on a sphere.
 - **Maxwell’s equations:** Applications on a sphere, cube, and the NASA almond.
 
