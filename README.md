@@ -1,8 +1,18 @@
 # Supplementary Code for MFS Paper
 
-<div>
-  <img src="https://github.com/user-attachments/assets/5547c218-049f-411e-ae09-5e1fb6eeedc8" alt="Image 1" style="height: 30vh; width: auto;">
-  <img src="https://github.com/user-attachments/assets/477610d9-1b39-4cdc-b768-c3db5d595f23" alt="Image 2" style="height: 30vh; width: auto;">
+This repository contains the code and notebooks supporting my MSci research project, "Using the Method of Fundamental Solutions to Solve Maxwell’s Equations". The materials showcase implementations and visualisations for 2D and 3D Helmholtz problems, as well as Maxwell’s equations on various geometries.
+
+<div align="left">
+
+  <!-- Images wrapped in hyperlinks -->
+  <a href="./MFS_MaxwellExterior.ipynb" target="_blank">
+    <img src="https://github.com/user-attachments/assets/5547c218-049f-411e-ae09-5e1fb6eeedc8" alt="MFS Maxwell Exterior" style="height: 30vh; width: auto; margin: 0 10px;">
+  </a>
+
+  <a href="./MFS_MaxwellCube.ipynb" target="_blank">
+    <img src="https://github.com/user-attachments/assets/477610d9-1b39-4cdc-b768-c3db5d595f23" alt="MFS Maxwell Cube" style="height: 30vh; width: auto; margin: 0 10px;">
+  </a>
+  
 </div>
 
 ---
@@ -29,6 +39,8 @@ The project applies the Method of Fundamental Solutions (MFS) to:
 
 ## Notebooks
 
+Each notebook is self-contained with all the necessary code and explanations to reproduce the results and visualisations:
+
 - [MFS_UnitDisc.ipynb](./MFS_UnitDisc.ipynb)
 - [MFS_UnitDiscExterior.ipynb](./MFS_UnitDiscExterior.ipynb)
 - [MFS_UnitSphere.ipynb](./MFS_UnitSphere.ipynb)
@@ -37,22 +49,23 @@ The project applies the Method of Fundamental Solutions (MFS) to:
 - [MFS_MaxwellCube.ipynb](./MFS_MaxwellCube.ipynb)
 - [MFS_MaxwellNasaAlmond.ipynb](./MFS_MaxwellNasaAlmond.ipynb)
 
-Each notebook is self-contained with all the necessary code and explanations to reproduce the results and visualisations.
-
 ---
 
 ## Usage
 
-Clone the repository to your local machine, open the desired notebook with Jupyter Notebook or JupyterLab, and run the cells to generate the results. Be sure to install any required packages as specified in the notebooks.
+1. Clone the repository to your local machine.
+2. Open the desired notebook with [Jupyter Notebook](https://jupyter.org) or [JupyterLab](https://jupyterlab.readthedocs.io/).
+3. Install any required packages as specified in the notebooks.
+4. Run the cells to generate the results and visualisations.
 
 ---
 
 ## Licence
 
-This project is licensed under the MIT Licence.
+This project is licensed under the [MIT Licence](LICENSE).
 
 ---
 
 ## Contact
 
-For questions or suggestions, please open an issue on GitHub.
+If you have any questions or suggestions, please feel free to open an issue on GitHub.
