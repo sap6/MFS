@@ -50,23 +50,18 @@ def surface(t, s, tau=None):
     return np.stack((x * np.ones_like(s), a * np.cos(s), b * np.sin(s)), axis=-1)
 
 
-def t_nodes(n, tip_ratio=0.75, end=1e-3):
-    """Parameter values: cosine-spaced on the rounded rear half, geometrically
-    clustered towards the conical tip on the front part."""
-    n_rear = max(4, int(round(0.42 * n)))
-    th = (np.arange(n_rear) + 0.5) / n_rear * np.pi / 2
-    rear = T0 * np.cos(th)                       # T0 -> 0, clustered at the rounded end
-    n_front = n - n_rear
-    d = (T1 - 0.0) * tip_ratio ** np.arange(n_front)   # distance from the tip
-    d = d[d > end]
-    front = (T1 - d)[1:] if len(d) > 1 else np.array([])
-    front = np.concatenate(([0.5 * (T1 - d[1])] if len(d) > 1 else [], front))
-    return np.unique(np.concatenate((rear, front)))
+def t_nodes(h, end=0.004):
+    """Parameter values giving rings uniformly spaced by h (metres) along x,
+    stopping a distance `end` (in t) short of the rounded end and of the tip."""
+    n = int(np.ceil((T1 - T0 - 2 * end) * L / h))
+    return T0 + end + (np.arange(n) + 0.5) / n * (T1 - T0 - 2 * end)
 
 
-def point_cloud(n_t, n_s, tau=None, tip_ratio=0.75):
-    """Points and (for the surface) quadrature-like weights and tangent bases."""
-    t = t_nodes(n_t, tip_ratio)
+def point_cloud(h, n_s, tau=None, b_min=0.0):
+    """Points and (for the surface) quadrature-like weights and normals.
+    Rings with minor semi-axis below b_min * max are skipped (used for sources)."""
+    t = t_nodes(h)
+    t = t[semi_axes(t)[1] >= b_min * 0.064444 * L]
     pts, wts, nrm = [], [], []
     dt = np.gradient(t)
     for ti, dti in zip(t, dt):
@@ -116,10 +111,10 @@ def mesh(n_t, n_s):
     return verts, tris
 
 
-def mfs(k, n_t, n_s, tau, src_frac=0.7, inc=None, cond=1e-13):
+def mfs(k, h, n_s, tau, src_frac=0.65, b_min=0.35, inc=None, cond=1e-13):
     inc = inc or (lambda p: mie.plane_wave(p, k, D, P))
-    x, w, nrm = point_cloud(n_t, n_s)
-    y = point_cloud(max(6, int(n_t * src_frac)), max(6, int(n_s * src_frac)), tau)
+    x, w, nrm = point_cloud(h, n_s)
+    y = point_cloud(2 * h, max(6, int(n_s * src_frac)), tau, b_min)
     T = tangent_basis(nrm)
     sw = np.sqrt(w / w.sum())
     A = np.einsum("mab,mnbc->manc", T, dyadic(x, y, k)) * sw[:, None, None, None]
@@ -134,9 +129,9 @@ def mfs(k, n_t, n_s, tau, src_frac=0.7, inc=None, cond=1e-13):
     return y, alpha, info
 
 
-def boundary_residual(k, y, alpha, inc=None, n_t=90, n_s=70):
+def boundary_residual(k, y, alpha, inc=None, h=0.0013, n_s=70):
     inc = inc or (lambda p: mie.plane_wave(p, k, D, P))
-    x, w, nrm = point_cloud(n_t, n_s, tip_ratio=0.8)
+    x, w, nrm = point_cloud(h, n_s)
     T = tangent_basis(nrm)
     rhs = -np.einsum("mab,mb->ma", T, inc(x))
     res = np.einsum("mab,mb->ma", T, evaluate(x, y, alpha, k)) - rhs
@@ -160,27 +155,35 @@ if __name__ == "__main__":
     # sanity check: data from an interior dipole, exact exterior field known
     y0, a0 = np.array([[0.01, 0.005, 0.002]]), np.array([[1.0, 0.5j, -0.7]])
     inc = lambda p: -np.einsum("pnab,nb->pa", dyadic(p, y0, k), a0)
-    y, alpha, info = mfs(k, 40, 36, 0.5, inc=inc)
     exact = -inc(pts)
-    print(f"dipole check: N={info['N']} error on r=0.3: "
-          f"{np.linalg.norm(evaluate(pts, y, alpha, k) - exact) / np.linalg.norm(exact):.2e}", flush=True)
+    for h, n_s in ((0.004, 30), (0.0025, 40)):
+        y, alpha, info = mfs(k, h, n_s, 0.5, inc=inc)
+        print(f"dipole check h={h}: M={info['M']} N={info['N']} bc={boundary_residual(k, y, alpha, inc):.2e} "
+              f"error on r=0.3: {np.linalg.norm(evaluate(pts, y, alpha, k) - exact) / np.linalg.norm(exact):.2e}",
+              flush=True)
 
     results, fields = [], []
-    for n_t, n_s in ((24, 24), (34, 30), (48, 40), (64, 52)):
-        for tau in (0.3, 0.5, 0.7):
-            y, alpha, info = mfs(k, n_t, n_s, tau)
-            info["bc"] = boundary_residual(k, y, alpha)
-            E = evaluate(pts, y, alpha, k)
-            results.append(info)
-            fields.append(E)
-            print(f"MFS n_t={n_t} n_s={n_s} tau={tau}: M={info['M']} N={info['N']} rank={info['rank']} "
-                  f"bc={info['bc']:.2e} |c|={info['coef_norm']:.1e} t={info['t_solve']:.1f}s", flush=True)
+    configs = [(0.004, 30, 0.5), (0.003, 36, 0.5), (0.0022, 44, 0.5), (0.0022, 44, 0.35), (0.0022, 44, 0.7)]
+    if "--fine" in sys.argv:
+        configs.append((0.0017, 52, 0.5))
+    for h, n_s, tau in configs:
+        y, alpha, info = mfs(k, h, n_s, tau)
+        info["bc"] = boundary_residual(k, y, alpha)
+        info.update(h=h, n_s=n_s)
+        E = evaluate(pts, y, alpha, k)
+        results.append(info)
+        fields.append(E)
+        print(f"MFS h={h} n_s={n_s} tau={tau}: M={info['M']} N={info['N']} rank={info['rank']} "
+              f"bc={info['bc']:.2e} |c|={info['coef_norm']:.1e} t={info['t_solve']:.1f}s", flush=True)
 
     best = fields[int(np.argmin([r["bc"] for r in results]))]
     for r, E in zip(results, fields):
         r["vs_best"] = float(np.linalg.norm(E - best) / np.linalg.norm(best))
 
-    for n_t, n_s in ((40, 36), (60, 54), (84, 72)):
+    np.savez(f"almond_mfs_fields_{freq}GHz.npz", pts=pts, fields=np.array(fields))
+    if "--nobem" in sys.argv:
+        sys.exit()
+    for n_t, n_s in ((40, 36), (60, 54)):
         t0 = time.time()
         Eb, ndof = bem(k, n_t, n_s, pts)
         d = float(np.linalg.norm(Eb - best) / np.linalg.norm(best))
