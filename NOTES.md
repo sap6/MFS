@@ -6,12 +6,19 @@ tangential E_sc = -tangential E_inc on the surface, least-squares collocation.
 
 ## 0. Scope (from the author)
 
-- The paper must include the **cube** and the **almond** as examples.
-- Nothing else from the thesis is fixed. Frequency, body size, incidence
-  direction, polarisation, formulation, source layout and which figures appear
-  can all change if that gives a better or more standard result (for example,
-  the almond at benchmark frequencies and nose-on incidence instead of the
-  thesis's quarter-wavelength, broadside case).
+- The paper is an **adaptation of the MSci thesis**, not a new paper. Keep the
+  thesis as the backbone: its structure (MFS, Helmholtz warm-up, Maxwell
+  formulation, results, convergence), its derivation of the dyadic fundamental
+  solution, its shapes and its figures wherever they are still valid.
+- It must include the **cube** and the **almond** as examples.
+- Change only what needs changing: inaccuracies, claims the results do not
+  support, things that can be explained better, and thesis-style wording.
+- Parameters are not fixed where the thesis choice is the problem (for
+  example, the almond at a benchmark frequency instead of a quarter
+  wavelength). Prefer the smallest departure that makes a result correct.
+- New material (Mie validation, edge line sources, skeleton sources, Bempp
+  comparison) goes in only where a thesis result cannot stand without it, and
+  is presented as extending the thesis's method, not replacing it.
 
 ## 1. Results so far
 
