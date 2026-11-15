@@ -11,7 +11,7 @@ from numba import njit, prange
 
 
 @njit(parallel=True, fastmath=True, cache=True)
-def line_block(x, T, use_T, ax, b, c, yb, yc, te, lam, d, n, g, gw, cap, magnetic, k, H, out):
+def line_block(x, T, use_T, ax, b, c, yb, yc, te, lam, d, n, g, gw, cap, magnetic, k, H, out, taper=False):
     M = x.shape[0]
     ng = g.shape[0]
     n_cap = int(np.ceil(2.0 / cap))
@@ -51,6 +51,8 @@ def line_block(x, T, use_T, ax, b, c, yb, yc, te, lam, d, n, g, gw, cap, magneti
                     ch = np.cosh(0.5 * u * lam)
                     t = H * np.tanh(0.5 * u * lam)
                     wt = half * gw[iq] * H * 0.5 * lam / (ch * ch) / d
+                    if taper:                      # density (1 - u^2) P_k(u): zero at both ends
+                        wt *= 1.0 - u * u
                     dv[ax] = xa - t
                     dv[b] = db
                     dv[c] = dc
