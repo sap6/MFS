@@ -6,19 +6,15 @@ tangential E_sc = -tangential E_inc on the surface, least-squares collocation.
 
 ## 0. Scope (from the author)
 
-- The paper is an **adaptation of the MSci thesis**, not a new paper. Keep the
-  thesis as the backbone: its structure (MFS, Helmholtz warm-up, Maxwell
-  formulation, results, convergence), its derivation of the dyadic fundamental
-  solution, its shapes and its figures wherever they are still valid.
-- It must include the **cube** and the **almond** as examples.
-- Change only what needs changing: inaccuracies, claims the results do not
-  support, things that can be explained better, and thesis-style wording.
-- Parameters are not fixed where the thesis choice is the problem (for
-  example, the almond at a benchmark frequency instead of a quarter
-  wavelength). Prefer the smallest departure that makes a result correct.
-- New material (Mie validation, edge line sources, skeleton sources, Bempp
-  comparison) goes in only where a thesis result cannot stand without it, and
-  is presented as extending the thesis's method, not replacing it.
+- The paper should be clearly **derived from the MSci thesis**: same topic
+  (MFS for 3D Maxwell), same core method and fundamental solution, and the
+  thesis's example shapes, including the **cube** and the **almond**. It should
+  state that it grew out of the thesis and cite it.
+- Beyond that, changes are **not limited**. There is no need to stay close to
+  the thesis's text, structure, parameters, experiments or figures. Improve,
+  replace or add whatever makes the paper better.
+- It should not turn into an unrelated paper: the thesis's question and method
+  remain the starting point, and new techniques are developments of them.
 
 ## 1. Results so far
 
