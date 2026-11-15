@@ -197,13 +197,22 @@ class Line:
 
 
 class Sources:
-    def __init__(self, J, n_base=6, depth0=0.2, q=0.25, gamma=2.0, n0=4, angles=(0.0,), kinds="e"):
+    def __init__(self, J, n_base=6, depth0=0.2, q=0.25, gamma=2.0, n0=4, angles=(0.0,), kinds="e", vrays=1):
         self.depths = depth0 * q ** np.arange(J + 1) if J >= 0 else np.array([])
         pts = [base_sources(n_base, depth0)]
+        # inward rays from every vertex: the body diagonal, optionally three more
+        dirs = [np.array([1.0, 1, 1])]
+        if vrays > 1:
+            dirs += [np.array(v, float) for v in ((2, 1, 1), (1, 2, 1), (1, 1, 2))]
+        vpts = []
         for d in self.depths:
-            pts.append(np.array([np.array(sg) * (H - d / np.sqrt(3))
-                                 for sg in itertools.product((-1, 1), repeat=3)]))
-        self.points = np.concatenate(pts)
+            for dr in dirs:
+                dr = dr / np.linalg.norm(dr)
+                vpts.append(np.array([np.array(sg) * (H - d * dr)
+                                      for sg in itertools.product((-1, 1), repeat=3)]))
+        vpts = np.concatenate(vpts) if vpts else np.zeros((0, 3))
+        self.points = np.concatenate(pts + [vpts])
+        self.mpoints = vpts if "m" in kinds else np.zeros((0, 3))
         self.lines = []
         for d in self.depths:
             n_modes = n0 + int(np.ceil(gamma * np.log(2 * H / d)))
@@ -212,19 +221,22 @@ class Sources:
                     for ang in angles:
                         for kind in kinds:
                             self.lines.append(Line(ax, s1, s2, d, n_modes, np.deg2rad(ang), kind))
-        self.n_unknowns = 3 * (len(self.points) + sum(l.n for l in self.lines))
+        self.n_unknowns = 3 * (len(self.points) + len(self.mpoints) + sum(l.n for l in self.lines))
 
     def matrix(self, x, T=None, batch=1200):
         nc = 3 if T is None else 2
         A = np.empty((len(x), nc, self.n_unknowns // 3, 3), complex)
-        if FAST:
-            batch = len(x)
         for i in range(0, len(x), batch):
             sl = slice(i, i + batch)
             G = dyadic(x[sl], self.points, K)
             A[sl, :, :len(self.points)] = (np.einsum("mab,mnbc->manc", T[sl], G) if T is not None
                                            else G.transpose(0, 2, 1, 3))
             lo = len(self.points)
+            if len(self.mpoints):
+                G = magnetic_pairs(x[sl][:, None, :] - self.mpoints[None, :, :])
+                A[sl, :, lo:lo + len(self.mpoints)] = (np.einsum("mab,mnbc->manc", T[sl], G) if T is not None
+                                                       else G.transpose(0, 2, 1, 3))
+                lo += len(self.mpoints)
             for line in self.lines:
                 A[sl, :, lo:lo + line.n] = line.block(x[sl], None if T is None else T[sl])
                 lo += line.n
@@ -243,7 +255,8 @@ class SymSources(Sources):
     def __init__(self, *args, **kw):
         super().__init__(*args, **kw)
         self.points = self.points[(self.points[:, 0] > 0) & (self.points[:, 1] > 0)]
-        lines, keep = [], [np.ones((len(self.points), 3), bool)]
+        self.mpoints = self.mpoints[(self.mpoints[:, 0] > 0) & (self.mpoints[:, 1] > 0)] if len(self.mpoints) else self.mpoints
+        lines, keep = [], [np.ones((len(self.points) + len(self.mpoints), 3), bool)]
         for ln in self.lines:
             mag = ln.kernel is magnetic_pairs
             if ln.ax == 2:                       # z-lines: orbit of four, keep x>0, y>0
@@ -260,7 +273,7 @@ class SymSources(Sources):
             keep.append(sigma * par * sc > 0)
         self.lines = lines
         self.keep = np.concatenate(keep).reshape(-1)
-        self._n_all = 3 * (len(self.points) + sum(l.n for l in self.lines))
+        self._n_all = 3 * (len(self.points) + len(self.mpoints) + sum(l.n for l in self.lines))
         self.n_unknowns = int(self.keep.sum())
 
     def matrix(self, x, T=None, batch=1200):
@@ -322,16 +335,16 @@ def load_bem():
 
 
 def main(Js, beta=1 / 3, q=0.25, gamma=2.0, col_q=1 / 3, col_p=2, n_base=6, tag="run", angles="0", kinds="e", moments=0,
-         col_hmax=0.1, sym=0):
+         col_hmax=0.1, sym=0, vrays=1, cond=1e-12):
     angles = tuple(float(a) for a in str(angles).split(":"))
     bem = load_bem()
     pts = bem["pts"] if bem is not None else 2.0 * fibonacci_sphere(400)
     results, prev = [], None
     for J in Js:
-        src = (SymSources if sym else Sources)(J, n_base=n_base, q=q, gamma=gamma, angles=angles, kinds=kinds)
+        src = (SymSources if sym else Sources)(J, n_base=n_base, q=q, gamma=gamma, angles=angles, kinds=kinds, vrays=vrays)
         d_min = src.depths[-1] if J >= 0 else 0.2
         col_levels = max(2, int(np.ceil(np.log(d_min / (2 * H)) / np.log(col_q))) + 1)
-        c, info = solve(src, col_levels, col_p, col_q, beta, moments=moments)
+        c, info = solve(src, col_levels, col_p, col_q, beta, moments=moments, cond=cond)
         E = (src.matrix(pts) @ c).reshape(-1, 3)
         info.update(J=J, d_min=float(d_min), beta=beta, q=q, gamma=gamma, col_q=col_q, col_p=col_p,
                     n_base=n_base)
