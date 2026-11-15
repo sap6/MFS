@@ -196,8 +196,49 @@ class Line:
         return np.einsum("mqk,mqac->makc", V, G)
 
 
+class TailLine:
+    """Singular tail of the line sources of one edge, below the deepest free
+    line (depth d). Lines at depths d * qt**i, i = 1..n_tail, all carrying the
+    modes of the deepest free line, are tied together with fixed weights
+    (d_i / d)**e for each exponent e: one set of modes per exponent instead of
+    one per depth. The exponents follow the edge expansion of the field
+    (rho^(2n/3) and integer powers): e = 2/3, 1, 4/3, ... for dipoles along
+    the edge and e + 1 for transverse dipoles. The geometric remainder below the last depth is lumped into
+    the last line."""
+
+    def __init__(self, base, n_tail, qt, exps):
+        self.base, self.exps = base, tuple(exps)
+        self.ax, self.yb, self.yc, self.kernel = base.ax, base.yb, base.yc, base.kernel
+        self.nm = base.n
+        self.n = base.n * len(self.exps)
+        self.deg = np.tile(np.arange(base.n), len(self.exps))
+        ratio = qt ** np.arange(1, n_tail + 1)
+        # exponent e for the dipole component along the edge, e + 1 for the
+        # two transverse components (their near field is one power more singular)
+        ecomp = np.array(self.exps)[:, None] + np.where(np.arange(3) == base.ax, 0.0, 1.0)[None, :]
+        self.w = ratio[None, :, None] ** ecomp[:, None, :]              # (n_exp, n_tail, 3)
+        self.w[:, -1, :] /= 1 - qt ** ecomp
+        s1, s2 = np.sign(base.yb), np.sign(base.yc)
+        self.pos = [(s1 * (H - base.d * r * np.cos(np.pi / 4)), s2 * (H - base.d * r * np.sin(np.pi / 4)))
+                    for r in ratio]
+
+    def block(self, x, T=None):
+        b = self.base
+        out = np.zeros((len(x), 3 if T is None else 2, self.n, 3), complex)
+        tmp = np.empty((len(x), 3 if T is None else 2, self.nm, 3), complex)
+        xc = np.ascontiguousarray(x)
+        Tc = np.ascontiguousarray(T) if T is not None else np.zeros((1, 2, 3))
+        for i, (yb, yc) in enumerate(self.pos):
+            line_block(xc, Tc, T is not None, b.ax, b.b, b.c, yb, yc, b.te, b.lam, b.d, b.n, b.g, b.gw,
+                       b.cap, b.kernel is magnetic_pairs, K, H, tmp)
+            for ie in range(len(self.exps)):
+                out[:, :, ie * self.nm:(ie + 1) * self.nm] += tmp * self.w[ie, i]
+        return out
+
+
 class Sources:
-    def __init__(self, J, n_base=6, depth0=0.2, q=0.25, gamma=2.0, n0=4, angles=(0.0,), kinds="e", vrays=1):
+    def __init__(self, J, n_base=6, depth0=0.2, q=0.25, gamma=2.0, n0=4, angles=(0.0,), kinds="e", vrays=1,
+                 tail_n=0, tail_q=0.5, tail_exps=(2 / 3, 1.0)):
         self.depths = depth0 * q ** np.arange(J + 1) if J >= 0 else np.array([])
         pts = [base_sources(n_base, depth0)]
         # inward rays from every vertex: the body diagonal, optionally three more
@@ -221,6 +262,9 @@ class Sources:
                     for ang in angles:
                         for kind in kinds:
                             self.lines.append(Line(ax, s1, s2, d, n_modes, np.deg2rad(ang), kind))
+        if tail_n and J >= 0:
+            deepest = [ln for ln in self.lines if ln.d == self.depths[-1]]
+            self.lines += [TailLine(ln, tail_n, tail_q, tail_exps) for ln in deepest]
         self.n_unknowns = 3 * (len(self.points) + len(self.mpoints) + sum(l.n for l in self.lines))
 
     def matrix(self, x, T=None, batch=1200):
@@ -267,7 +311,7 @@ class SymSources(Sources):
             if ln.yb < 0:                        # x-lines: b is y; y-lines: b is x
                 continue
             sigma = 1.0 if ln.ax == 0 else -1.0  # parity of the reflection that maps the line to itself
-            par = (-1.0) ** np.arange(ln.n)[:, None]
+            par = (-1.0) ** getattr(ln, 'deg', np.arange(ln.n))[:, None]
             sc = np.where(np.arange(3) == ln.ax, -1.0, 1.0)[None, :] * (-1.0 if mag else 1.0)
             lines.append(ln)
             keep.append(sigma * par * sc > 0)
@@ -335,15 +379,18 @@ def load_bem():
 
 
 def main(Js, beta=1 / 3, q=0.25, gamma=2.0, col_q=1 / 3, col_p=2, n_base=6, tag="run", angles="0", kinds="e", moments=0,
-         col_hmax=0.1, sym=0, vrays=1, cond=1e-12):
+         col_hmax=0.1, sym=0, vrays=1, cond=1e-12, tail=0, tail_q=0.5, tail_exps="0.6667:1",
+         col_extra=1):
     angles = tuple(float(a) for a in str(angles).split(":"))
+    texps = tuple(round(3 * float(a)) / 3 for a in str(tail_exps).split(":"))
     bem = load_bem()
     pts = bem["pts"] if bem is not None else 2.0 * fibonacci_sphere(400)
     results, prev = [], None
     for J in Js:
-        src = (SymSources if sym else Sources)(J, n_base=n_base, q=q, gamma=gamma, angles=angles, kinds=kinds, vrays=vrays)
+        src = (SymSources if sym else Sources)(J, n_base=n_base, q=q, gamma=gamma, angles=angles, kinds=kinds, vrays=vrays,
+                                               tail_n=tail, tail_q=tail_q, tail_exps=texps)
         d_min = src.depths[-1] if J >= 0 else 0.2
-        col_levels = max(2, int(np.ceil(np.log(d_min / (2 * H)) / np.log(col_q))) + 1)
+        col_levels = max(2, int(np.ceil(np.log(d_min / (2 * H)) / np.log(col_q))) + col_extra)
         c, info = solve(src, col_levels, col_p, col_q, beta, moments=moments, cond=cond)
         E = (src.matrix(pts) @ c).reshape(-1, 3)
         info.update(J=J, d_min=float(d_min), beta=beta, q=q, gamma=gamma, col_q=col_q, col_p=col_p,
@@ -385,5 +432,5 @@ if __name__ == "__main__":
     else:
         Js = [int(a) for a in sys.argv[1].split(",")]
         kw = dict(a.split("=") for a in sys.argv[2:])
-        main(Js, **{k: (v if k in ("tag", "angles", "kinds") else float(v) if "." in v or "e" in v else int(v))
+        main(Js, **{k: (v if k in ("tag", "angles", "kinds", "tail_exps") else float(v) if "." in v or "e" in v else int(v))
                     for k, v in kw.items()})
