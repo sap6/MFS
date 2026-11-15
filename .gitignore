@@ -1,4 +1,3 @@
-validation/run_full.log
-validation/run_cube.log
+validation/*.log
 validation/*_quick.json
 __pycache__/
