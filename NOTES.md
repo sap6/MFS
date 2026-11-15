@@ -4,6 +4,15 @@ Last updated: 2026-11-15. All scripts are in `validation/`. Problem throughout:
 exterior scattering of a plane wave by a perfectly conducting (PEC) body,
 tangential E_sc = -tangential E_inc on the surface, least-squares collocation.
 
+## 0. Scope (from the author)
+
+- The paper must include the **cube** and the **almond** as examples.
+- Nothing else from the thesis is fixed. Frequency, body size, incidence
+  direction, polarisation, formulation, source layout and which figures appear
+  can all change if that gives a better or more standard result (for example,
+  the almond at benchmark frequencies and nose-on incidence instead of the
+  thesis's quarter-wavelength, broadside case).
+
 ## 1. Results so far
 
 | Shape | Method | Best result | Reference |
@@ -81,8 +90,10 @@ helpers; its solver is superseded), `pec_cube_edge.py` (superseded).
 - [ ] **T2 Almond robustness.** The 2246-source run was under-sampled
       (rows/unknowns 1.6, residual 4.5%): refine collocation with the sources.
       Confirm MFS accuracy with a finer Bempp mesh.
-- [ ] **T3 Almond, thesis configuration.** Broadside incidence (d = -z, p = y)
-      has one mirror symmetry and needs all six dipole components.
+- [ ] **T3 Almond, general incidence (optional).** Broadside incidence
+      (d = -z, p = y, the thesis case) has one mirror symmetry and needs all six
+      dipole components. Not required; do it only if the paper wants more than
+      nose-on incidence.
 - [ ] **T4 Almond at benchmark frequencies** (7 and 9.92 GHz) and monostatic
       RCS against published data (Woo et al. 1993).
 - [ ] **T5 Error-versus-time plots,** MFS against Bempp, for sphere, cube and
