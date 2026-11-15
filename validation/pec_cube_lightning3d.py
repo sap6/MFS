@@ -30,6 +30,12 @@ from pec_sphere_convergence import dyadic, fibonacci_sphere
 
 LEG = np.polynomial.legendre
 
+try:
+    from line_kernel import line_block
+    FAST = True
+except ImportError:                       # fall back to the NumPy implementation
+    FAST = False
+
 
 def dyadic_pairs(dvec):
     """Dyadic for separation vectors dvec (..., 3) -> (..., 3, 3)."""
@@ -110,7 +116,7 @@ def edge_dist(x):
 class Line:
     """Line dipole distribution parallel to coordinate axis `ax`."""
 
-    def __init__(self, ax, s1, s2, d, n_modes, angle=0.0, kind="e", ng=8, cap=0.34):
+    def __init__(self, ax, s1, s2, d, n_modes, angle=0.0, kind="e", ng=12, cap=0.17):
         self.ax, self.d, self.n, self.ng, self.cap = ax, d, n_modes, ng, cap
         self.kernel = dyadic_pairs if kind == "e" else magnetic_pairs
         self.b, self.c = [i for i in range(3) if i != ax]
@@ -156,6 +162,12 @@ class Line:
         """(M, nc, n_modes, 3) field block; nc = 2 with tangents T, else 3.
         Targets are grouped by how close they are to the line, so that only
         nearby targets pay for the deep dyadic refinement."""
+        if FAST:
+            out = np.empty((len(x), 3 if T is None else 2, self.n, 3), complex)
+            line_block(np.ascontiguousarray(x), np.ascontiguousarray(T) if T is not None else np.zeros((1, 2, 3)),
+                       T is not None, self.ax, self.b, self.c, self.yb, self.yc, self.te, self.lam,
+                       self.d, self.n, self.g, self.gw, self.cap, self.kernel is magnetic_pairs, K, H, out)
+            return out
         t0 = np.clip(x[:, self.ax], -self.te, self.te)
         r = np.sqrt((x[:, self.b] - self.yb) ** 2 + (x[:, self.c] - self.yc) ** 2
                     + (x[:, self.ax] - t0) ** 2)
@@ -205,6 +217,8 @@ class Sources:
     def matrix(self, x, T=None, batch=1200):
         nc = 3 if T is None else 2
         A = np.empty((len(x), nc, self.n_unknowns // 3, 3), complex)
+        if FAST:
+            batch = len(x)
         for i in range(0, len(x), batch):
             sl = slice(i, i + batch)
             G = dyadic(x[sl], self.points, K)
