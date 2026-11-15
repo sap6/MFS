@@ -16,6 +16,25 @@ tangential E_sc = -tangential E_inc on the surface, least-squares collocation.
 - It should not turn into an unrelated paper: the thesis's question and method
   remain the starting point, and new techniques are developments of them.
 
+### Agreed paper shape ("Option A")
+
+Working title: stability and convergence of the MFS for 3D Maxwell scattering.
+The author liked this outline as derived from the thesis, extended, and suited
+to JCP. Status of each element:
+
+| Element | Status |
+|---|---|
+| Tangential-trace formulation | done in all current solvers |
+| Mie-validated convergence for the PEC sphere in N and source radius | done |
+| Almond at benchmark frequencies against published RCS data or Bempp | 1.19 GHz done against Bempp; higher frequencies and RCS data open (T2, T4) |
+| Cube result | honest account of where plain MFS degrades is done; the edge-source method reaches 0.5% and should be pushed further (T1) |
+| Cost comparison with a boundary element solver | numbers exist for all three shapes; needs proper error-versus-time plots (T5) |
+| Helmholtz material | shrinks to about a page (write-up) |
+
+Aim: the cube and almond should work well with the method, not only be shown
+as limitations. If the cube cannot be pushed much below 0.5%, present what it
+reaches honestly alongside the explanation of why plain MFS fails there.
+
 ## 1. Results so far
 
 | Shape | Method | Best result | Reference |
