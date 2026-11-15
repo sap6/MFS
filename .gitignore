@@ -1,3 +1,4 @@
 validation/run_full.log
-validation/results_pec_sphere_quick.json
+validation/run_cube.log
+validation/*_quick.json
 __pycache__/
