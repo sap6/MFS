@@ -164,10 +164,17 @@ converging towards the MFS field.
     0.029 dB rms. Bempp references for 1.19, 7, 9.92 GHz are stored in
     `bem_almond_rcs_ref.json` (from `bem_almond_rcs.py`, laptop).
 
+20. **Almond cost table** (`python3 fig_cost_almond.py`, 1.19 GHz nose-on,
+    container, 4 cores, error against the finest MFS layout): MFS with 795,
+    1377, 2103, 2937 unknowns: 2.4, 4.1, 7.9, 13.5 s for 6.7%, 0.40%, 0.029%,
+    0.0056%. Bempp with 2106, 4212, 9558 dofs: 28, 89, 412 s for 1.3%, 0.67%,
+    0.30% (compilation excluded by a warm-up solve).
+
 ## 3. Current best commands
 
 ```
 python3 pec_sphere_convergence.py && python3 plot_pec_sphere.py
+python3 fig_cost_cube.py ; python3 fig_cost_almond.py ; python3 fig_cost_sphere.py ; python3 fig_almond_rcs.py   # tables and figures from saved data (add `run` to recompute)
 python3 bem_reference.py cube                      # writes bem_cube_h*.npz
 python3 pec_cube_lightning3d.py 4,5,6 tag=NAME kinds=em q=0.5 gamma=2.0 col_p=3 col_q=0.5 beta=0.5 sym=1 tail=9
 python3 diag_cube.py 5 "tail_n=9"                 # residual map by zone, optical theorem
