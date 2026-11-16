@@ -100,9 +100,10 @@ if __name__ == "__main__":
     step = float(sys.argv[3]) if len(sys.argv) > 3 else 2.0
     tip = "--notip" not in sys.argv
     s_src = ([float(v[4:]) for v in sys.argv if v.startswith("--s=")] or [0.5])[0]
+    s_col = ([float(v[7:]) for v in sys.argv if v.startswith("--scol=")] or [0.3])[0]
     print(f"almond, {freq} GHz, {a.L * freq * 1e9 / C0:.2f} wavelengths long, sources n_mid={n_mid} J={J}", flush=True)
-    out = rcs(freq, n_mid, J, step, tip=tip, s=s_src)
-    np.savez(f"almond_rcs_{freq}GHz_{n_mid}_{J}_s{s_src}{'' if tip else '_notip'}.npz", **out)
+    out = rcs(freq, n_mid, J, step, s_col=s_col, tip=tip, s=s_src)
+    np.savez(f"almond_rcs_{freq}GHz_{n_mid}_{J}_s{s_src}{'' if tip else '_notip'}{'' if s_col == 0.3 else f'_c{s_col}'}.npz", **out)
     try:                                           # Bempp reference, if one was stored for this frequency
         import json
         ref = json.load(open("bem_almond_rcs_ref.json"))

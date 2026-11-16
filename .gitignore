@@ -3,3 +3,4 @@ validation/*_quick.json
 __pycache__/
 validation/*_t_*.npy
 validation/*_t_*.json
+validation/almond_rcs_*.npz

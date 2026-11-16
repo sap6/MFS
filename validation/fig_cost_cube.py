@@ -95,7 +95,48 @@ def report():
     return curves
 
 
+# Fixed colour, marker and dash per method (colour is never the only cue, so
+# the figure survives greyscale printing). Hues checked for colour-blind
+# separation with the dataviz palette validator.
+STYLE = {"MFS+tail": ("#2a78d6", "o", "-", "MFS, edge sources + tail"),
+         "Bempp": ("#eb6834", "D", "-.", "Bempp (EFIE, RWG)"),
+         "MFS no tail": ("#1baf7a", "s", "--", "MFS, edge sources, no tail"),
+         "plain MFS": ("#eda100", "^", ":", "plain MFS (inner cube)")}
+INK, MUTED = "#1f1f1e", "#6b6a64"
+
+
+def plot(curves, fname="fig_cost_cube"):
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    plt.rcParams.update({"font.size": 9, "axes.edgecolor": MUTED, "axes.labelcolor": INK, "text.color": INK,
+                         "xtick.color": MUTED, "ytick.color": MUTED, "axes.linewidth": 0.6})
+    fig, ax = plt.subplots(figsize=(5.2, 3.6))
+    for key, (col, mk, ls, label) in STYLE.items():
+        c = curves[key]
+        ax.loglog(c[:, 0], c[:, 1], ls, color=col, marker=mk, ms=6, lw=1.6, mec="white", mew=0.8, label=label)
+    # direct labels at the end of each curve, in ink, next to the coloured mark
+    for key, dx, dy, ha in (("MFS+tail", 1.2, 1.0, "left"), ("Bempp", 1.0, 1.7, "center"),
+                            ("MFS no tail", 1.15, 1.25, "left"), ("plain MFS", 1.25, 1.0, "left")):
+        c = curves[key]
+        ax.annotate(STYLE[key][3].split(",")[0].split(" (")[0] + ("" if key != "MFS+tail" else " + tail")
+                    if key in ("MFS+tail", "Bempp") else STYLE[key][3].replace("MFS, edge sources, ", ""),
+                    (c[-1, 0] * dx, c[-1, 1] * dy), ha=ha, va="center", fontsize=8, color=INK)
+    ax.set_xlabel("wall time [s]  (4 cores)")
+    ax.set_ylabel("relative error of the field on |x| = 2")
+    ax.grid(True, which="major", color="#e4e3df", lw=0.6)
+    ax.grid(False, which="minor")
+    for sp in ("top", "right"):
+        ax.spines[sp].set_visible(False)
+    ax.legend(frameon=False, fontsize=8, loc="lower left")
+    ax.set_title("Unit cube, side = one wavelength", loc="left", fontsize=9, color=INK)
+    fig.tight_layout()
+    fig.savefig(fname + ".pdf")
+    fig.savefig(fname + ".png", dpi=200)
+    print("wrote", fname + ".pdf/.png")
+
+
 if __name__ == "__main__":
     if len(sys.argv) > 1 and sys.argv[1] == "run":
         run()
-    report()
+    plot(report())

@@ -26,7 +26,7 @@ to JCP. Status of each element:
 |---|---|
 | Tangential-trace formulation | done in all current solvers |
 | Mie-validated convergence for the PEC sphere in N and source radius | done |
-| Almond at benchmark frequencies against published RCS data or Bempp | 1.19 GHz done and confirmed (T2); higher frequencies and monostatic RCS open (T4) |
+| Almond at benchmark frequencies against published RCS data or Bempp | done against Bempp at 1.19, 7, 9.92 GHz, all look angles, HH and VV (T4); overlay of the measured curves (Woo et al.) left to the author |
 | Cube result | honest account of where plain MFS degrades is done; edge sources with a singular tail reach about 0.15% (Bempp-limited reference) and converge with depth (T1, in progress) |
 | Cost comparison with a boundary element solver | cube: table done (`fig_cost_cube.py`), MFS 2x to 10x faster than Bempp between 0.7% and 0.2% and still converging; sphere and almond tables and all plots open (T5) |
 | Helmholtz material | shrinks to about a page (write-up) |
@@ -45,6 +45,7 @@ reaches honestly alongside the explanation of why plain MFS fails there.
 | Unit cube, k = 2pi | lightning-type edge sources, no tail | 0.5% (J = 10); 0.8% at J = 12 (stall) | Bempp h = 0.05 |
 | Unit cube, k = 2pi | edge sources + singular tail, balanced refinement (section 2, items 8, 12) | 0.93%, 0.33%, 0.13%, 0.049%, 0.016% for J = 4..8 against J = 9; J = 9 is 0.05% from extrapolated Bempp; optical mismatch down to 4.6e-5 | MFS J = 9, extrapolated Bempp |
 | NASA almond, 1.19 GHz, nose-on | confocal / shrunk source surface | unstable or 20%+ | - |
+| NASA almond, 1.19 / 7 / 9.92 GHz, monostatic RCS, HH and VV | skeleton sources + tip tail, four parity classes | within 0.03 / 0.04 / 0.12 dB rms of Bempp; self-converged to 0.001 dB (1.19 GHz) and 0.01 dB rms (9.92 GHz) | Bempp 9558 / 13632 dofs |
 | NASA almond, 1.19 GHz, nose-on | skeleton sources on mid-plane | self-converged to 5e-5, optical mismatch 1e-4; Bempp approaches it like 1/N (0.67%, 0.29%, 0.20%) | Bempp 4212, 9558, 13632 dofs |
 
 Bempp itself: sphere 0.4% with 9750 dofs (307 s); cube at h = 0.05 (8514 dofs,
@@ -136,6 +137,33 @@ converging towards the MFS field.
     tail, J = 4, 6, 8: 9, 37, 125 s for 5.4%, 2.5%, 1.1%. Plain MFS, 72 to 450
     unknowns: 30% to 21%, no convergence.
 
+16. **Almond, all look angles** (`almond_rcs.py`). Any plane wave splits into
+    four parity classes under y -> -y and z -> -z; each is solved with a
+    quarter of the sources, and one QR per class serves every angle. HH uses
+    the two classes even in z (dipoles e_x, e_y, m_z on the mid-plane), VV the
+    two odd in z (e_z, m_x, m_y).
+17. **Tip tail (almond).** The class even in both mirrors carries current
+    along the axis into the tip (an elliptic cone, half-angles 34 and 12.7
+    degrees), where the field is strongly singular. The nose-on case never
+    excited it. Free sources cut off 1 mm from the tip leave 19% residual in
+    that class, half of it within 1 mm of the tip, and HH errors up to 1.2 dB;
+    more sources do not help. Fix (`tip_tail`, `tail_matrix`): continue every
+    source row to 1e-4 mm from the tip and tie the continued dipoles together
+    with weights (r / r_cut)^e, e in {2.2, 2.4, 2.7, 3.0} (dipole exponent =
+    field exponent nu + 2; the true nu of the elliptic cone is not known, the
+    fit combines the set). Electric dipoles only; adding magnetic ones, more
+    or lower exponents, a longer tail or collocation closer to the tip changes
+    nothing. Close exponents make the coefficient norm huge (1e7 to 1e12)
+    without hurting the result; the set of four keeps it at 1e3.
+18. **Row spacing.** For that class the spacing along a source row must be
+    0.5 x (distance to the surface) or less: residual 3.1%, 0.23%, 0.034% for
+    0.7, 0.5, 0.4. More rows help far less. The other three classes were
+    already fine at 0.7.
+19. Almond RCS at 1.19 GHz, 19 angles: spacing 0.5 against 0.4 differs by
+    0.0011 dB (HH) and 0.0002 dB (VV); against Bempp 9558 dofs 0.023 and
+    0.029 dB rms. Bempp references for 1.19, 7, 9.92 GHz are stored in
+    `bem_almond_rcs_ref.json` (from `bem_almond_rcs.py`, laptop).
+
 ## 3. Current best commands
 
 ```
@@ -145,6 +173,7 @@ python3 pec_cube_lightning3d.py 4,5,6 tag=NAME kinds=em q=0.5 gamma=2.0 col_p=3 
 python3 diag_cube.py 5 "tail_n=9"                 # residual map by zone, optical theorem
 python3 bem_optical.py 0.1,0.07,0.05              # Bempp cross-sections and far field
 python3 pec_almond_skeleton.py 1.19 --bem
+python3 almond_rcs.py 1.19 6:3 10 --s=0.5         # monostatic RCS, HH and VV, compares with stored Bempp
 python3 proto2d_square.py TE ; python3 proto2d_ellipse.py     # 2D prototypes, seconds
 python3 proto2d_square_tail.py TE                 # 2D singular tail
 ```
@@ -183,12 +212,22 @@ and the confocal solver kept as the record of the failed layout).
       proportional to 1/N with the MFS as the limit. The boundary residual
       stays at 2-4e-3 while the field converges (it does not radiate; where it
       sits was not checked).
-- [ ] **T3 Almond, general incidence (optional).** Broadside incidence
-      (d = -z, p = y, the thesis case) has one mirror symmetry and needs all six
-      dipole components. Not required; do it only if the paper wants more than
-      nose-on incidence.
-- [ ] **T4 Almond at benchmark frequencies** (7 and 9.92 GHz) and monostatic
-      RCS against published data (Woo et al. 1993).
+- [x] **T3 Almond, general incidence.** Covered by `almond_rcs.py`: any
+      plane wave is handled through the four parity classes. Only in-plane
+      look angles were run; the thesis case (d = -z, p = y) goes through the
+      same `solve_class` but was not run or checked.
+- [x] **T4 Almond at benchmark frequencies.** Done 2026-11-16 against Bempp;
+      **not** against the measured data of Woo et al. 1993, which could not be
+      fetched from the cloud session (the author should overlay digitised
+      curves). Monostatic RCS, HH and VV, azimuth 0-180 degrees, layout 6:3
+      with row spacing 0.5: about 4200 unknowns per class and 2 minutes per
+      frequency at 1.19, 7 and 9.92 GHz alike (the source count is set by the
+      geometry, not the wavelength, up to 8.35 wavelengths). MFS against Bempp
+      (9558 dofs at 1.19 GHz, 13632 at 7 and 9.92): rms 0.023 / 0.029 dB (HH /
+      VV) at 1.19, 0.044 / 0.026 dB at 7, 0.115 / 0.088 dB at 9.92 GHz (max
+      0.46 dB at a null). MFS self-convergence at 9.92 GHz: row spacing 0.4,
+      collocation 0.22, or layout 8:5 change HH by at most 0.036, 0.004, 0.034
+      dB and VV by at most 0.0024 dB. Figure: `fig_almond_rcs.py`.
 - [ ] **T5 Error-versus-time plots,** MFS against Bempp, for sphere, cube and
       almond. One script per figure.
 - [ ] **T6 Literature check.** Is a 3D lightning-type method for Maxwell new?
