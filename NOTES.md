@@ -1,6 +1,8 @@
 # Project notes
 
-Last updated: 2026-11-16. All scripts are in `validation/`. Problem throughout:
+Last updated: 2026-11-16 (second session of that day). All scripts are in
+`validation/`. Companion files: `DERIVATIONS.md` (proofs and exponent tables),
+`LITERATURE.md` (T6), `PAPER_OUTLINE.md` (T7). Problem throughout:
 exterior scattering of a plane wave by a perfectly conducting (PEC) body,
 tangential E_sc = -tangential E_inc on the surface, least-squares collocation.
 
@@ -26,16 +28,20 @@ to JCP. Status of each element:
 |---|---|
 | Tangential-trace formulation | done in all current solvers |
 | Mie-validated convergence for the PEC sphere in N and source radius | done |
-| Almond at benchmark frequencies against published RCS data or Bempp | done against Bempp at 1.19, 7, 9.92 GHz, all look angles, HH and VV (T4); overlay of the measured curves (Woo et al.) left to the author |
-| Cube result | done: plain MFS stalls at 21-30%; edge sources with the singular tail converge to 0.016% (J = 8) and agree with extrapolated Bempp to 0.05% (T1) |
-| Cost comparison with a boundary element solver | done for sphere, cube and almond, tables and figures (T5) |
+| Almond at benchmark frequencies against published RCS data or Bempp | done: against Bempp at 1.19, 7, 9.92 GHz (T4) and against the public Austin benchmark (measurements and reference simulation) at 3.5, 5.125, 7, 10.25 GHz, all look angles, HH and VV (T8) |
+| Cube result | done: plain MFS stalls at 21-30%; edge sources with edge and vertex tails converge to 0.011% (J = 8) and agree with graded Bempp to 0.022%, with its extrapolation to 0.016% (T1, T9); any incident wave (T10) |
+| Cost comparison with a boundary element solver | done for sphere, cube and almond, tables and figures (T5); cube also against Bempp on edge-graded meshes |
 | Helmholtz material | shrinks to about a page (write-up) |
 
-Aim (met on 2026-11-16): the cube and almond work well with the method and
-beat Bempp in accuracy and time, with the plain-MFS failures kept as the
-motivation. The one new idea behind both is the same: where the field is
-singular (cube edges, almond tip), sources below the cut-off depth are tied
-together by power laws instead of being left free ("singular tail").
+Aim (met on 2026-11-16): the cube and almond work well with the method, with
+the plain-MFS failures kept as the motivation. The one new idea behind both
+is the same: where the field is singular (cube edges and vertices, almond
+tip), sources below the cut-off depth are tied together by power laws instead
+of being left free ("singular tail"); the exponents are computed, not fitted.
+Against Bempp: far ahead on the sphere and the almond; on the cube far ahead
+of quasi-uniform meshes but only level with edge-graded meshes around 0.15%
+(ahead below 0.1%), see section 2, item 27. Do not write "beats Bempp" for
+the cube without that qualification.
 
 ## 1. Results so far
 
@@ -45,15 +51,20 @@ together by power laws instead of being left free ("singular tail").
 | Unit sphere, k = 4pi | same | 1.3e-12 (N = 1200) | Mie |
 | Unit cube, k = 2pi | uniform dipoles on inner cube | stalls at 25% | Bempp |
 | Unit cube, k = 2pi | lightning-type edge sources, no tail | 0.5% (J = 10); 0.8% at J = 12 (stall) | Bempp h = 0.05 |
-| Unit cube, k = 2pi | edge sources + singular tail, balanced refinement (section 2, items 8, 12) | 0.93%, 0.33%, 0.13%, 0.049%, 0.016% for J = 4..8 against J = 9; J = 9 is 0.05% from extrapolated Bempp; optical mismatch down to 4.6e-5 | MFS J = 9, extrapolated Bempp |
+| Unit cube, k = 2pi | edge sources + edge and vertex tails, balanced refinement (section 2, items 8, 12, 22, 25) | 1.27%, 0.52%, 0.20%, 0.089%, 0.033%, 0.011% for J = 3..8 against J = 9; optical mismatch down to 4.0e-5 | MFS J = 9; graded Bempp (10368 dofs) is 0.022% from J = 9, its extrapolation 0.016% |
+| Unit cube, oblique wave (from theta 60, phi 25, polarisation angle 35 degrees) | the same, four parity classes (`cube_general.py`) | see item 26 | graded Bempp, 10368 dofs |
 | NASA almond, 1.19 GHz, nose-on | confocal / shrunk source surface | unstable or 20%+ | - |
 | NASA almond, 1.19 / 7 / 9.92 GHz, monostatic RCS, HH and VV | skeleton sources + tip tail, four parity classes | within 0.03 / 0.04 / 0.12 dB rms of Bempp; self-converged to 0.001 dB (1.19 GHz) and 0.01 dB rms (9.92 GHz) | Bempp 9558 / 13632 dofs |
 | NASA almond, 1.19 GHz, nose-on | skeleton sources on mid-plane | self-converged to 5e-5, optical mismatch 1e-4; Bempp approaches it like 1/N (0.67%, 0.29%, 0.20%) | Bempp 4212, 9558, 13632 dofs |
+| NASA almond, 3.5 / 5.125 / 7 / 10.25 GHz, monostatic RCS, HH and VV | the same solver as the RCS row above, tip exponents from the cone | mean difference from the Austin reference simulation 0.04-0.14 dB (HH), 0.01-0.02 dB (VV); from the measurements 0.6-1.8 dB, the same as the reference simulation's own distance from them | Austin RCS benchmark III-A (Kelley et al. 2020) |
 
 Bempp itself (container, compilation excluded): sphere 0.37% with 9750 dofs
-(411 s); cube 0.26% at h = 0.05 (8514 dofs, 323 s) and 0.19% at h = 0.04 (13302
-dofs, 689 s); almond 0.67% (4212 dofs, 89 s) and 0.30% (9558 dofs, 412 s). In
-every case Bempp converges towards the MFS field.
+(411 s); cube, quasi-uniform: 0.26% at h = 0.05 (8514 dofs, 393 s) and 0.19% at
+h = 0.04 (13302 dofs, 832 s); cube, graded to the edges: 0.105% with 4608 dofs
+(161 s); almond 0.67% (4212 dofs, 89 s) and 0.30% (9558 dofs, 412 s). In every
+case Bempp converges towards the MFS field. (Cube times are from the second
+session's container, about 20% slower than the first; sphere and almond times
+are from the first.)
 
 ## 2. What we learned (do not re-test)
 
@@ -87,7 +98,8 @@ every case Bempp converges towards the MFS field.
 7. Did not help on the cube: bigger base grid, cell-averaged ("moment")
    testing, more modes beyond gamma = 2, extra corner rays (0.58% -> 0.51%).
 
-8. **Singular tail (the fix for the cube stall).** The error of the edge
+8. **Singular tail (the fix for the cube stall).** *(Exponent list superseded
+   by item 22: one derived exponent per component.)* The error of the edge
    sources was the cut-off of the edge singularity at the deepest free depth
    d_J (error ~ d_J^0.55), not conditioning or sampling. Below d_J, sources at
    depths d_J * 2^-i (i = 1..9, remainder lumped into the last) are tied
@@ -132,7 +144,8 @@ every case Bempp converges towards the MFS field.
     (rank was always full). The laptop's 16 cores speed up Bempp and the
     Numba assembly about 2x but its dense QR was slower than the container's.
 
-15. **Cube cost table** (`python3 fig_cost_cube.py`, container, 4 cores, error
+15. **Cube cost table, first version** *(superseded by item 27)*
+    (`python3 fig_cost_cube.py`, container, 4 cores, error
     against MFS J = 9): MFS + tail J = 3..8: 16.5, 25, 42, 77, 154, 220 s for
     2.7%, 0.93%, 0.33%, 0.13%, 0.049%, 0.016%. Bempp h = 0.1, 0.07, 0.05, 0.04:
     57, 166, 323, 689 s for 0.68%, 0.39%, 0.26%, 0.19%. Edge sources without
@@ -144,7 +157,7 @@ every case Bempp converges towards the MFS field.
     quarter of the sources, and one QR per class serves every angle. HH uses
     the two classes even in z (dipoles e_x, e_y, m_z on the mid-plane), VV the
     two odd in z (e_z, m_x, m_y).
-17. **Tip tail (almond).** The class even in both mirrors carries current
+17. **Tip tail (almond).** *(The fitted exponent set is superseded by item 24.)* The class even in both mirrors carries current
     along the axis into the tip (an elliptic cone, half-angles 34 and 12.7
     degrees), where the field is strongly singular. The nose-on case never
     excited it. Free sources cut off 1 mm from the tip leave 19% residual in
@@ -176,6 +189,115 @@ every case Bempp converges towards the MFS field.
     container, no symmetry used): MFS with 300, 600, 1200, 2400 unknowns: 0.06,
     0.16, 1.0, 5.4 s for 2.7e-3, 2.7e-6, 2.0e-9, 1.8e-13. Bempp with 1269,
     2733, 4824, 9750 dofs: 15, 46, 112, 411 s for 3.2%, 1.4%, 0.76%, 0.37%.
+
+
+### Second session, 2026-11-16 (items 22-32)
+
+22. **Edge tail exponents are derived** (`DERIVATIONS.md` B). The tail stands
+    for the surface current that the continued field leaves on the bisector
+    half-plane of the edge. Parity under the mirror in that plane sorts the
+    Meixner terms: even terms give only electric current, odd terms only
+    magnetic, nothing normal to the plane; integer-power terms give no
+    current at all. One exponent per component: electric axis 2/3, electric
+    radial 5/3, magnetic axis 4/3, magnetic radial 7/3 (now the defaults of
+    `Sources`). Checked with `check_tail_exponents.py`: same error as the old
+    sets with integer second exponents (J = 5: 0.314% against 0.327%; J = 7:
+    0.049% both), 8-10% fewer unknowns; the derived second terms (8/3, 11/3)
+    change nothing; the J = 9 field moved by 1e-5.
+23. **Skeleton theorem** (`DERIVATIONS.md` A). For a convex PEC polyhedron
+    the scattered field is exactly a layer of electric and magnetic current
+    on the interior medial surface (image principle across each face, patched
+    over the nearest-face cells). It explains why skeleton sources are
+    complete, why a shrunk surface fails, and why both dipole kinds are
+    needed. Not found in the literature; convex bodies only.
+24. **Tip exponents are computed** (`cone_exponents.py`, `DERIVATIONS.md` C).
+    Method of particular solutions on the sphere with poles on the focal
+    segment of the cone's cross-section; exact to 8 digits for a circular
+    cone, stable to 5 digits from 12 to 36 poles. Almond tip (half-angles
+    34.09 and 12.71 degrees): the only exponent below 1 is nu = 0.29959
+    (E ~ r^-0.70), in the class even under both mirrors. One electric
+    exponent e = nu + 2 = 2.2996 replaces the fitted set {2.2, 2.4, 2.7, 3.0}:
+    same residual (0.24% at spacing 0.5), HH closer to the fine layout
+    (0.0001 against 0.0003 dB rms). `almond_rcs.rcs` now takes the exponents
+    per class from the cone (two electric, one magnetic); more exponents
+    change nothing.
+25. **Cube vertices** (`python3 cone_exponents.py cube`, `DERIVATIONS.md` D).
+    Exponents outside a cube corner: nu = 0.45417 (the known value), 1.23087;
+    tau = 0.8400, 1.20635. A vertex tail on the body diagonal (`VertexTail`,
+    e = nu + 2 and tau + 2, 12 unknowns) cuts the error by a third to 40% at
+    every depth: J = 5: 0.31% -> 0.20%, J = 6: 0.133% -> 0.086%, J = 7: 0.049%
+    -> 0.029% (against J = 9), and 0.059% -> 0.042% against graded Bempp. A
+    second exponent changes nothing. It is now part of the balanced family.
+26. **Cube, any incident wave** (`cube_general.py`, T10). Four parity classes
+    under x -> -x, y -> -y; the class matrices are signed sums of the same
+    four reflected blocks, so the assembly is shared and each class has its
+    own QR. It reproduces the symmetric solver to 2e-15. Oblique wave (from
+    theta 60, phi 25, polarisation angle 35 degrees), J = 5, 6, 7:
+    86, 176, 370 s (assembly 47, 84, 169 s; four factorisations 25, 70, 171 s)
+    for 0.27%, 0.112%, 0.055% against graded Bempp (10368 dofs, quadrature
+    6/8, itself 0.016% from its 7200-dof mesh); optical mismatch 8.8e-4,
+    4.0e-4, 2.1e-4. The symmetric case costs 53, 95, 199 s, so a general wave
+    costs 1.6-1.9 times as much. Graded Bempp (no symmetry needed) gives
+    0.15% in 76 s and 0.105% in 161 s for any wave: for a general incidence
+    it is faster than the MFS at 0.1-0.4% and slower below about 0.06%.
+27. **Cube cost table, final** (`python3 fig_cost_cube.py`, second container,
+    4 cores, everything timed in one session, error against MFS J = 9 with
+    5082 unknowns and 419 s):
+    - MFS, edge and vertex tails, J = 3..8: 22, 32, 53, 95, 199, 284 s for
+      1.27%, 0.52%, 0.20%, 0.089%, 0.033%, 0.011%; optical mismatch 3.0e-3 to
+      6.4e-5.
+    - Edge sources without tails, J = 4, 6, 8: 14, 54, 180 s for 5.4%, 2.5%,
+      1.1%. Plain MFS, 72 to 450 unknowns: 30% to 21%.
+    - Bempp, quasi-uniform, h = 0.1, 0.07, 0.05, 0.04 (2214 to 13302 dofs):
+      63, 174, 393, 832 s for 0.68%, 0.39%, 0.26%, 0.19%.
+    - Bempp, graded to the edges (`bem_cube_graded.py`, grading exponent 2,
+      default quadrature), 1152, 2592, 4608 dofs: 32, 76, 161 s for 0.44%,
+      0.15%, 0.105%. With quadrature orders 6/8, 4608 dofs: 555 s for 0.060%.
+    - Reading: against quasi-uniform Bempp the MFS is 10-15 times faster at
+      0.2%; against graded Bempp it is level at 0.15-0.2%, 1.7 times faster
+      at 0.1%, about 4 times at 0.06%, and graded Bempp was not taken below
+      0.02% (25 min of assembly on the laptop for 0.022%).
+    - Bempp's time is assembly: 158 of 161 s at 4608 dofs, 1521 of 1540 s at
+      10368 dofs (laptop). A faster linear solver would not change the
+      comparison; matrix compression or higher-order elements might, and
+      were not tried.
+28. **Graded Bempp meshes** (`bem_cube_graded.py`). Tensor grid per face with
+    nodes 0.5 (1 - (1 - |s|)^g), each rectangle cut in two triangles
+    (anisotropic near the edges). g = 2 is best; g = 1.5 similar at 4608 dofs
+    (0.113%); g = 2.5 worse (0.20% against 0.13% at 2592 dofs); g = 3 fails
+    (4.8%) with default quadrature. The default quadrature (4 regular, 6
+    singular) limits the graded meshes at 0.1%: 4608 dofs give 0.104%, 0.060%,
+    0.057% with orders 4/6, 6/8, 8/10, and the gap grows with the mesh
+    (7200 dofs: 0.038% against 0.032%). Use 8/10 for reference runs.
+29. **Independent reference for the cube.** Graded Bempp with quadrature
+    8/10 and 4608, 7200, 10368 dofs is 0.058%, 0.032%, 0.022% from MFS J = 9;
+    extrapolated from these three (fitted rate n^-2.9) 0.016%; cross-section
+    2.92710, 2.92745, 2.92762, extrapolated 2.92785. Extrapolated
+    quasi-uniform Bempp stays 0.05% away (unchanged). MFS self-convergence:
+    0.011% at J = 8. So the cube field is confirmed by a second method to
+    about 0.02%; below that the reference is the MFS itself.
+30. **Almond against the Austin RCS benchmark** (`fig_almond_benchmark.py`,
+    data in `validation/austin_almond/`, T8). Same almond (9.936 in), same
+    angle and polarisation conventions. Mean |difference| in dB over 361
+    angles, MFS against the suite's reference simulation (ARCHIE-AIM, finest
+    mesh), HH / VV: 3.5 GHz 0.043 / 0.011; 5.125 GHz 0.055 / 0.013; 7 GHz
+    0.072 / 0.016; 10.25 GHz 0.140 / 0.024. MFS against the two measurements:
+    0.64-1.83 dB, within 0.07 dB of the reference simulation's own distance
+    from them in every case. Largest pointwise differences from the reference
+    simulation are in deep HH nulls: 1.5 dB (3.5 GHz, 130 deg), 0.9, 0.7 and
+    4.3 dB (10.25 GHz, 35.5 deg, a null at -66.7 dBsm). There the MFS is
+    converged: layouts 6:3 and 8:5 differ by 0.0006 dB on average and 0.024
+    dB at that null, so the 4.3 dB is not an MFS resolution error (the
+    reference's mesh, or the 0.01% difference in length, are the candidates;
+    not investigated). About 3 min per frequency for all angles.
+31. **Never run two jobs at once.** Two Numba/BLAS jobs side by side made four
+    QR factorisations take 453 s instead of 22 s and spoiled every timing of
+    that batch. Queue jobs strictly one after another.
+32. **Laptop.** Bempp is 3-4 times faster there than in the container (2592
+    dofs: 22 s against 75 s). A separate worktree of the working branch is at
+    `~/Projects/MFS-ccr` (branch `laptop-bem`); the old clone `~/Projects/MFS`
+    was not touched. Results were committed there and pushed to the working
+    branch.
 
 ## 3. Current best commands
 

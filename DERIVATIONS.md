@@ -113,7 +113,8 @@ Let m be the mirror in the bisector plane; it maps the exterior wedge (opening
    rho^(e - 1) gives line weights (d_i / d_J)^e. That is the weight used in
    `TailLine`, and the exponents in the last column are the ones to use.
 
-**Check** (`edgetest`, balanced family, error against the J = 9 field):
+**Check** (balanced family of `fig_cost_cube.py`, error against the J = 9 field,
+J = 5 and J = 7):
 the derived set with one exponent per component, (2/3 | 5/3 | 4/3 | 7/3),
 gives the same error as the set used so far, which had a second, integer
 exponent per component (1, 2, 1, 2), with 10% fewer unknowns; adding the
@@ -176,6 +177,19 @@ by the cube (`python3 cone_exponents.py cube`):
     tau (Neumann):   0.8400,  1.20635, 1.8061,  2 (regular), 2.44666
 
 So E ~ r^(-0.546) (electric type) and H ~ r^(-0.160) (magnetic type) at a
-vertex. 0.45417 is the known value for the exterior of a cube corner. These
-are not used by the solver (no vertex tail), but they bound the growth needed
-in step A.5 and are the numbers to quote.
+vertex. 0.45417 is the known value for the exterior of a cube corner. They
+bound the growth needed in step A.5.
+
+**Vertex tail.** The free point dipoles on the body diagonal stop at the
+deepest depth d_J, like the edge lines. Continuing them on the diagonal at
+distances d_J 2^(-i) with weights (d_i / d_J)^e, e = nu + 2 = 2.454 for the
+electric and e = tau + 2 = 2.840 for the magnetic dipoles (same counting as
+in C), adds 12 unknowns in the symmetric solver (`VertexTail`).
+
+**Check.** Error against the J = 9 field without / with the vertex tail:
+J = 5: 0.31% / 0.20%; J = 6: 0.133% / 0.086%; J = 7: 0.049% / 0.029%; against
+graded Bempp (10368 unknowns) at J = 7: 0.059% / 0.042%. A second exponent
+per kind (nu_2, tau_2) changes nothing. The tail on the diagonal carries only
+the radial law; the angular structure of the vertex singularity is left to
+the edge lines, which is presumably why the gain is a constant factor (about
+half a refinement level) rather than a change of rate.

@@ -1,12 +1,13 @@
 """Error against wall time for the unit cube (k = 2 pi): MFS with edge sources
 and singular tail, the same without tail, plain MFS (uniform sources on an
-inner cube), and Bempp (EFIE, RWG, dense LU).
+inner cube), and Bempp (EFIE, RWG, dense LU) on quasi-uniform meshes and on meshes graded
+towards the edges.
 
     python3 fig_cost_cube.py run     # solve and time everything except Bempp; writes fig_cost_cube.npz
     python3 fig_cost_cube.py         # table (and figure, if matplotlib is present) from the saved data
 
-Bempp fields and times come from bem_optical.py (bem_cube_h*_q4.npz), run on
-the same machine. All times include assembly, solve and evaluation at the 400
+Bempp fields and times come from bem_optical.py (bem_cube_h*_q4.npz) and
+bem_cube_graded.py (bem_cube_graded_n*_g2.npz), run on the same machine. All times include assembly, solve and evaluation at the 400
 test points on |x| = 2; the MFS uses the two mirror symmetries of this
 incidence, Bempp does not. Run alone on the machine.
 """
@@ -24,15 +25,19 @@ J_REF = 9
 
 def balanced(J):
     """All resolution parameters grow with the depth J: modes per line
-    (n0 + 2 log(1/d)), base grid, and the collocation that samples it."""
+    (n0 + 2 log(1/d)), base grid, and the collocation that samples it. The
+    tail exponents are the solver defaults (derived, DERIVATIONS.md B); the
+    vertex tail (one exponent, DERIVATIONS.md D) is on."""
     n0 = max(4, 2 * J - 4)
     n_base, hmax = (4, 0.25) if J <= 5 else (6, 0.15) if J == 6 else (8, 0.1)
-    return dict(q=0.5, gamma=2.0, kinds="em", n0=n0, n_base=n_base), hmax
+    return dict(q=0.5, gamma=2.0, kinds="em", n0=n0, n_base=n_base, vtail_n=9), hmax
 
 
 def run_mfs(J, pts, tail=9, n_base=None):
     t0 = time.time()
     kw, hmax = balanced(J) if n_base is None else (dict(q=0.5, gamma=2.0, kinds="em", n_base=n_base), 0.1)
+    if not tail:
+        kw.pop("vtail_n", None)                        # "no tail" means neither the edge nor the vertex tail
     src = m.SymSources(J, tail_n=tail, **kw)
     d_min = src.depths[-1] if J >= 0 else 0.2
     lv = max(2, int(np.ceil(np.log(d_min / (2 * m.H)) / np.log(COL["col_q"]))) + 1)
@@ -92,6 +97,33 @@ def report():
         print(f"{'Bempp':12s} {float(b['h']):5.2f} {int(b['ndof']):9d} {float(b['t_solve']):9.1f} {rel(b['E'], ref):14.2e} "
               f"{rel(b['E'], ext):18.2e}")
     curves["Bempp"] = np.array(pts_)
+    # Bempp on meshes graded towards the edges (bem_cube_graded.py, grading exponent 2, default quadrature)
+    graded = sorted((np.load(f) for f in glob.glob("bem_cube_graded_n*_g2.npz")), key=lambda b: int(b["ndof"]))
+    pts_ = []
+    for b in graded:
+        pts_.append((float(b["t_solve"]), rel(b["E"], ref)))
+        print(f"{'Bempp graded':12s} {int(b['n']):5d} {int(b['ndof']):9d} {float(b['t_solve']):9.1f} {rel(b['E'], ref):14.2e} "
+              f"{rel(b['E'], ext):18.2e}   (assembly {float(b['t_assembly']):.0f}s, LU {float(b['t_lu']):.0f}s, "
+              f"evaluation {float(b['t_eval']):.0f}s)")
+    if pts_:
+        curves["Bempp graded"] = np.array(pts_)
+    # the same meshes with higher quadrature orders: the independent reference
+    for q in ("6_8", "8_10"):
+        fine = sorted((np.load(f) for f in glob.glob(f"bem_cube_graded_n*_g2_q{q}.npz")), key=lambda b: int(b["ndof"]))
+        for b in fine:
+            print(f"reference check: graded Bempp n={int(b['n'])} ({int(b['ndof'])} dofs, quadrature {q.replace('_', '/')}) differs "
+                  f"from the MFS reference by {rel(b['E'], ref):.2e}; sigma_ext {float(b['ext']):.5f}")
+        if len(fine) >= 3:                              # three-level extrapolation, E_n = E + C n^(-p)
+            from scipy.optimize import brentq
+            (n1, E1), (n2, E2), (n3, E3) = ((float(b["n"]), b["E"]) for b in fine[-3:])
+            r = np.linalg.norm(E1 - E2) / np.linalg.norm(E2 - E3)
+            p = brentq(lambda p: (n1 ** -p - n2 ** -p) / (n2 ** -p - n3 ** -p) - r, 0.2, 12)
+            Ex = E3 + (E3 - E2) * n3 ** -p / (n2 ** -p - n3 ** -p)
+            s1, s2, s3 = (float(b["ext"]) for b in fine[-3:])
+            print(f"   extrapolated from the last three (fitted rate n^-{p:.2f}): differs from the MFS reference by "
+                  f"{rel(Ex, ref):.2e}; sigma_ext {s3 + (s3 - s2) * n3 ** -p / (n2 ** -p - n3 ** -p):.5f}")
+    sm = d["tail"][-1]
+    print(f"MFS reference J = {int(sm[0])}: {int(sm[2])} unknowns, {sm[1]:.0f} s, optical mismatch {sm[4]:.1e}")
     return curves
 
 
@@ -99,9 +131,10 @@ def report():
 # the figure survives greyscale printing). Hues checked for colour-blind
 # separation with the dataviz palette validator.
 STYLE = {"MFS+tail": ("#2a78d6", "o", "-", "MFS, edge sources + tail"),
-         "Bempp": ("#eb6834", "D", "-.", "Bempp (EFIE, RWG)"),
+         "Bempp": ("#eb6834", "D", "-.", "Bempp, quasi-uniform mesh"),
          "MFS no tail": ("#1baf7a", "s", "--", "MFS, edge sources, no tail"),
-         "plain MFS": ("#eda100", "^", ":", "plain MFS (inner cube)")}
+         "plain MFS": ("#eda100", "^", ":", "plain MFS (inner cube)"),
+         "Bempp graded": ("#e87ba4", "v", (0, (5, 1, 1, 1)), "Bempp, mesh graded to the edges")}
 INK, MUTED = "#1f1f1e", "#6b6a64"
 
 
@@ -113,15 +146,10 @@ def plot(curves, fname="fig_cost_cube"):
                          "xtick.color": MUTED, "ytick.color": MUTED, "axes.linewidth": 0.6})
     fig, ax = plt.subplots(figsize=(5.2, 3.6))
     for key, (col, mk, ls, label) in STYLE.items():
+        if key not in curves:
+            continue
         c = curves[key]
-        ax.loglog(c[:, 0], c[:, 1], ls, color=col, marker=mk, ms=6, lw=1.6, mec="white", mew=0.8, label=label)
-    # direct labels at the end of each curve, in ink, next to the coloured mark
-    for key, dx, dy, ha in (("MFS+tail", 1.2, 1.0, "left"), ("Bempp", 1.0, 1.7, "center"),
-                            ("MFS no tail", 1.15, 1.25, "left"), ("plain MFS", 1.25, 1.0, "left")):
-        c = curves[key]
-        ax.annotate(STYLE[key][3].split(",")[0].split(" (")[0] + ("" if key != "MFS+tail" else " + tail")
-                    if key in ("MFS+tail", "Bempp") else STYLE[key][3].replace("MFS, edge sources, ", ""),
-                    (c[-1, 0] * dx, c[-1, 1] * dy), ha=ha, va="center", fontsize=8, color=INK)
+        ax.loglog(c[:, 0], c[:, 1], linestyle=ls, color=col, marker=mk, ms=6, lw=1.6, mec="white", mew=0.8, label=label)
     ax.set_xlabel("wall time [s]  (4 cores)")
     ax.set_ylabel("relative error of the field on |x| = 2")
     ax.grid(True, which="major", color="#e4e3df", lw=0.6)

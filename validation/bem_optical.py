@@ -72,6 +72,7 @@ if __name__ == "__main__":
     bempp.GLOBAL_PARAMETERS.quadrature.regular = reg
     bempp.GLOBAL_PARAMETERS.quadrature.singular = sing
     pts = np.load("bem_cube_h0.05.npz")["pts"]
+    solve(0.4, pts)                                    # warm-up: compilation is not part of the timings
     for h in hs:
         t0 = time.time()
         E, far, ndof = solve(h, pts)

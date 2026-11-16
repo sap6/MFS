@@ -7,9 +7,18 @@ magnetic point dipoles on the mid-plane, in rows that follow the rim and
 cluster towards the focal curve. Their spacing along a row is proportional to
 the local distance to the surface, as is the spacing of the collocation points.
 
-Incidence is nose-on (travelling in -x, towards the tip), polarised along y,
-so the field is odd under y -> -y and even under z -> -z; the unknowns and
-collocation points are reduced to one quarter accordingly.
+This module is the library of the almond solvers: geometry, source rows,
+collocation, the symmetrised matrices for any mirror-parity class
+(`parity_class`), and the tip tail (`tip_tail`, `tail_matrix`, with exponents
+from the tip cone, `tip_exponents`). The general solver, for any look angle
+and both polarisations, is almond_rcs.py.
+
+Run as a script it solves one case only: nose-on incidence (travelling in -x,
+towards the tip), polarised along y. That field is odd under y -> -y and even
+under z -> -z, a class that does not carry current into the tip, so the
+script uses neither the tip tail nor the finer row spacing (0.5) that the
+class even under both mirrors needs; do not copy its settings for other
+incidences.
 
 Usage: python pec_almond_skeleton.py [freq_GHz]
 """

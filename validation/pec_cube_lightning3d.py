@@ -14,7 +14,19 @@ The line integrals are evaluated with a target-adapted quadrature in u: panels
 grow dyadically away from the point of the line nearest to the target, so a
 line at depth 1e-6 costs a few hundred kernel evaluations per target.
 
+  * below the deepest free depth, the "singular tail" (TailLine): further
+    lines tied together by the power laws of the edge expansion.
+
+All line and vertex sources lie on the bisector planes of the edges, i.e. on
+the skeleton of the cube, which is where the continued field has its sources
+(DERIVATIONS.md, section A).
+
 Rows are weighted by sqrt(area) * dist_to_edge**beta.
+
+This module is the library and the solver for the standard case (wave along
+-z, E along y; SymSources with its default parity). cube_general.py solves
+any incident plane wave with the four parity classes; fig_cost_cube.py holds
+the balanced refinement family and the cost table.
 """
 import glob
 import itertools
@@ -228,14 +240,17 @@ class TailLine:
 
     Dipole components are taken in the frame of the edge: along the edge
     (axis), along the bisector (radial) and normal to the bisector plane. The
-    exponents follow the edge expansion of the field, rho^(2n/3) and integer
-    powers, sorted by mirror symmetry about the bisector plane:
-      electric axis    even E_axis-type field   e = 2/3, 1, 2
-      electric radial  odd  H_axis-type field   e = 5/3, 2      (leading TE term)
-      magnetic axis    even H_axis-type field   e = 1, 4/3
-      magnetic radial  odd  E_axis-type field   e = 2, 7/3
-    The normal components duplicate the axis ones of the other kind and are
-    left out unless `normal` is set."""
+    tail stands for the surface current that the continued field leaves on
+    the bisector half-plane (DERIVATIONS.md, section B). A sheet density
+    rho^(e - 1) gives line weights (d_i / d)**e, and the edge expansion gives
+      electric axis    J_s   = [H_rho]  ~ rho^(-1/3)   e = 2/3   (next 8/3)
+      electric radial  J_rho = [H_s]    ~ rho^(2/3)    e = 5/3   (next 11/3)
+      magnetic axis    K_s   = [E_rho]  ~ rho^(1/3)    e = 4/3   (next 8/3)
+      magnetic radial  K_rho = [E_s]    ~ rho^(4/3)    e = 7/3   (next 11/3)
+    A surface current has no component normal to the bisector plane, so the
+    normal dipoles are left out unless `normal` is set. One exponent per
+    component is enough: the second terms change nothing at J = 5, and the
+    integer exponents used in earlier runs (1, 2, 1, 2) were not physical."""
 
     def __init__(self, base, n_tail, qt, exps_axis, exps_radial, normal=False, taper=False):
         self.base, self.taper = base, bool(taper)
@@ -278,10 +293,37 @@ class TailLine:
         return out
 
 
+class VertexTail:
+    """Singular tail of the point dipoles of one vertex: points on the inward
+    body diagonal at distances d * qt**i below the deepest free one, tied
+    together with weights (d_i / d)**e. Near the vertex the field behaves
+    like r^(nu - 1) (electric type, nu = 0.45417) and H like r^(tau - 1)
+    (tau = 0.8400), see cone_exponents.py and DERIVATIONS.md D; dipoles of
+    strength r^e on a geometric row give a field r^(e - 3), so e = nu + 2
+    for electric and tau + 2 for magnetic dipoles. Optional (vtail_n > 0)."""
+
+    NU, TAU = (0.45417, 1.23087), (0.8400, 1.20635)
+
+    def __init__(self, sg, d, n_tail, qt, n_exp, magnetic):
+        self.ax, self.yb, self.yc = 2, float(sg[0]), float(sg[1])       # so that SymSources keeps the vertices with x, y > 0
+        self.kernel = magnetic_pairs if magnetic else dyadic_pairs
+        exps = np.array((self.TAU if magnetic else self.NU)[:n_exp]) + 2.0
+        self.n = len(exps)
+        ratio = qt ** np.arange(1, n_tail + 1)
+        self.w = ratio[:, None] ** exps[None, :]
+        self.w[-1] /= 1 - qt ** exps
+        self.pts = np.asarray(sg, float)[None, :] * (H - d * ratio[:, None] / np.sqrt(3.0))
+
+    def block(self, x, T=None):
+        G = self.kernel(x[:, None, :] - self.pts[None, :, :])            # (m, n_tail, 3, 3)
+        B = np.einsum("mtbc,te->mebc", G, self.w)
+        return np.einsum("mab,mebc->maec", T, B) if T is not None else B.transpose(0, 2, 1, 3)
+
+
 class Sources:
     def __init__(self, J, n_base=6, depth0=0.2, q=0.25, gamma=2.0, n0=4, angles=(0.0,), kinds="e", vrays=1,
-                 tail_n=0, tail_q=0.5, tail_e=(2 / 3, 1.0), tail_m=(1.0, 4 / 3), tail_normal=0,
-                 tail_er=None, tail_mr=None):
+                 tail_n=0, tail_q=0.5, tail_e=(2 / 3,), tail_m=(4 / 3,), tail_normal=0,
+                 tail_er=(5 / 3,), tail_mr=(7 / 3,), vtail_n=0, vtail_exp=1):
         self.depths = depth0 * q ** np.arange(J + 1) if J >= 0 else np.array([])
         pts = [base_sources(n_base, depth0)]
         # inward rays from every vertex: the body diagonal, optionally three more
@@ -310,12 +352,12 @@ class Sources:
             for ln in deepest:
                 ea = tail_m if ln.kernel is magnetic_pairs else tail_e
                 er = tuple(e + 1 for e in ea) if tail_normal else (
-                    (2.0, 7 / 3)[:len(ea)] if ln.kernel is magnetic_pairs else (5 / 3, 2.0)[:len(ea)])
-                if ln.kernel is magnetic_pairs and tail_mr is not None:
-                    er = tail_mr
-                elif ln.kernel is not magnetic_pairs and tail_er is not None:
-                    er = tail_er
+                    tail_mr if ln.kernel is magnetic_pairs else tail_er)
                 self.lines.append(TailLine(ln, tail_n, tail_q, ea, er, tail_normal))
+        if vtail_n and J >= 0:
+            for sg in itertools.product((-1, 1), repeat=3):
+                for kind in kinds:
+                    self.lines.append(VertexTail(sg, self.depths[-1], vtail_n, tail_q, vtail_exp, kind == "m"))
         self.n_unknowns = 3 * (len(self.points) + len(self.mpoints) + sum(l.n for l in self.lines))
 
     def matrix(self, x, T=None, batch=1200):
@@ -478,7 +520,7 @@ def load_bem():
 
 
 def main(Js, beta=1 / 3, q=0.25, gamma=2.0, col_q=1 / 3, col_p=2, n_base=6, n0=4, tag="run", angles="0", kinds="e", moments=0,
-         col_hmax=0.1, sym=0, vrays=1, cond=1e-12, tail=0, tail_q=0.5, tail_e="0.6667:1", tail_m="1:1.3333", tail_normal=0,
+         col_hmax=0.1, sym=0, vrays=1, cond=1e-12, tail=0, tail_q=0.5, tail_e="0.6667", tail_m="1.3333", tail_normal=0,
          col_extra=1, diag=0):
     angles = tuple(float(a) for a in str(angles).split(":"))
     te_, tm_ = (tuple(round(3 * float(a)) / 3 for a in str(t).split(":")) for t in (tail_e, tail_m))
