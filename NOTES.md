@@ -6,6 +6,28 @@ Last updated: 2026-11-16 (second session of that day). All scripts are in
 exterior scattering of a plane wave by a perfectly conducting (PEC) body,
 tangential E_sc = -tangential E_inc on the surface, least-squares collocation.
 
+## Start here (state at the end of 2026-11-16)
+
+- Everything is committed and pushed on branch `ccr-116c520c-fts35f` (last
+  commit of the session: "Notes: handover"). No pull request exists. No
+  jobs are running anywhere.
+- All experiment tasks on the list are done (T0-T11). What is left is
+  reading, writing and optional extras: section 4, T12-T18. The next real
+  step is **T13, the write-up**, which the author leads; `PAPER_OUTLINE.md`
+  is the starting point and section 6 lists what the paper may and may not
+  claim.
+- Before changing any number in a table, read section 2, items 22-32: the
+  cube table (item 27) was re-timed in one container and must be redone as a
+  whole if any part of it is re-run.
+- The one result that cuts against the paper's first draft of its story:
+  on the cube an edge-graded Bempp mesh is as fast as the MFS at 0.15-0.2%
+  and faster for a general incident wave at 0.1-0.4% (items 26-27).
+- Open questions for the author (also at the end of `PAPER_OUTLINE.md`):
+  keep or delete the third-party benchmark files in
+  `validation/austin_almond/`; which BEM curve leads the cube figure; title.
+- Nothing was ever pushed to `sap6/mfs-paper`; it is still the thesis text
+  (commit 4f8731f).
+
 ## 0. Scope (from the author)
 
 - The paper should be clearly **derived from the MSci thesis**: same topic
@@ -435,8 +457,8 @@ Open, in the order I would take them:
 
 ## 6. Write-up session
 
-- Attach both `sap6/MFS` and `sap6/mfs-paper`. Read this file and the
-  manuscript; do not re-run experiments.
+- Attach both `sap6/MFS` and `sap6/mfs-paper`. Read this file,
+  `PAPER_OUTLINE.md` and the manuscript; do not re-run experiments.
 - Target: Journal of Computational Physics; post to arXiv first. Fallback
   venue: Engineering Analysis with Boundary Elements.
 - Proposed story: (1) MFS for 3D Maxwell with a Mie-validated stability and
@@ -509,22 +531,32 @@ Open, in the order I would take them:
 ## 7. Working environment (read before running anything)
 
 - **Where to run.** The cloud container (4 cores, 15 GB) is the primary copy
-  and is fast enough for everything except large Bempp meshes. Its dense QR
-  is faster than the laptop's. Rough times here: cube J = 6: 77 s, J = 8:
-  220 s; almond RCS, all angles: 2 min per frequency; Bempp 13k dofs: 11 min.
+  and is fast enough for everything except large Bempp meshes. Rough times
+  (second container): cube J = 6: 95 s, J = 8: 284 s, J = 9: 419 s; cube, any
+  wave, J = 6: 176 s; almond RCS, all angles and both polarisations: 3 min
+  per frequency; Bempp 4608 dofs: 160 s, 13k dofs: 14 min. Setup on a fresh
+  container: the three lines in `CLAUDE.md` (2-3 min).
 - **The author's laptop** (`flowx13`, 16 cores, 15 GB, Linux) can be attached
-  through Remote Control (folder `Projects`). It has a clone at
-  `~/Projects/MFS` with a virtual environment `.venv` (numpy, scipy, numba,
-  bempp-cl, gmsh). That clone is at an **old commit (efac0ae) plus hand-made
-  edits** to `pec_almond_skeleton.py` and two extra scripts
-  (`bem_optical.py`, `bem_almond_rcs.py`); it is only good for Bempp
-  reference runs. To use it for anything else, bring it to the current
-  branch first (fetch, show the author the diff, then check out). Use it for:
-  Bempp with more than about 5k dofs, where it is 3-4 times as fast
-  (2592 dofs: 22 s against 75 s).
-  Run commands there as `/home/sap/Projects/MFS/.venv/bin/python3 -W ignore
-  script.py ...` from `~/Projects/MFS/validation`; background jobs there do
-  not notify the session, so read their output file to check.
+  through Remote Control (folder `Projects`). Use it for Bempp with more
+  than about 5k dofs, where it is 3-4 times as fast (2592 dofs: 22 s against
+  75 s); its dense QR is slower than the container's, so keep the MFS here.
+  Two checkouts exist there:
+  - `~/Projects/MFS-ccr`: a git worktree of the working branch (local branch
+    `laptop-bem`), made in the second session. **Use this one.** Before a
+    run: `git pull origin ccr-116c520c-fts35f` in it. Run as
+    `/home/sap/Projects/MFS/.venv/bin/python3 -W ignore script.py ...` from
+    `~/Projects/MFS-ccr/validation`. To return results: commit there and
+    `git push origin laptop-bem:ccr-116c520c-fts35f`, then pull in the
+    container. Remove it with `git worktree remove ../MFS-ccr` (run in
+    `~/Projects/MFS`) when no longer wanted.
+  - `~/Projects/MFS`: the old clone, detached at efac0ae with hand-made
+    edits to `pec_almond_skeleton.py` and untracked Bempp files. Not touched
+    in either session; it only lends its `.venv` (numpy, scipy, numba,
+    bempp-cl; gmsh's Python module is missing, so `bempp.shapes` does not
+    work there, but `bem_cube_graded.py` builds its own meshes). Ask the
+    author before changing it.
+  Background jobs on the laptop do not notify the session: read their log
+  file to check, and never assume they are finished.
 - **Session restarts.** The cloud worker was restarted several times in one
   day. Files in the repository survive; the scratch folder and running jobs
   do not. Put anything worth keeping in `validation/` and commit often.
@@ -544,12 +576,11 @@ Open, in the order I would take them:
   about 20% slower than the first for both the MFS and Bempp. Never mix
   timings from different sessions in one table; `fig_cost_cube.py` data and
   all cube Bempp files were re-timed together.
-- **Laptop worktree**: `~/Projects/MFS-ccr` on `flowx13` is a git worktree of
-  the working branch (local branch `laptop-bem`), made so that the old clone
-  `~/Projects/MFS` (detached at efac0ae with hand edits) stays untouched. It
-  uses the old clone's `.venv`. Remove it with `git worktree remove
-  ../MFS-ccr` from `~/Projects/MFS` when no longer wanted.
-- **Scratch outputs** named `*_t_*.npy/json` and `almond_rcs_*.npz` are
-  ignored by git on purpose.
+- **Scratch outputs** named `*_t_*.npy/json/npz` and `almond_rcs_*.npz` are
+  ignored by git on purpose (logs too). The scratchpad folder outside the
+  repository is lost at every restart.
+- **The manuscript** (`sap6/mfs-paper`) can be attached read-only with
+  `add_repo`; it then sits at `/home/user/mfs-paper`. Rule 8 of `CLAUDE.md`
+  stands: no push there without asking.
 - **Figures** follow one style (colour plus marker plus dash per method, so
   they print in greyscale); see `STYLE` in the `fig_*.py` scripts.
