@@ -41,7 +41,7 @@ def class_part(x, k, d, p, sig):
     return out / 4
 
 
-def solve_class(k, y, sy, sz, d, p, s_col, ratio=2.5):
+def solve_class(k, y, sy, sz, d, p, s_col, ratio=2.5, tail=None):
     """Coefficients for all waves (d, p) in the class (sy, sz), and its backscatter amplitudes p . F(-d)."""
     comps, sig = a.parity_class(sy, sz)
     x, w, nrm = a.collocation(a.ETA_F, s_col, a.col_hmax(k))
@@ -50,7 +50,10 @@ def solve_class(k, y, sy, sz, d, p, s_col, ratio=2.5):
         x, w, nrm = a.collocation(a.ETA_F, s_col, a.col_hmax(k))
     T = tangent_basis(nrm)
     sw = np.sqrt(w / w.sum())
-    A = a.matrix(x, y, k, T, comps, sig) * np.repeat(sw, 2)[:, None]
+    A = a.matrix(x, y, k, T, comps, sig)
+    if tail is not None:
+        A = np.concatenate((A, a.tail_matrix(x, tail, k, T, comps, sig)), axis=1)
+    A *= np.repeat(sw, 2)[:, None]
     scale = np.linalg.norm(A, axis=0)
     A /= scale
     rhs = -np.einsum("mab,mnb->man", T, class_part(x, k, d, p, sig)) * sw[:, None, None]
@@ -60,14 +63,21 @@ def solve_class(k, y, sy, sz, d, p, s_col, ratio=2.5):
     res = np.array([np.linalg.norm(Q @ (R @ c) - rhs, axis=0), np.linalg.norm(rhs, axis=0)])   # absolute, per wave
     c = c / scale[:, None]
     rfar = 1.0e5
-    Ffar = a.matrix(-rfar * d, y, k, None, comps, sig) * rfar * np.exp(-1j * k * rfar)      # (3 n_wave, unknowns)
+    Ffar = a.matrix(-rfar * d, y, k, None, comps, sig)                                       # (3 n_wave, unknowns)
+    if tail is not None:
+        Ffar = np.concatenate((Ffar, a.tail_matrix(-rfar * d, tail, k, None, comps, sig)), axis=1)
+    Ffar = Ffar * rfar * np.exp(-1j * k * rfar)
     F = np.einsum("nau,un->na", Ffar.reshape(len(d), 3, -1), c)                               # field of wave n in its own direction
     return np.einsum("na,na->n", p, F), res, len(x) * 2, A.shape[1]
 
 
-def rcs(freq, n_mid=6, J=3, step=2.0, s_col=0.35):
+def rcs(freq, n_mid=6, J=3, step=2.0, s_col=0.3, tip=True, s=0.5):
+    """s: spacing of the sources along a row, as a fraction of the distance to
+    the surface. It is the main convergence parameter for the waves that
+    drive current along the axis (0.7: 3%, 0.5: 0.2%, 0.4: 0.03% residual)."""
     k = 2 * np.pi * freq * 1e9 / C0
-    y = a.source_rows(n_mid, J, 0.5, hmax=2 * np.pi / k / 4)
+    y = a.source_rows(n_mid, J, 0.5, s=s, hmax=2 * np.pi / k / 4)
+    tail = a.tip_tail(n_mid, J, 0.5, s=s, hmax=2 * np.pi / k / 4) if tip else None
     phi = np.deg2rad(np.arange(0.0, 180.0 + 1e-9, step))
     d, ph, pv = waves(phi)
     out = {"phi_deg": np.rad2deg(phi), "freq": freq, "N": len(y)}
@@ -75,7 +85,7 @@ def rcs(freq, n_mid=6, J=3, step=2.0, s_col=0.35):
         amp, res2 = 0, 0
         for sy in (+1, -1):
             t0 = time.time()
-            f, res, rows, unk = solve_class(k, y, sy, sz, d, p, s_col)
+            f, res, rows, unk = solve_class(k, y, sy, sz, d, p, s_col, tail=tail)
             amp, res2 = amp + f, res2 + res ** 2
             print(f"  {name} class (sy={sy:+d}, sz={sz:+d}): unknowns={unk} rows={rows} largest residual / largest "
                   f"right-hand side over the angles = {res[0].max() / res[1].max():.1e} ({time.time() - t0:.0f}s)", flush=True)
@@ -88,9 +98,23 @@ if __name__ == "__main__":
     freq = float(sys.argv[1])
     n_mid, J = (int(v) for v in sys.argv[2].split(":")) if len(sys.argv) > 2 else (6, 3)
     step = float(sys.argv[3]) if len(sys.argv) > 3 else 2.0
+    tip = "--notip" not in sys.argv
+    s_src = ([float(v[4:]) for v in sys.argv if v.startswith("--s=")] or [0.5])[0]
     print(f"almond, {freq} GHz, {a.L * freq * 1e9 / C0:.2f} wavelengths long, sources n_mid={n_mid} J={J}", flush=True)
-    out = rcs(freq, n_mid, J, step)
-    np.savez(f"almond_rcs_{freq}GHz_{n_mid}_{J}.npz", **out)
+    out = rcs(freq, n_mid, J, step, tip=tip, s=s_src)
+    np.savez(f"almond_rcs_{freq}GHz_{n_mid}_{J}_s{s_src}{'' if tip else '_notip'}.npz", **out)
+    try:                                           # Bempp reference, if one was stored for this frequency
+        import json
+        ref = json.load(open("bem_almond_rcs_ref.json"))
+        r = ref[str(freq)]
+        idx = [int(np.argmin(np.abs(out["phi_deg"] - p))) for p in ref["phi_deg"]]
+        if np.allclose(out["phi_deg"][idx], ref["phi_deg"]):
+            for pol in ("HH", "VV"):
+                db = 10 * np.log10(out["sigma_" + pol][idx] / np.array(r[pol]))
+                print(f"{pol} against Bempp ({r['ndof']} dofs) at {len(idx)} angles: rms {np.sqrt(np.mean(db ** 2)):.3f} dB, "
+                      f"max {np.abs(db).max():.3f} dB at {ref['phi_deg'][int(np.argmax(np.abs(db)))]} deg")
+    except (OSError, KeyError):
+        pass
     lam2 = (C0 / (freq * 1e9)) ** 2
     print("azimuth[deg]   HH[dBsm]   VV[dBsm]   (HH, VV in dB relative to lambda^2)   boundary residual HH, VV")
     for i in range(0, len(out["phi_deg"]), max(1, int(round(30 / step)))):

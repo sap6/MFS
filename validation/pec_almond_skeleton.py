@@ -110,10 +110,56 @@ def surf_dist(x, y):
     return np.minimum(a - np.abs(y), b * np.sqrt(1 - eta ** 2))
 
 
-def source_rows(n_mid, J, q, beyond=(), s=0.7, tip_cut=0.004, hmax=np.inf):
+def row_etas(n_mid, J, q, beyond=()):
     etas = list((ETA_F - 3 * GAP) * np.cos((np.arange(n_mid) + 0.5) * np.pi / (2 * n_mid)))
     etas += [ETA_F - 2 * GAP * q ** j for j in range(J + 1)]
-    etas += [ETA_F + f * GAP for f in beyond]
+    return etas + [ETA_F + f * GAP for f in beyond]
+
+
+TIP_EXPS = (2.2, 2.4, 2.7, 3.0)
+
+
+def tip_tail(n_mid, J, q, beyond=(), s=0.7, tip_cut=0.004, hmax=np.inf, tip_end=4e-7):
+    """Continuation of every source row from where it stops (tip_cut * L from
+    the tip) towards the tip, by the same spacing rule. Near the tip the body
+    is an elliptic cone and the field behaves like r^(nu - 1) with an exponent
+    nu that is small when the wave drives current along the axis; free sources
+    cut off at a fixed distance then leave an error that decays only like
+    cut^nu. The continued points are not free: on each row they are tied
+    together with weights (r / r_cut)^e, dipole exponent e = nu + 2, for a
+    small set of exponents (TIP_EXPS) among which the fit chooses.
+    Returns points (N, 3), row index (N,), r / r_cut (N,)."""
+    x0, xt = L * (T1 - tip_cut), L * T1
+    pts, row, rr = [], [], []
+    for i, eta in enumerate(row_etas(n_mid, J, q, beyond)):
+        x = 0.5 * min(s * surf_dist(0.0, eta * ab(0.0)[0]), hmax)
+        while x < x0:
+            x += min(s * surf_dist(x, eta * ab(x)[0]), hmax)
+        while x < L * (T1 - tip_end):
+            yv = eta * ab(x)[0]
+            pts.append((x, yv, 0.0))
+            row.append(i)
+            rr.append((xt - x) / (xt - x0))
+            x += s * surf_dist(x, yv)
+    return np.array(pts), np.array(row), np.array(rr)
+
+
+def tail_matrix(x, tail, k, T=None, comps=COMPS, sig=SIG, exps=TIP_EXPS, mexps=()):
+    """Columns of the tip tail: per row, per electric component of the class,
+    per exponent (and per magnetic component and exponent in mexps)."""
+    pts, row, rr = tail
+    nc = 2 if T is not None else 3
+    cols = []
+    for cc, ee in ((comps[comps < 3], exps), (comps[comps >= 3], mexps)):
+        if len(ee) == 0 or len(cc) == 0:
+            continue
+        M = matrix(x, pts, k, T, cc, sig).reshape(len(x) * nc, len(pts), len(cc))
+        cols += [np.einsum("mnc,n->mc", M[:, row == i, :], rr[row == i] ** e) for i in np.unique(row) for e in ee]
+    return np.concatenate(cols, axis=1) if cols else np.zeros((len(x) * nc, 0), complex)
+
+
+def source_rows(n_mid, J, q, beyond=(), s=0.7, tip_cut=0.004, hmax=np.inf):
+    etas = row_etas(n_mid, J, q, beyond)
     pts = []
     x_end = L * (T1 - tip_cut)
     for eta in etas:
