@@ -25,6 +25,14 @@ almond itself do; classes odd in z use the derivative of the pole across the
 segment. Each mirror-parity class (y -> -y, z -> -z) is computed separately.
 
     python3 cone_exponents.py            # almond tip, all classes, with checks
+    python3 cone_exponents.py cube       # vertex of a cube (field outside a solid octant)
+
+The cube vertex uses the same method with poles inside the spherical triangle
+cut out by the cube, clustered exponentially towards its three corners along
+the medians (a lightning-type layout on the sphere), each pole carrying the
+fundamental solution and its two tangential derivatives. Check: the first
+Dirichlet exponent, 0.45417, is the known value for the exterior of a cube
+corner (the "Fichera corner").
 """
 import sys
 
@@ -134,6 +142,72 @@ class Cone:
         return out
 
 
+def d2leg(nu, x):
+    """P_nu'' from Legendre's equation."""
+    return (nu * (nu + 1) * leg(nu, x) - 2 * x * dleg(nu, x)) / (x * x - 1)
+
+
+class CubeVertex:
+    """Vertex at the origin of the solid octant x, y, z < 0; the field lives on the
+    other seven octants. On the unit sphere the body is the triangle with corners
+    -e_x, -e_y, -e_z and sides on the coordinate planes."""
+
+    def __init__(self, n=20, sigma=3.0, dmax=0.7, ni=200, bq=0.6, blev=18, seed=0):
+        V, C = -np.eye(3), unit(-np.ones(3))
+        self.poles, self.tans = [], []
+        for v in V:
+            t = unit(C - (C @ v) * v)
+            for j in range(1, n + 1):
+                dl = dmax * np.exp(-sigma * (np.sqrt(n) - np.sqrt(j)))
+                p = np.cos(dl) * v + np.sin(dl) * t
+                tp = unit(t - (t @ p) * p)
+                self.poles.append(p)
+                self.tans.append((tp, np.cross(p, tp)))
+        g, w = np.polynomial.legendre.leggauss(4)                     # sides: panels graded towards both corners
+        edges = np.concatenate(([0.0], (np.pi / 4) * bq ** np.arange(blev, -1, -1)))
+        th = np.concatenate([0.5 * (a + b) + 0.5 * (b - a) * g for a, b in zip(edges[:-1], edges[1:])])
+        wt = np.concatenate([0.5 * (b - a) * w for a, b in zip(edges[:-1], edges[1:])])
+        th, wt = np.concatenate((th, np.pi / 2 - th[::-1])), np.concatenate((wt, wt[::-1]))
+        self.xb = np.concatenate([np.outer(np.cos(th), V[i]) + np.outer(np.sin(th), V[(i + 1) % 3]) for i in range(3)])
+        self.nb = np.concatenate([np.tile(V[(i + 2) % 3], (len(th), 1)) for i in range(3)])   # conormal of each side
+        self.wb = np.tile(wt, 3)
+        self.rho = np.arccos(np.clip(np.max(-self.xb, axis=1), -1, 1))                       # distance to the nearest corner
+        pts = unit(np.random.default_rng(seed).normal(size=(8 * ni, 3)))
+        self.xi = pts[~np.all(pts < 0, axis=1)][:ni]
+
+    def columns(self, nu, x, normal=None):
+        out = []
+        for s, tt in zip(self.poles, self.tans):
+            c = np.clip(-(x @ s), -1 + 1e-15, 1 - 1e-15)
+            if normal is None:
+                out += [leg(nu, c)] + [-dleg(nu, c) * (x @ t) for t in tt]
+            else:
+                ns = np.sum(normal * s, axis=1)
+                out += [-dleg(nu, c) * ns] + [d2leg(nu, c) * ns * (x @ t) - dleg(nu, c) * (normal @ t) for t in tt]
+        return np.column_stack(out)
+
+    def sigma(self, nu, neumann=False):
+        # Neumann rows are weighted by the distance to the corner (the normal derivative grows like 1/distance there)
+        B = self.columns(nu, self.xb, self.nb if neumann else None) * (np.sqrt(self.wb) * (self.rho if neumann else 1.0))[:, None]
+        I = self.columns(nu, self.xi) / np.sqrt(len(self.xi))
+        A = np.vstack((B, I))
+        A = A / np.linalg.norm(A, axis=0)
+        U, s, _ = np.linalg.svd(A, full_matrices=False)
+        return np.linalg.svd(U[:len(B), s > 1e-12 * s[0]], compute_uv=False)[-1]
+
+    def exponents(self, neumann=False, lo=0.06, hi=2.6, step=0.04):
+        grid = np.arange(lo, hi, step)
+        grid = grid[np.abs(grid - np.round(grid)) > 1e-6]
+        sig = np.array([self.sigma(v, neumann) for v in grid])
+        out = []
+        for i in range(1, len(grid) - 1):
+            if sig[i] < sig[i - 1] and sig[i] <= sig[i + 1]:
+                r = minimize_scalar(lambda v: self.sigma(v, neumann), bounds=(grid[i - 1], grid[i + 1]),
+                                    method="bounded", options={"xatol": 1e-9})
+                out.append((r.x, r.fun))
+        return out
+
+
 def circular_exponent(alpha, neumann=False):
     """First axisymmetric exponent of a circular cone of half-angle alpha (exact condition)."""
     x = np.cos(np.pi - alpha)
@@ -156,6 +230,14 @@ def table(cone, hi=3.6):
 
 
 if __name__ == "__main__":
+    if len(sys.argv) > 1 and sys.argv[1] == "cube":
+        print("cube vertex (exterior of a solid octant); known first Dirichlet exponent: 0.45417")
+        for n in (8, 14, 20):
+            v = CubeVertex(n=n)
+            for neumann in (False, True):
+                print(f"  poles per corner {n:2d}, {'Neumann  (magnetic, tau)' if neumann else 'Dirichlet (electric, nu)'}: "
+                      + "  ".join(f"{e:.5f} ({s:.0e})" for e, s in v.exponents(neumann)))
+        sys.exit()
     print("check 1: circular cone, half-angle 20 degrees (exact: zero of P_nu(cos 160 deg))")
     c = Cone(np.tan(np.deg2rad(20.0)), np.tan(np.deg2rad(20.0)))
     print(f"  particular solutions: {c.exponents(1, 1)[0][0]:.8f}   exact: {circular_exponent(np.deg2rad(20.0)):.8f}")
