@@ -1,0 +1,277 @@
+<title>MFS Thesis to Paper</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;600;700&family=Source+Serif+4:opsz,wght@8..60,600&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: one reading column; diagrams and tables may run a little wider than the text.
+   Colour code is the thesis's own: red = source points, blue = boundary points. */
+:root {
+  --bg: #f6f7f9; --surface: #ffffff; --ink: #1a2230; --muted: #5a6677; --rule: #d6dbe3;
+  --src: #c5352b; --col: #2460c4; --sing: #7440bd; --sing-soft: rgba(116, 64, 189, .13);
+  --tail: #0c8a76; --tail-soft: rgba(12, 138, 118, .30); --body: #e7eaef; --field: rgba(36, 96, 196, .07);
+  --good: #0c7a4e; --warn: #9a5b00;
+  --f-body: "Source Sans 3", "Segoe UI", system-ui, sans-serif;
+  --f-head: "Source Serif 4", Georgia, serif;
+  --f-mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #11151b; --surface: #181e27; --ink: #e5e9ef; --muted: #9ba7b6; --rule: #2b3441;
+    --src: #f07a70; --col: #74a7ff; --sing: #b895f6; --sing-soft: rgba(184, 149, 246, .16);
+    --tail: #4fcfb6; --tail-soft: rgba(79, 207, 182, .32); --body: #222a35; --field: rgba(116, 167, 255, .08);
+    --good: #57d39c; --warn: #f0b458; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #11151b; --surface: #181e27; --ink: #e5e9ef; --muted: #9ba7b6; --rule: #2b3441;
+  --src: #f07a70; --col: #74a7ff; --sing: #b895f6; --sing-soft: rgba(184, 149, 246, .16);
+  --tail: #4fcfb6; --tail-soft: rgba(79, 207, 182, .32); --body: #222a35; --field: rgba(116, 167, 255, .08);
+  --good: #57d39c; --warn: #f0b458; color-scheme: dark;
+}
+body { background: var(--bg); color: var(--ink); font-family: var(--f-body); font-size: 17px; line-height: 1.55; }
+.wrap { max-width: 860px; margin: 0 auto; padding-block: 36px 72px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+h1 { font-family: var(--f-head); font-size: clamp(30px, 5vw, 42px); line-height: 1.12; margin: 0 0 10px; text-wrap: balance; }
+h2 { font-family: var(--f-head); font-size: 26px; line-height: 1.2; margin: 56px 0 12px; text-wrap: balance; }
+h3 { font-size: 18px; font-weight: 700; margin: 28px 0 6px; }
+p, li { max-width: 68ch; }
+p { margin: 0 0 14px; }
+ul, ol { padding-left: 22px; margin: 0 0 14px; }
+li { margin-bottom: 6px; }
+a { color: var(--col); }
+a:focus-visible { outline: 2px solid var(--col); outline-offset: 2px; }
+.lede { font-size: 19px; color: var(--muted); max-width: 62ch; }
+.stamp { font-family: var(--f-mono); font-size: 12.5px; color: var(--muted); letter-spacing: .02em; margin-bottom: 18px; }
+nav.toc { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 15px; margin: 22px 0 0; padding-top: 14px; border-top: 1px solid var(--rule); }
+.num, td.n, code { font-family: var(--f-mono); font-size: .86em; font-variant-numeric: tabular-nums; }
+code { background: var(--body); padding: 1px 5px; border-radius: 4px; }
+figure { margin: 22px 0 26px; }
+figure svg { display: block; width: 100%; height: auto; background: var(--surface); border: 1px solid var(--rule); border-radius: 8px; }
+.scroll { overflow-x: auto; }
+.scroll svg { min-width: 620px; }
+figcaption { font-size: 14.5px; color: var(--muted); margin-top: 8px; max-width: 72ch; }
+.print { background: #fff; border: 1px solid var(--rule); border-radius: 8px; padding: 8px; }
+.print img { display: block; width: 100%; height: auto; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 20px; font-size: 14.5px; color: var(--muted); margin: 4px 0 18px; }
+.legend span { display: inline-flex; align-items: center; gap: 7px; }
+.sw { width: 11px; height: 11px; border-radius: 50%; display: inline-block; }
+.sw.x { border-radius: 0; background: none; color: var(--sing); font-weight: 700; width: auto; height: auto; line-height: 1; }
+table { border-collapse: collapse; width: 100%; font-size: 15px; }
+th { text-align: left; font-weight: 600; color: var(--muted); font-size: 13px; letter-spacing: .04em; text-transform: uppercase; }
+th, td { padding: 8px 12px 8px 0; border-bottom: 1px solid var(--rule); vertical-align: top; }
+td.n { white-space: nowrap; }
+.tablewrap { overflow-x: auto; margin: 14px 0 22px; }
+.tablewrap table { min-width: 640px; }
+.note { border-left: 3px solid var(--warn); padding: 2px 0 2px 14px; margin: 18px 0; color: var(--ink); }
+.note.ok { border-left-color: var(--good); }
+.note p:last-child { margin-bottom: 0; }
+blockquote { margin: 12px 0 16px; padding: 2px 0 2px 16px; border-left: 3px solid var(--rule); color: var(--ink); font-family: var(--f-head); font-size: 17px; max-width: 64ch; }
+blockquote cite { display: block; font-family: var(--f-body); font-style: normal; font-size: 14.5px; color: var(--muted); margin-top: 6px; }
+.verdict { font-weight: 700; }
+/* diagram marks */
+svg text { font-family: var(--f-body); }
+.lab { font-size: 12.5px; fill: var(--ink); }
+.labs { font-size: 11.5px; fill: var(--muted); }
+.ttl { font-size: 13px; font-weight: 600; fill: var(--ink); }
+.bnd { stroke: var(--ink); stroke-width: 1.4; }
+.hid { stroke: var(--muted); stroke-width: 1; stroke-dasharray: 3 3; }
+.body { fill: var(--body); }
+.field { fill: var(--field); }
+.guide { stroke: var(--src); stroke-width: 1; stroke-dasharray: 3 3; }
+.src { fill: var(--src); }
+.srcs { stroke: var(--src); }
+.srco { fill: none; stroke: var(--src); stroke-width: 1.3; }
+.srcl { stroke: var(--src); stroke-width: 2.2; }
+.col { fill: var(--col); }
+.colt { stroke: var(--col); stroke-width: 1; }
+.singm { stroke: var(--sing); stroke-width: 2.2; }
+.singl { stroke: var(--sing); stroke-width: 1.5; stroke-dasharray: 5 4; }
+.plane { fill: var(--sing-soft); stroke: var(--sing); stroke-width: 1; }
+.forbid { fill: var(--sing-soft); stroke: var(--sing); stroke-width: 1; stroke-dasharray: 2 3; }
+.axis { stroke: var(--muted); stroke-width: 1; stroke-dasharray: 9 3 2 3; }
+.axisl, .dim, .brk { stroke: var(--muted); stroke-width: 1.1; color: var(--muted); }
+.bad { stroke: var(--muted); stroke-width: 1.4; stroke-dasharray: 7 4; }
+.tail { fill: var(--tail); }
+.tailbar { fill: var(--tail-soft); }
+.tailring { stroke: var(--tail); stroke-width: 2; }
+.lead { stroke: var(--muted); stroke-width: 1; color: var(--muted); }
+.wave { stroke: var(--ink); stroke-width: 1.3; color: var(--ink); }
+</style>
+
+<div class="wrap">
+<div class="stamp">MFS for Maxwell · working notes for the author · 16 November 2026</div>
+<h1>From the thesis to the paper</h1>
+<p class="lede">What was wrong with the thesis results, what was changed to fix each point, where the source points now sit for every shape, whether the torus belongs in the paper, and whether any of this is new.</p>
+<nav class="toc" aria-label="Sections">
+  <a href="#glance">At a glance</a><a href="#problem">The problem</a><a href="#rule">The one rule</a><a href="#torus">Torus</a><a href="#almond">Almond</a><a href="#cube">Cube</a><a href="#checks">How errors are checked</a><a href="#cost">Cost</a><a href="#new">Is it new?</a><a href="#open">Still open</a>
+</nav>
+
+<h2 id="glance">At a glance</h2>
+<p>The notation is the thesis's: source points <b>y<sub>j</sub></b>, boundary points <b>x<sub>i</sub></b>, coefficients <b>α<sub>j</sub></b>, the system <b>Aα = b</b>, <i>N</i> source points and <i>M</i> boundary points, source radius <i>R</i> or scale factor <i>S</i>. Each α<sub>j</sub> is still a 3-vector multiplying the same dyadic Green's function.</p>
+<div class="tablewrap"><table>
+<thead><tr><th>Weak point in the thesis</th><th>What was done</th><th>Evidence now</th></tr></thead>
+<tbody>
+<tr><td>The sphere, cube and almond runs solved the <i>interior</i> problem with the plane wave as boundary data. Its exact solution is the plane wave itself, so errors of 10⁻⁹ said nothing about scattering.</td><td>Solve the scattering problem: source points inside the body, field outside.</td><td>Sphere against the Mie series: <span class="num">2e-9</span> with <i>N</i> = 400, <span class="num">2e-14</span> with <i>N</i> = 1200.</td></tr>
+<tr><td>All three components of <b>E</b> were imposed (3<i>M</i> equations). The one exterior run had 2<i>M</i> equations for 3<i>N</i> unknowns with <i>M</i> = <i>N</i>: fewer equations than unknowns.</td><td>Impose only the two tangential components, which is all a perfect conductor prescribes; take <i>M</i> = 2<i>N</i>; solve by least squares.</td><td>4<i>N</i> equations for 3<i>N</i> unknowns everywhere.</td></tr>
+<tr><td>"Exponential convergence in <i>N</i>."</td><td>Measured the rate against Mie.</td><td>The error falls like exp(−c√<i>N</i>) in 3D. Best <i>R</i> is 0.35 to 0.45.</td></tr>
+<tr><td>Cube: for scattering, source points on an inner cube stall at 21–30% error however many are used.</td><td>Lines of dipoles along every edge, in the plane that bisects the edge, plus a "singular tail".</td><td><span class="num">0.011%</span>; an independent boundary-element solution agrees to <span class="num">0.02%</span>.</td></tr>
+<tr><td>Almond: a scaled copy of the surface (scale factor <i>S</i>) is unstable or 20% off for scattering.</td><td>Source points on the mid-plane, crowding towards the focal curve, plus a tail at the tip.</td><td>Within <span class="num">0.01–0.14 dB</span> of a published reference simulation at four frequencies.</td></tr>
+<tr><td>No second solver, no timings.</td><td>Bempp (a boundary element code) run on every shape, with wall times.</td><td>Tables in <a href="#cost">Cost</a>.</td></tr>
+<tr><td>The text credits GMRES and block structure.</td><td>Nothing to fix in the code: it always used a dense least-squares solve. The paragraph should go.</td><td>—</td></tr>
+<tr><td>New in this session</td><td>The torus as a fourth shape.</td><td><span class="num">7e-12</span> in 10 s. See <a href="#torus">Torus</a>.</td></tr>
+</tbody></table></div>
+
+<h2 id="problem">The problem that is solved now</h2>
+<figure class="scroll">{{D_PROBLEM}}
+<figcaption>Left: what the thesis computed for the sphere, cube and almond. Right: what the paper computes. The method, the Green's function and the unknowns are the same; the source points have moved inside and the field is wanted outside.</figcaption></figure>
+<div class="legend"><span><i class="sw" style="background:var(--src)"></i>source point y<sub>j</sub></span><span><i class="sw" style="background:var(--col)"></i>boundary point x<sub>i</sub></span><span><i class="sw x">✕</i>where the continued field is singular</span><span><i class="sw" style="background:var(--tail)"></i>tied "tail" source</span></div>
+<p>In the thesis the boundary data was <b>E</b>(<b>x</b>) = <b>p</b> e<sup>ik<b>d</b>·<b>x</b></sup> on the surface, the source points sat on an outer surface (<i>R</i> = 2.5, <i>L</i> = 1.5, <i>S</i> = 1.5 to 2.5), and the field was evaluated inside. The only field that satisfies this is the plane wave. It is perfectly smooth, so any reasonable set of source points reproduces it, and the cube's edges and the almond's tip never matter. That is why those runs reached 10⁻⁹ so easily.</p>
+<p>A conductor in a plane wave is a different problem. The unknown is the scattered field <b>E</b><sub>sc</sub> outside the body, and the surface condition is that the tangential part of <b>E</b><sub>sc</sub> cancels the tangential part of the incident wave. The normal part is not prescribed, so each boundary point gives two equations, one per tangent direction, not three. With <i>M</i> = 2<i>N</i> the system has 4<i>N</i> equations for 3<i>N</i> unknowns and is solved by least squares, as <code>numpy.linalg.lstsq</code> did in your notebooks.</p>
+<p>For the sphere there is an exact answer, the Mie series, so the error is a real error. With source points on an inner sphere of radius 0.5 it is <span class="num">2e-9</span> for <i>N</i> = 400 (under a second) and <span class="num">2e-14</span> for <i>N</i> = 1200. The error falls like exp(−c√<i>N</i>): <i>N</i> points on a surface give about √<i>N</i> per direction, and it is the count per direction that buys accuracy.</p>
+
+<h2 id="rule">The one rule behind every layout</h2>
+<p>Your thesis plotted the mean boundary error and ‖α‖ against <i>R</i> and found a best radius, with ‖α‖ growing beyond it. That observation has a precise cause, and it decides where source points may go for every shape.</p>
+<p>The scattered field is defined outside the body, but it can be continued smoothly inwards through the surface. The continuation stops being a solution only at certain points, curves or sheets inside the body: its singularities. The source points must be placed so that all of those lie inside the source surface. If the source surface is pulled in past a singularity, a solution still exists for each <i>N</i>, but ‖α‖ grows exponentially with <i>N</i> and rounding error destroys the answer. If the source surface is too close to the boundary, convergence is slow. So: as deep as possible, but never deeper than the singularities. Barnett and Betcke proved this for the disc in 2008; the engineering literature on "auxiliary sources" states the same rule.</p>
+<figure class="scroll">{{D_SETS}}
+<figcaption>Where the continued scattered field is singular, for the four shapes. Read from left to right, this is the paper's argument: the further the singular set reaches towards the surface, the less room an inner copy of the surface has, until at the cube it has none.</figcaption></figure>
+
+<h2 id="torus">Torus: a good addition, with two caveats</h2>
+<p class="verdict">Recommendation: include it, as about one page between the sphere and the almond.</p>
+<p>It is the one shape where the thesis's own layout, source points on an inner copy of the surface, works unchanged on a body that is neither convex nor simply connected. It also makes the rule above checkable by a formula, which the sphere cannot do because its only singularity is the centre.</p>
+<figure class="scroll">{{D_TORUS}}
+<figcaption>Torus with major radius <i>R</i> = 1 and tube radius <i>a</i> = 0.5, cut along its axis. Each red dot is a ring of dipoles around the axis; the source torus has tube radius <i>a</i><sub>s</sub> = 0.5<i>a</i>. The crosses mark the two rings where the continued field is singular. The dotted circle is the smallest source torus that still contains both.</figcaption></figure>
+<h3>What was computed</h3>
+<ul>
+<li>Electric dipoles (three unknowns each) on rings of an inner torus, boundary points on rings of the surface, two tangential equations per boundary point, least squares. Because both point sets are the same in every direction around the axis, the big system splits exactly into one small system per angular mode. This is a solver shortcut, not a different method: it gives the same α as the full matrix to <span class="num">8e-15</span>, and it works for a wave from any direction.</li>
+<li>Wave along the axis, wavenumber <i>k</i> = 2π: boundary residual <span class="num">2.5e-2, 3.7e-4, 1.6e-6, 6.5e-9, 1.0e-10</span> for <span class="num">1440, 3840, 8064, 13824, 21120</span> unknowns. Oblique wave: <span class="num">2.6e-10</span>.</li>
+<li>There is no Mie series for a torus. The checks are: a field with a known answer (dipoles hidden inside the tube) is reproduced to <span class="num">4e-10</span>; the optical theorem holds to <span class="num">9e-14</span>; Bempp with 9600 unknowns is 0.82% away after 334 s and its error shrinks in proportion to 1/unknowns, and extrapolating its cross-section gives <span class="num">11.7533</span> against the MFS value <span class="num">11.7526</span>.</li>
+</ul>
+<h3>How small may the source torus be?</h3>
+<p>The continued field is singular on the centre circle of the tube and on a second ring between the centre and the hole, at distance √(<i>R</i>² − <i>a</i>²) from the axis. That ring is the focal ring of toroidal coordinates. A source torus centred on the tube must therefore have</p>
+<p class="num" style="font-size:16px">a_s &gt; R − √(R² − a²), &nbsp; i.e. a_s/a &gt; 0.127, 0.268, 0.5 &nbsp; for &nbsp; a/R = 0.25, 0.5, 0.8.</p>
+<p>A fat torus leaves little room. This was argued from the reflection principle and then measured: for <i>a</i>/<i>R</i> = 0.8 the singularity sits at distance <span class="num">0.395–0.401</span> from the centre circle for four different incident waves (predicted <span class="num">0.400</span>), and at <span class="num">0.49</span> when measured from a point 0.1 further out (predicted <span class="num">0.50</span>), which shows it is on the side of the hole.</p>
+<figure><div class="print"><img src="{{IMG_TORUS_SRC}}" alt="Boundary residual and coefficient norm against the source torus radius for three tube radii, with dotted lines at the predicted limits."></div>
+<figcaption>The thesis's "error and ‖α‖ against <i>R</i>" plot, redone for the torus with 19 200 unknowns. Dotted lines: the predicted limit for each tube radius. To the right of its line each ‖α‖ curve stays near 1; to the left it climbs by orders of magnitude. For <i>a</i>/<i>R</i> = 0.8 it jumps from 3.6 to 7×10⁴ between <i>a</i><sub>s</sub>/<i>a</i> = 0.5 and 0.4.</figcaption></figure>
+<div class="note"><p><b>Caveats.</b> A torus is not new as a test body: the auxiliary-sources group in Tbilisi treated one in the 1990s, and a 2026 preprint uses tori for acoustic MFS. And the focal-ring statement is argued and measured, not proved; one 1983 paper (Millar) that may contain it could not be opened. Present the torus as a convergence study that confirms the rule, not as a discovery.</p></div>
+
+<h2 id="almond">Almond: source points on the mid-plane</h2>
+<p>Every cross-section of the almond is an ellipse three times as wide as it is high. For an ellipse the continued field is singular at the two focal points, and for a 3:1 ellipse those lie at 94% of the half-width. A copy of the surface scaled by any factor below 0.94 leaves them outside, which breaks the rule. That is why the scaled layout is unstable or 20% off for scattering, whatever <i>S</i> is chosen.</p>
+<figure class="scroll">{{D_ALMOND_SECTION}}
+<figcaption>One cross-section of the almond. The dashed ellipse is a scaled copy of the surface (factor 0.65): the focal points are outside it. The source points lie on the flat mid-plane instead, in rows whose spacing halves towards each focal point.</figcaption></figure>
+<p>Joined along the body, the focal points form a focal curve in the mid-plane, just inside the rim. The source points are point dipoles on the mid-plane, in rows that follow the rim. Six rows cover the middle; four more approach the focal curve, each half as far from it as the one before. Along a row, neighbouring points are half the local distance to the surface apart. On the mid-plane a field that is symmetric top to bottom needs only three of the six possible components (electric dipoles along <i>x</i> and <i>y</i>, magnetic along <i>z</i>), the antisymmetric part the other three.</p>
+<figure class="scroll">{{D_ALMOND_PLAN}}
+<figcaption>The actual source points used at 1.19 GHz (2762 of them), drawn from the solver's coordinates. Dashed: the focal curve.</figcaption></figure>
+<h3>The tip</h3>
+<p>The tip is the point of a cone, and the field there grows like <i>r</i><sup>−0.70</sup> with the distance <i>r</i> to the tip. Free source points stop 1 mm short of it, and that cut-off alone left a 19% residual for waves that drive current along the body, with errors up to 1.2 dB. More source points did not help. The fix is the same device as on the cube, described in the next section: each row is continued to 0.0001 mm from the tip, but the continued points are not free. They share one unknown per row, and their strengths follow the power law that the cone dictates. The exponent, 0.2996, was computed for this cone, not fitted.</p>
+<h3>Results</h3>
+<ul>
+<li>At 1.19, 7 and 9.92 GHz the radar cross-section for all look angles and both polarisations is within <span class="num">0.03, 0.04, 0.12 dB</span> of Bempp.</li>
+<li>Against the public Austin benchmark at 3.5, 5.125, 7 and 10.25 GHz: <span class="num">0.04–0.14 dB</span> (HH) and <span class="num">0.01–0.02 dB</span> (VV) from its reference simulation; about 1 dB from the measurements, which is also how far the reference simulation is from them.</li>
+<li>One deep null differs from the reference simulation by 4.3 dB while the MFS is converged to 0.02 dB there. Which is right is not settled; the paper should say so.</li>
+</ul>
+
+<h2 id="cube">Cube: sources along the edges, and the tail</h2>
+<p>At an edge of a conductor the field grows like ρ<sup>−1/3</sup> with the distance ρ to the edge. No finite set of source points at a fixed depth can produce that, so an inner cube of source points stalls: 21–30% error from 72 to 450 unknowns, with no improvement. The singular set of the continued field reaches the surface at the edges.</p>
+<p>Where exactly is it? For a convex body with flat faces there is a short exact answer. Mirror the outside field in a face, as in the method of images, and it continues the field into the body. Doing this from each face, each continuation is valid in the part of the body nearest that face. The pieces disagree only on the planes that are equally far from two faces. For the cube these are the twelve triangles joining each edge to the centre, each lying in the plane that bisects its edge. The scattered field is exactly the field of electric and magnetic currents on those triangles. So that is where the source points go, and both kinds of dipole are needed.</p>
+<figure class="scroll">{{D_CUBE}}
+<figcaption>Left: cut through the middle of the cube. Dashed: the bisecting planes. Red dots: the lines of dipoles of the four vertical edges, seen end on, at depths 0.2, 0.1, 0.05, … from the edge. Red squares: a coarse grid of point dipoles on an inner cube for the smooth part of the field. Blue ticks: boundary points. Right: one edge with its lines of dipoles and the bisecting plane they lie in.</figcaption></figure>
+<h3>What the unknowns are</h3>
+<ul>
+<li><b>Lines, not points.</b> Each source is a line of dipoles parallel to the edge. The dipole strength along the line is a polynomial in a stretched coordinate, so one line resolves everything from the middle of the edge to the corners with about ten to twenty unknowns.</li>
+<li><b>Depths halve.</b> Lines sit at depths 0.2 × 2<sup>−<i>j</i></sup>, <i>j</i> = 0 … <i>J</i>. A factor 0.25 between depths stalls; 0.5 works.</li>
+<li><b>Electric and magnetic dipoles on every line.</b> Electric only stalls at 5%.</li>
+<li><b>Boundary points crowd towards the edges</b>, at least twice as many per scale as there are unknowns, and each equation is weighted by √(area) × (distance to the edge)<sup>1/2</sup>. With too few boundary points the result is wrong without any warning.</li>
+<li><b>Corners:</b> point dipoles on the diagonal into each corner, at the same depths.</li>
+</ul>
+<h3>The singular tail</h3>
+<p>With all of that the error still stalled near 0.5%. The cause was the gap between the deepest line and the edge: whatever the deepest depth <i>d<sub>J</sub></i>, the current below it was missing. Adding more free lines costs unknowns and conditioning for ever smaller gains.</p>
+<figure class="scroll">{{D_TAIL}}
+<figcaption>Depths of the lines at one edge, <i>J</i> = 5, on a logarithmic scale. The six free lines each have their own unknowns. The nine tail lines below them add no unknowns per line: they repeat the pattern of a single shared set of unknowns, scaled by fixed weights. The bars show the weights for the exponent 2/3.</figcaption></figure>
+<p>The tail is nine further lines at depths <i>d<sub>J</sub></i>/2, <i>d<sub>J</sub></i>/4, …, tied together: line <i>i</i> carries a shared set of unknowns times the fixed weight (<i>d<sub>i</sub></i>/<i>d<sub>J</sub></i>)<sup><i>e</i></sup>. The exponents <i>e</i> are not tuned. They follow from the known expansion of the field at an edge, one per dipole component:</p>
+<div class="tablewrap"><table>
+<thead><tr><th>Dipole on the bisecting plane</th><th>Current density near the edge</th><th>Tail exponent e</th></tr></thead>
+<tbody>
+<tr><td>electric, along the edge</td><td class="n">ρ^(−1/3)</td><td class="n">2/3</td></tr>
+<tr><td>electric, pointing into the body</td><td class="n">ρ^(2/3)</td><td class="n">5/3</td></tr>
+<tr><td>magnetic, along the edge</td><td class="n">ρ^(1/3)</td><td class="n">4/3</td></tr>
+<tr><td>magnetic, pointing into the body</td><td class="n">ρ^(4/3)</td><td class="n">7/3</td></tr>
+</tbody></table></div>
+<p>The corners get the same treatment on the diagonal, with exponents computed for the cube corner (0.454 and 0.840, plus 2). In the 2D test problem the tail took the error from 10⁻² to 8×10⁻⁵ with three extra unknowns per corner.</p>
+<h3>Results</h3>
+<ul>
+<li>Refining everything together (<i>J</i> = 3 … 8): <span class="num">1.27%, 0.52%, 0.20%, 0.089%, 0.033%, 0.011%</span>. Without the tail: 5.4%, 2.5%, 1.1% and then no better.</li>
+<li>Independent check: Bempp on a mesh graded towards the edges, 10 368 unknowns, is <span class="num">0.022%</span> away. Below that the only reference is the method itself.</li>
+<li>Any incident wave is handled, at 1.6 to 1.9 times the cost of the symmetric case.</li>
+</ul>
+
+<h2 id="checks">How errors are checked now</h2>
+<ul>
+<li><b>Mie series</b> for the sphere: an exact answer.</li>
+<li><b>Bempp</b>, an independent boundary element code, for every shape. In every case its mesh sequence converges towards the MFS field.</li>
+<li><b>Boundary residual at fresh points</b>: the boundary condition is tested at points that were not used in the fit. This is your "mean boundary error", but for the scattering problem and off the fitting points.</li>
+<li><b>Optical theorem</b>: two ways of computing the total scattered power must agree. Needs no reference.</li>
+<li><b>Known-solution test</b>: put dipoles inside the body, use their field as data, and compare with the exact answer outside.</li>
+<li><b>Published data</b> for the almond: measurements and a fine-mesh reference simulation from the Austin benchmark suite.</li>
+</ul>
+
+<h2 id="cost">Cost against Bempp</h2>
+<div class="tablewrap"><table>
+<thead><tr><th>Shape</th><th>MFS</th><th>Bempp</th><th>Reading</th></tr></thead>
+<tbody>
+<tr><td>Sphere</td><td class="n">2e-9 in 1.0 s<br>2e-13 in 5.4 s</td><td class="n">0.37% in 411 s</td><td>Not close.</td></tr>
+<tr><td>Torus</td><td class="n">2e-9 in 6.7 s<br>7e-12 in 10 s</td><td class="n">0.82% in 334 s</td><td>Not close. Without the per-mode shortcut the MFS needs 26 s for 1e-4.</td></tr>
+<tr><td>Almond, 1.19 GHz</td><td class="n">0.006% in 13.5 s</td><td class="n">0.30% in 412 s</td><td>Not close.</td></tr>
+<tr><td>Cube</td><td class="n">0.089% in 95 s<br>0.011% in 284 s</td><td class="n">uniform mesh: 0.19% in 832 s<br>graded mesh: 0.105% in 161 s</td><td>Ahead of a uniform mesh by 10–15 times; level with a graded mesh near 0.15%; ahead below 0.1%.</td></tr>
+</tbody></table></div>
+<figure><div class="print"><img src="{{IMG_TORUS_COST}}" alt="Error against wall time for the torus: MFS mode by mode, MFS with the full matrix, and Bempp."></div>
+<figcaption>Torus, error against wall time on the same four-core machine.</figcaption></figure>
+<figure><div class="print"><img src="{{IMG_CUBE_COST}}" alt="Error against wall time for the cube: plain MFS, edge sources without tail, edge sources with tails, Bempp on uniform and on graded meshes."></div>
+<figcaption>Cube. The top curve is the thesis layout applied to scattering. The pink curve is the result that must be reported plainly: a boundary element mesh graded towards the edges is as fast as the MFS around 0.15–0.2%, and faster for a general incident wave at 0.1–0.4%.</figcaption></figure>
+<div class="note"><p>The MFS timings use the symmetry of each body (mirror planes for the cube and almond, rotation for the torus); Bempp uses none. Bempp ran with dense matrices; compressed or higher-order boundary element codes were not tried. Everything is at most about nine wavelengths across.</p></div>
+
+<h2 id="new">Was this an open problem, and is the fix new?</h2>
+<p>This time the papers were read in full wherever an open copy exists, not from abstracts. The short answer: the edge problem in 3D is open by the testimony of the people best placed to know, nothing was found that solves it this way, and three of the supporting ideas have older relatives that the paper must cite.</p>
+<h3>The question has been posed in print</h3>
+<p>"Lightning" solvers cluster sources exponentially towards the corners of 2D domains. Their authors say this about three dimensions:</p>
+<blockquote>The extension to 3D is a bigger issue to be considered. Here, as in 2D, there are MFS papers going back many years. The question is whether a new more focussed connection with approximation theory near singularities can bring a new efficiency, as we have shown here for 2D problems, and we are open-minded on this question.<cite>Gopal and Trefethen, SIAM J. Numer. Anal. 2019 (<a href="https://arxiv.org/abs/1905.02960">arXiv:1905.02960</a>)</cite></blockquote>
+<blockquote>Extension of these methods to three dimensions is undoubtedly possible, but not straightforward, and we have no view as to whether something practical can be developed here or not.<cite>Brubeck and Trefethen, SIAM J. Sci. Comput. 2022 (<a href="https://arxiv.org/abs/2107.01572">arXiv:2107.01572</a>)</cite></blockquote>
+<blockquote>Although this approach can be in principle extended to deal with three-dimensional polyhedral edge and vertex singularities, how to efficiently solve the large scale least-squares problem required to resolve these singularities is particularly challenging.<cite>Kong and Shen, October 2026 (<a href="https://arxiv.org/abs/2610.26540">arXiv:2610.26540</a>); their 3D part treats isolated points only</cite></blockquote>
+<h3>What the engineering literature does instead</h3>
+<p>The method of auxiliary sources is the MFS under another name. Its standard texts state the enclosure rule and then avoid edges:</p>
+<blockquote>It is more advantageous to smooth the edges under certain radius of curvature and to trace out its influence on the final results.<cite>Karkashadze and Zaridze, The method of auxiliary sources in applied electrodynamics; the same advice in Bogdanov, Karkashadze and Zaridze 1999</cite></blockquote>
+<p>A July 2026 paper from the same community (<a href="https://arxiv.org/abs/2607.28558">arXiv:2607.28558</a>) still handles the edges of a finite sheet by moving sources closer to them, in two dimensions, with no singular functions.</p>
+<h3>What is new, and what is not</h3>
+<div class="tablewrap"><table>
+<thead><tr><th>Element</th><th>Status</th><th>Closest earlier work</th></tr></thead>
+<tbody>
+<tr><td>MFS for a 3D conductor with sharp edges that converges (cube to 0.011%)</td><td><b>Not found anywhere.</b></td><td>2D only: Gopal–Trefethen; Ginn–Trefethen (Helmholtz); Hochman, Leviatan and White, J. Comput. Phys. 2013.</td></tr>
+<tr><td>The singular tail: tied sources with exponents taken from the edge, corner and tip expansions</td><td><b>Not found.</b></td><td>Singular functions added to 2D MFS (Antunes–Valtchev, Marin, Barnett–Betcke 2010). Singular basis functions in boundary elements.</td></tr>
+<tr><td>Almond with a tip tail, checked against measurements</td><td><b>Not found.</b></td><td>Discrete sources on the symmetry plane of flat particles (Doicu, Eremin, Wriedt).</td></tr>
+<tr><td>Field of a convex polyhedron = currents on its skeleton</td><td>Not found for scattering. <b>Has a close relative.</b></td><td>Gustafsson 1998: a uniformly filled convex polyhedron has the same outside gravity as a mass layer on the same skeleton ("mother body"). Cite it and call ours the scattering counterpart.</td></tr>
+<tr><td>Source points must enclose the singularities</td><td>Known.</td><td>Barnett–Betcke 2008; the auxiliary-sources literature; Kyurkchan, Sternin and Shatalov.</td></tr>
+<tr><td>MFS for Maxwell on smooth bodies</td><td>Known.</td><td>Young and Ruan 2005; Kangro 2012 (a convergence proof); Weed et al. 2026.</td></tr>
+<tr><td>Torus as a test body</td><td>Known.</td><td>Karkashadze and Zaridze (auxiliary contour "surrounds the foci"); Cai, Bagge and Martinsson 2026 (acoustic).</td></tr>
+<tr><td>Focal ring of the torus as a singularity</td><td>Not found; <b>not safe to claim yet.</b></td><td>Millar 1983 (general theory for bodies of revolution), unread. In even dimensions only the centre circle is singular (Aberra 2002).</td></tr>
+</tbody></table></div>
+<p>A safe sentence for the paper: <i>to our knowledge, the first MFS for 3D Maxwell scattering that converges on bodies with edges and tips</i>. Not safe: "the first lightning method in 3D" (Kong and Shen have a version for isolated points).</p>
+<div class="note"><p><b>Limits of the search.</b> Elsevier, SIAM, IEEE, ACM and MDPI refuse automated readers, so papers hosted only there were seen as abstracts at best. Russian and Georgian work from the 1980s and 90s is only partly online. A precedent there cannot be ruled out, which is why the wording stays "to our knowledge".</p></div>
+<h3>Papers worth getting, most important first</h3>
+<ol>
+<li>Millar, Arch. Ration. Mech. Anal. 81 (1983) 349–372. Decides what may be said about the torus.</li>
+<li>Gustafsson, SIAM J. Math. Anal. 29 (1998) 1106–1117. Decides the wording of the skeleton result.</li>
+<li>Kangro, AIP Conf. Proc. 1479 (2012) 2328–2331. Convergence of the MFS for 3D Maxwell.</li>
+<li>Ye, Hu, Xu, Yan, Eng. Anal. Bound. Elem. 155 (2023) 401–406. A different MFS for 3D conductors.</li>
+<li>De Smedt and Van Bladel, IEEE Trans. Antennas Propag. 34 (1986) 865–870. To compare the tip exponents.</li>
+<li>Kelley et al., IEEE Antennas Propag. Mag. 62(1) (2020) 96–106. The measurement uncertainty of the almond data.</li>
+<li>Costabel and Dauge, Arch. Ration. Mech. Anal. 151 (2000) 221–276. To check the edge and corner exponents.</li>
+</ol>
+
+<h2 id="open">Still open</h2>
+<ul>
+<li>The derivations (skeleton result, tail exponents, torus) have been read by nobody but their author. Timo should check the edge-exponent argument first.</li>
+<li>The source layouts are built by hand for each shape. There is no automatic construction for a general body.</li>
+<li>The skeleton result is for convex bodies with flat faces. For the almond and the torus the layouts rest on the enclosure rule and on numerical evidence.</li>
+<li>On the cube the selling point is the rate of convergence, not the cost at 0.2%.</li>
+<li>The manuscript itself is still the thesis text. Nothing has been pushed to the Overleaf repository.</li>
+</ul>
+<p style="color:var(--muted);font-size:14.5px;margin-top:28px">Numbers and scripts: <code>NOTES.md</code>. Derivations: <code>DERIVATIONS.md</code>. Literature with how each item was checked: <code>LITERATURE.md</code>. Diagrams are drawn by <code>explainer/make_diagrams.py</code> from the solvers' coordinates.</p>
+</div>
