@@ -1,6 +1,6 @@
 # Project notes
 
-Last updated: 2026-11-16 (second session of that day). All scripts are in
+Last updated: 2026-11-16 (third session of that day: torus, second literature pass). All scripts are in
 `validation/`. Companion files: `DERIVATIONS.md` (proofs and exponent tables),
 `LITERATURE.md` (T6), `PAPER_OUTLINE.md` (T7). Problem throughout:
 exterior scattering of a plane wave by a perfectly conducting (PEC) body,
@@ -27,6 +27,23 @@ tangential E_sc = -tangential E_inc on the surface, least-squares collocation.
   `validation/austin_almond/`; which BEM curve leads the cube figure; title.
 - Nothing was ever pushed to `sap6/mfs-paper`; it is still the thesis text
   (commit 4f8731f).
+
+### Third session of 2026-11-16 (read this first)
+
+- New example: the **torus** (section 2, items 33-36; `pec_torus.py`,
+  `torus_singularities.py`, `fig_cost_torus.py`, `fig_torus_sources.py`,
+  `bem_torus.py`; `DERIVATIONS.md` E). Plain MFS (dipoles on an inner torus)
+  reaches 7e-12 in 10 s; Bempp is at 0.8% after 334 s. Recommendation: put
+  it in the paper as a short section between the sphere and the almond; the
+  author decides.
+- Second literature pass with full texts (item 37, `LITERATURE.md` section
+  7): the 3D edge case is still open in the literature; new items to cite;
+  two claims to soften (skeleton theorem: Gustafsson's mother bodies are the
+  potential-theory analogue; torus: MAS was applied to a torus in the 1990s).
+- An illustrated explainer for the author was published as a private
+  artifact ("MFS Thesis to Paper"); its source is `explainer/index.html`.
+- Still open: T12 (papers behind publisher walls, list in `LITERATURE.md`
+  section 8), T13 write-up.
 
 ## 0. Scope (from the author)
 
@@ -75,6 +92,7 @@ the cube without that qualification.
 | Unit cube, k = 2pi | lightning-type edge sources, no tail | 0.5% (J = 10); 0.8% at J = 12 (stall) | Bempp h = 0.05 |
 | Unit cube, k = 2pi | edge sources + edge and vertex tails, balanced refinement (section 2, items 8, 12, 22, 25) | 1.27%, 0.52%, 0.20%, 0.089%, 0.033%, 0.011% for J = 3..8 against J = 9; optical mismatch down to 4.0e-5 | MFS J = 9; graded Bempp (10368 dofs) is 0.022% from J = 9, its extrapolation 0.016% |
 | Unit cube, oblique wave (from theta 60, phi 25, polarisation angle 35 degrees) | the same, four parity classes (`cube_general.py`) | see item 26 | graded Bempp, 10368 dofs |
+| Torus R = 1, a = 0.5, k = 2pi (also a = 0.25, 0.8; any wave) | dipoles on the inner torus a_s = 0.5 a, solved mode by mode about the axis | field 5e-7 (8064 unknowns, 3 s), 2e-9 (13824, 7 s), 7e-12 (21120, 10 s) against the finest run; residual 1e-10, optical mismatch 9e-14 | finest MFS (40320 unknowns); Bempp 9600 dofs is 0.82% away and its 1/N extrapolation of the cross-section agrees to 7e-5 |
 | NASA almond, 1.19 GHz, nose-on | confocal / shrunk source surface | unstable or 20%+ | - |
 | NASA almond, 1.19 / 7 / 9.92 GHz, monostatic RCS, HH and VV | skeleton sources + tip tail, four parity classes | within 0.03 / 0.04 / 0.12 dB rms of Bempp; self-converged to 0.001 dB (1.19 GHz) and 0.01 dB rms (9.92 GHz) | Bempp 9558 / 13632 dofs |
 | NASA almond, 1.19 GHz, nose-on | skeleton sources on mid-plane | self-converged to 5e-5, optical mismatch 1e-4; Bempp approaches it like 1/N (0.67%, 0.29%, 0.20%) | Bempp 4212, 9558, 13632 dofs |
@@ -321,10 +339,79 @@ are from the first.)
     was not touched. Results were committed there and pushed to the working
     branch.
 
+### Third session, 2026-11-16 (items 33-38)
+
+33. **Torus, plain MFS** (`pec_torus.py`). Electric dipoles (3 unknowns
+    each) on rings of an inner torus; collocation on rings of the surface,
+    two tangential components, rows weighted by sqrt(area). Both sets are
+    tensor grids (ring, angle about the axis), so the least-squares problem
+    splits exactly into one small problem per Fourier mode about the axis,
+    for any incident wave (checked against the full matrix: 8e-15). Known
+    exterior solution (three dipoles inside the tube): 4e-10 with 13824
+    unknowns. Plane wave along the axis, R = 1, a = 0.5, a_s = 0.5 a: residual
+    2.5e-2, 3.7e-4, 1.6e-6, 6.5e-9, 1.0e-10 for 1440, 3840, 8064, 13824, 21120
+    unknowns; optical mismatch down to 9e-14; sigma_ext = 11.75257471.
+    Oblique wave (from theta 60, phi 25, polarisation 35): residual 2.6e-10
+    with 21120 unknowns, sigma_ext = 9.53615856. Not prototyped in 2D first:
+    the 3D runs take seconds.
+34. **Torus: the singular set** (`torus_singularities.py`,
+    `fig_torus_sources.py`, `DERIVATIONS.md` E). The continued field is
+    singular on the centre circle and on the focal ring rho = sqrt(R^2 - a^2);
+    a concentric source torus needs a_s > R - sqrt(R^2 - a^2), i.e. a_s/a >
+    0.127, 0.268, 0.5 for a/R = 0.25, 0.5, 0.8. Measured: distance 0.395-0.401
+    for a/R = 0.8 with four waves (predicted 0.400), 0.49 from a centre moved
+    by 0.1 (0.50); coefficient norm jumps from 3.6 to 7e4 between a_s/a = 0.5
+    and 0.4. For a/R = 0.5 and 0.25 the fit is consistent but not clean. The
+    reflection argument behind it is a sketch, not a proof.
+35. **Torus: traps.** (a) An off-centre source circle with the default
+    2 collocation rings per source ring gives garbage without warning
+    (residual 1 to 1e4 at independent points): use 4 rings per source ring
+    (`ntheta_col=4*ns`). (b) Fourier modes that the wave does not excite
+    carry coefficients of order 1 (rounding noise in the null space); they
+    do not harm the field but ruin any statistic of the coefficients unless
+    excluded (`rhs_modes`). (c) The size of the coefficients on an off-centre
+    circle is not a clean indicator of enclosure; the density-decay fit
+    with a concentric circle is.
+36. **Torus cost table** (`python3 fig_cost_torus.py`, third container, 4
+    cores, error against the finest MFS run, times include residual and
+    cross-section evaluation): MFS 1440, 3840, 8064, 13824, 21120 unknowns:
+    0.28, 1.1, 3.1, 6.7, 10.1 s for 5.0e-3, 1.1e-4, 5.0e-7, 2.0e-9, 7.3e-12.
+    The same problem with the full matrix (no symmetry): 1440, 2496, 3840
+    unknowns: 1.7, 6.5, 25.5 s for 5.0e-3, 7.6e-4, 1.1e-4. Bempp (structured
+    mesh, `bem_torus.py`) 864, 2400, 4704, 9600 dofs: 9, 33, 93, 334 s for
+    10%, 3.3%, 1.7%, 0.82%; sigma_ext 11.255, 11.585, 11.668, 11.711, error
+    like 1/dofs, extrapolated 11.7533 (MFS 11.7526). Oblique wave: Bempp
+    4704 dofs is 2.0% from the MFS. The MFS uses the rotational symmetry of
+    the body; Bempp uses none.
+37. **Second literature pass** (`LITERATURE.md` sections 7-8). Full texts
+    read this time. No 3D MFS/MAS with edge-singular sources found; the MAS
+    literature rounds edges (Bogdanov, Karkashadze, Zaridze 1999). Gopal and
+    Trefethen 2019 pose the 3D question explicitly. New to cite: Kangro 2012
+    (convergence of interior source methods for 3D Maxwell), Hochman,
+    Leviatan, White 2013 (JCP; rational-function / dipole fitting for 2D
+    Laplace with corners, a forerunner of lightning), Gustafsson 1998 (mother
+    bodies of convex polyhedra: the potential-theory analogue of the skeleton
+    theorem), Karkashadze and Zaridze (MAS on a torus, auxiliary contour
+    around the foci), Cai, Bagge, Martinsson 2026 (MFS on tori, acoustic),
+    Yurkin and Kahnert 2013 (accuracy limits for a dielectric cube).
+    arXiv:2310.01665 is Ginn's Oxford MMath dissertation (arXiv authors Ginn
+    and Trefethen).
+38. **Is the torus worth including?** Yes, as about one page: it is the one
+    shape where the thesis's own layout (sources on an inner copy of the
+    surface) works unchanged on a non-convex, ring-shaped body, it reaches
+    1e-11, and it makes the paper's organising rule (sources must enclose the
+    singularities of the continued field) visible with a formula that can be
+    checked. It is not novel as an application (MAS and acoustic MFS have
+    used tori) and it has no closed-form reference. Do not present the
+    focal-ring statement as new before Millar 1983 has been read.
+
 ## 3. Current best commands
 
 ```
 python3 pec_sphere_convergence.py && python3 plot_pec_sphere.py
+python3 pec_torus.py ; python3 torus_singularities.py                              # torus: self-checks; where the continued field is singular
+python3 fig_cost_torus.py ; python3 fig_torus_sources.py                           # torus: cost table against Bempp; residual and |alpha| against the source radius (add `run`)
+python3 bem_torus.py 12,20,28,40 0.5                                               # Bempp on the torus (optional: theta phi pol of the wave)
 python3 fig_cost_cube.py ; python3 fig_cost_almond.py ; python3 fig_cost_sphere.py   # tables and figures from saved data (add `run` to recompute)
 python3 fig_almond_rcs.py ; python3 fig_almond_benchmark.py                         # almond RCS against Bempp / against the Austin benchmark
 python3 cube_general.py 6 60 25 35                # cube, any plane wave (from theta, phi; polarisation angle), four parity classes
@@ -385,13 +472,18 @@ T3 check of the thesis case (wave along -z, polarised along y, 1.19 GHz):
 MFS backscatter 0.110432 m^2 (row spacing 0.5) and 0.110436 m^2 (0.4); Bempp
 0.109478 (4212 dofs) and 0.110008 m^2 (9558 dofs), converging towards the MFS.
 
+Done in the third session of 2026-11-16 (items 33-38), at the author's
+request: **T19 Torus** (new example, solver, singular set, cost table
+against Bempp, two figures) and a second literature pass with full texts.
+
 Open, in the order I would take them:
 
 - [ ] **T12 Read what could not be fetched** (author or a session with
-      publisher access): the list at the end of `LITERATURE.md`. Most urgent:
-      Ye et al. 2023 (regularised MFS for 3D PEC), De Smedt and Van Bladel
-      1986 (compare their exponent tables with ours), Kelley et al. 2020
-      (measurement uncertainty to quote), Liu's thesis.
+      publisher access): the list in `LITERATURE.md` section 8. Most urgent:
+      Millar 1983 (torus singularities), Gustafsson 1998 (skeleton analogue),
+      Ye et al. 2023 (regularised MFS for 3D PEC), Kangro 2012, De Smedt and
+      Van Bladel 1986 (compare exponent tables), Kelley et al. 2020
+      (measurement uncertainty to quote).
 - [ ] **T13 Write-up** (author writes; section 6 and `PAPER_OUTLINE.md`).
       Still missing for it: sketches of the two source layouts (cube
       cross-section at an edge; almond mid-plane), and a figure of the
@@ -455,6 +547,14 @@ Open, in the order I would take them:
 - Almond 10.25 GHz, layouts 6:3 and 8:5: 0.0006 dB mean difference, 0.024 dB in the -66.7 dBsm null where the reference simulation differs by 4.3 dB.
 - Two jobs at once: QR 20 times slower, timings of that batch discarded.
 
+- Torus, known exterior solution (3 dipoles in the tube): 1.8e-3, 3.1e-5, 1.2e-7, 4.2e-10 for 1440 to 13824 unknowns; mode-by-mode solver equals the full matrix to 8e-15.
+- Torus R = 1, a = 0.5, wave along the axis: residual 2.5e-2 to 1.0e-10 for 1440 to 21120 unknowns; sigma_ext 11.75257471; optical mismatch 9e-14 at the finest.
+- Torus, fitted singularity distance, a/R = 0.8: 0.395-0.401 (axis), 0.39-0.40 (in plane), 0.391-0.400 (oblique), 0.398 (k = 4 pi); predicted R - c = 0.400. Centre moved to 1.1: 0.49 (0.50). a/R = 0.5, 0.25: no clean fit.
+- Torus, |alpha| against a_s/a at 19200 unknowns: a/R = 0.8: 1.9, 3.6, 41, 7e4 at 0.55, 0.50, 0.45, 0.40; a/R = 0.5: 13, 49, 460 at 0.30, 0.25, 0.20; a/R = 0.25: 24, 770 at 0.15, 0.10.
+- Torus, off-centre source circles with 2 collocation rings per source ring: residual 1 to 1e4 (silent); with 4: 6.5e-8.
+- Torus cost: MFS 0.28-10.1 s for 5e-3 to 7e-12; full matrix 25.5 s for 1.1e-4; Bempp 9-334 s for 10% to 0.82%, extrapolated sigma_ext 11.7533 against 11.7526.
+- Torus, oblique wave: MFS residual 2.6e-10 (21120 unknowns, 1.5 s solve); Bempp 4704 dofs 2.0% away.
+
 ## 6. Write-up session
 
 - Attach both `sap6/MFS` and `sap6/mfs-paper`. Read this file,
@@ -514,6 +614,14 @@ Open, in the order I would take them:
     published reference simulation by up to 4.3 dB while the MFS is
     self-converged to 0.02 dB there (item 30). Report it; do not claim the
     MFS value is the right one without a third computation.
+  - *Torus (third session)*: say that MAS has been applied to tori before
+    and that tori are standard MFS test bodies in acoustics; the content here
+    is the Maxwell convergence study and the admissible source radius. The
+    focal-ring location is argued and measured, not proved; no closed-form
+    reference exists (Bempp confirms to 1e-4 by extrapolation only).
+  - *Skeleton theorem*: cite Gustafsson 1998 as the analogue for Newtonian
+    potentials; "to our knowledge not stated for scattering" is the most
+    that can be said.
   - Everything is at most about 9 wavelengths in size, and the layouts are
     built by hand per shape.
 - Known problems in the current manuscript: thesis wording ("this project",
@@ -570,6 +678,18 @@ Open, in the order I would take them:
   implication ieeexplore) are blocked. `pip install` of packages that are
   not in CLAUDE.md's list was refused by the permission system (scikit-fem);
   write the few lines needed instead.
+- **Network, third session.** The publisher refusals are the publishers' own
+  bot walls (Cloudflare challenge; Elsevier also reserves text mining), not
+  the session's network policy: sciencedirect, epubs.siam.org, mdpi, dl.acm
+  return 403 to any automated client. web.archive.org and
+  perso.univ-rennes1.fr reset the connection. Open and useful: arxiv.org,
+  lae.tsu.ge (the Tbilisi MAS papers as PDFs), core.ac.uk, link.springer.com
+  (landing pages). The author offered to supply PDFs: ask for them in
+  `~/Projects/MFS-ccr/papers/` on the laptop.
+- **Worker restarts** happened again in the third session (three in a row):
+  the scratch folder was lost, the repository survived. Downloaded papers
+  were re-fetched; nothing else was lost because results were in
+  `validation/`.
 - **One job at a time, really** (item 31). Chain jobs in one background
   command; wait for a process with `tail --pid=PID -f /dev/null`.
 - **Two containers, two speeds.** The second container of 16 November was

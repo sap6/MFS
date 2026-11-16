@@ -210,3 +210,206 @@ Read: Ye et al. 2023; Tsitsas et al. 2018; Shifman et al. 1997; De Smedt and
 Van Bladel 1986 (compare exponent tables); Kelley et al. 2020 (measurement
 uncertainty, to quote next to the 0.4-1.5 dB differences); Liu's thesis
 (MFS for Maxwell on axisymmetric bodies); Young and Ruan 2005.
+
+## 7. Second pass, 2026-11-16 (third session): full texts
+
+The author asked for a thorough reading rather than abstracts. What was read
+in full (the passages that matter here, and the surrounding sections), and
+what it changes. Quotations are copied from the PDFs.
+
+### 7.1 Is the 3D edge case open? Yes, and it is posed as a question
+
+- Gopal and Trefethen, SIAM J. Numer. Anal. 2019 **[full]**, closing
+  section: "The extension to 3D is a bigger issue to be considered. Here,
+  as in 2D, there are MFS papers going back many years. The question is
+  whether a new more focussed connection with approximation theory near
+  singularities can bring a new efficiency, as we have shown here for 2D
+  problems, and we are open-minded on this question." This is the sentence
+  the paper answers; quote it.
+- Brubeck and Trefethen 2022 **[full]**: "Extension of these methods to three
+  dimensions is undoubtedly possible, but not straightforward, and we have no
+  view as to whether something practical can be developed here or not."
+- Kong and Shen, arXiv:2610.26540 **[full: abstract, contributions, section 6,
+  conclusion]**: the 3D part places modified-Bessel poles around *point*
+  singularities only; conclusion as quoted in section 1 above (verified
+  verbatim).
+- Hochman, Leviatan, White, J. Comput. Phys. 238 (2013) 337-358
+  (arXiv:1112.1643) **[full: abstract, conclusion]**: dipole sources (poles
+  of a rational function) placed by vector fitting for 2D Laplace problems
+  with sharp corners, errors near machine precision; a forerunner of the
+  lightning solvers, in the target journal, and from the MAS community.
+  Conclusion: the method "may be difficult to generalize to 3D Laplace
+  problems". Must be cited. It also records that the convex hull of the
+  singularities of the Helmholtz and Laplace continuations is the same.
+- Cai, Bagge, Martinsson, arXiv:2603.19113 **[full: sections 1-3, 5.2]**:
+  corners in 2D only, by dyadic refinement with the MFS distance shrinking
+  towards the corner. Its 3D examples are smooth ellipsoids and **tori**
+  (acoustic, sources at a fixed normal distance d = 0.18, errors to 4e-7),
+  so a torus as an MFS test body is not new.
+- Ginn and Trefethen, arXiv:2310.01665 **[full: front matter, sections 1-3]**:
+  this is Henry Ginn's Oxford MMath dissertation (supervisor Trefethen; the
+  arXiv record lists both as authors). Exterior 2D Helmholtz, Hankel poles
+  along the interior bisectors. Cite as an arXiv preprint.
+- Weed, Wu, Huang, Cho, arXiv:2605.15527 **[full: sections 1-2, 6]**:
+  confirmed as described in section 1: smooth bi-periodic interfaces, dipoles
+  offset along the normals, no edges.
+- Kouroublakis, Tsitsas, Leviatan, arXiv:2607.28558 (July 2026) **[full:
+  abstract, section III]**: MAS for metasurfaces in **2D**; at the edges of a
+  finite sheet "sources are positioned closer to the edges and gradually
+  placed farther away toward the interior" and extended beyond the edges.
+  The current state of edge handling in MAS: ad hoc clustering, two
+  dimensions, no singular functions.
+
+### 7.2 What the MAS community does with edges in 3D: it rounds them
+
+- Bogdanov, Karkashadze, Zaridze, "The method of auxiliary sources in
+  electromagnetic scattering problems", in Wriedt (ed.) 1999 **[full, author
+  copy at lae.tsu.ge]**. Section 3 defines the "main singularities" (the
+  singularities of the continued field, interpreted as images of the primary
+  sources) and section 4 gives the rules for the auxiliary surface: (2) it
+  "should embrace the domain of location of the main singularities"; (3) the
+  distance to the surface must be below the minimal radius of curvature,
+  which "also indicates a way of investigating scattering problems upon
+  bodies with non-smooth surfaces (edges), offering at edge points the
+  finite rounding radius"; (4) the interior of the auxiliary surface must
+  not resonate at the working frequency.
+- Karkashadze and Zaridze, "The method of auxiliary sources in applied
+  electrodynamics" (Tbilisi; a review of the mid-1990s, author copy at
+  lae.tsu.ge) **[full]**: recommendation (d), "In the case of edges at the
+  main surface ... It is more advantageous to smooth the edges under
+  certain radius of curvature and to trace out its influence on the final
+  results." Also: "for better efficiency of the method, we must locate the
+  auxiliary sources in the scattered field's singularity region, i.e. in
+  convexity centers of the scattered field or in basic contour angles (in
+  the case of a surface with edges)" (stated for 2D contours, not carried
+  out in 3D). **And a torus:** ring sources (their eq. 32) and the
+  "excitation of the elliptic torus by magnetic dipole", where "the
+  auxiliary contour l surrounds the foci of the given ellipse". So MAS on a
+  torus exists (axisymmetric excitation); the rule used is the 2D one for
+  the meridian section.
+- Zaridze et al., IEEE TAP 50 (2002) 50-58 and the 2005 AP-S paper **[full]**:
+  scattered-field singularities sit near caustic surfaces; "It is good to
+  avoid sharp corners in MAS."
+- Consequence for the paper: the sentence "the MAS literature treats edges
+  by rounding them or by wrapping the body in an auxiliary surface
+  (Tabatadze et al. 2025)" is accurate and can be supported by these
+  quotations. Keeping the edge sharp and carrying its singularity by
+  sources with derived power laws was not found anywhere.
+
+### 7.3 The enclosure rule and its proofs
+
+- Barnett and Betcke 2008 **[full: sections 2-3, arXiv:0708.3533]**. Unit
+  disc, charge radius R, singularity radius rho: Theorem 3 (error
+  C rho^(-N/2) if rho < R^2, C R^(-N) if rho > R^2), Theorem 6 (coefficients
+  bounded if R < rho), Theorem 7 (if R > rho the coefficient norm grows at
+  least like sqrt(N) (R/rho)^(N/2)). General analytic domains: Conjecture 9
+  and 12, with Millar's result that the singularities of the Schwarz
+  function are singularities of the continuation. The torus radius study
+  (item 34 of the notes) is the 3D analogue of their Figure 3.
+- Liu and Barnett 2016 **[full: sections 1, 3.2, arXiv:1506.05083]**: MFS on
+  axisymmetric bodies mode by mode ("ring sources"), the same splitting as
+  `pec_torus.py`; they state the enclosure condition as a conjecture and
+  cite, for 3D Maxwell, **Kangro, AIP Conf. Proc. 1479 (2012) 2328-2331**
+  ("Solution of three-dimensional electromagnetic scattering problems by
+  interior source methods"): a convergence proof for analytic boundaries
+  when the sources are the nodes of an exponentially convergent quadrature
+  on the inner surface. Not read (AIP); must be cited next to the sphere
+  study. Also Karageorghis and Fairweather 1998 (axisymmetric acoustic MFS).
+- Kolezas, Fikioris, Roumeliotis, arXiv:2404.07914 **[full: abstract,
+  introduction]**: MFS = MAS; convergence of the field while the source
+  amplitudes diverge and oscillate when the auxiliary surface does not
+  enclose the singularities (2D Laplace, Neumann).
+
+### 7.4 The skeleton theorem has a potential-theory relative
+
+- Gustafsson, "On mother bodies of convex polyhedra", SIAM J. Math. Anal. 29
+  (1998) 1106-1117; Gustafsson and Sakai, Geom. Dedicata 76 (1999) 1-30
+  **[statement read as quoted by Tran, arXiv:1710.06991, Theorem 1; the
+  originals are behind SIAM / Springer]**: a convex polyhedron with uniform
+  mass has a unique "mother body", a measure with the same exterior
+  Newtonian potential whose support "is contained in a finite union of
+  hyperplanes and reaches the boundary only at corners and edges (not at
+  faces)". That support is the ridge of the distance function, i.e. the
+  medial surface of `DERIVATIONS.md` A. Different problem (the potential of
+  a filled body, not a field scattered by a conductor) and a different proof,
+  but the same geometric statement. The skeleton observation must cite it,
+  and should be presented as the scattering counterpart, not as a new kind
+  of result.
+
+### 7.5 The torus
+
+- Not found: any statement of where the continued scattered field of a 3D
+  torus is singular. Found: MAS with the auxiliary contour around the foci
+  of an elliptic section (7.2); Aberra 2002 (the Schwarz potential of
+  even-dimensional tori), described by Lundberg, arXiv:1009.5159 **[full:
+  sections 2-4]**, where for the four-dimensional torus the singular part
+  sits on the centre circle only; Millar 1983 (the axially symmetric
+  Helmholtz equation; general theory, not read).
+- The Khavinson-Shapiro conjecture (Lundberg, Conjecture 2.3) is the
+  statement that continuations with entire data are singular only where the
+  Schwarz potential is; it "holds in the plane and has been shown to hold
+  generically in higher dimensions". Relevant background if the torus
+  section makes a claim about the singular set.
+
+### 7.6 Other
+
+- Helsing and Perfekt, arXiv:1203.5997 **[abstract, introduction]**:
+  integral-equation solver (recursive compressed inverse preconditioning)
+  for the electrostatic cube, 5 to 10 digits. Shows what a specialised BIE
+  can do on a cube in the static case; no Maxwell scattering.
+- Yurkin and Kahnert, JQSRT 123 (2013) 176-183 **[abstract]**: accuracy
+  limits of the discrete dipole approximation and the T-matrix method for a
+  *dielectric* cube: DDA 1e-7 to 1e-3 after extrapolation, T-matrix 1e-4 to
+  0.2. The only cube accuracy study found; different material, so not a
+  reference for our numbers, but it sets the scale for "0.011%".
+- Wriedt and Comberg 1998 compare DDA, FDTD and the extended boundary
+  condition method on a dielectric cube (abstract only); the 3D MMP code
+  has been applied to cubes (Scattport listing) without, as far as the
+  abstracts show, any special edge treatment.
+
+### 7.7 Verdict
+
+- **Open problem?** Yes in the sense that matters: three papers by the
+  people who started the lightning line of work say the 3D edge and vertex
+  case is unsolved or doubtful (2019, 2022, 2026), and the MAS literature
+  avoids it by rounding. Nothing found contradicts that.
+- **Novel?** The combination is: (i) sources on the skeleton of a 3D
+  conductor, as lines along the edges with geometrically clustered depths;
+  (ii) the singular tail with exponents taken from the edge, vertex and tip
+  expansions; (iii) the same at a conical tip of a smooth thin body;
+  (iv) validation at the 1e-4 level against a graded BEM and a public
+  benchmark. Not novel: the enclosure rule, exponential clustering in 2D,
+  singular functions in 2D MFS, MFS for Maxwell on smooth bodies, tori as
+  test bodies, the skeleton as the support of an equivalent source (in
+  potential theory).
+- **Limits of this search.** Web and arXiv searches plus full texts of what
+  is openly hosted. Publisher-only papers were seen as abstracts at best
+  (section 8). Russian and Georgian MAS and discrete-sources literature of
+  the 1980s-90s is only partly online; a precedent there cannot be excluded.
+  Safe wording stays "to our knowledge".
+
+## 8. Papers to obtain (publisher access), in order of importance
+
+    Millar. Arch. Ration. Mech. Anal. 81 (1983) 349-372. 10.1007/BF00250860            (torus singular set: is the focal ring covered?)
+    Gustafsson. SIAM J. Math. Anal. 29 (1998) 1106-1117. 10.1137/S0036141097317918     (mother bodies; wording of the skeleton claim)
+    Kangro. AIP Conf. Proc. 1479 (2012) 2328-2331. 10.1063/1.4756660                   (convergence of MFS for 3D Maxwell)
+    Ye, Hu, Xu, Yan. Eng. Anal. Bound. Elem. 155 (2023) 401-406. 10.1016/j.enganabound.2023.05.050
+    De Smedt, Van Bladel. IEEE Trans. Antennas Propag. 34 (1986) 865-870. 10.1109/TAP.1986.1143916   (compare exponent tables)
+    Kelley, Chamulak, Courtney, Yilmaz. IEEE Antennas Propag. Mag. 62(1) (2020) 96-106. 10.1109/MAP.2019.2955702   (measurement uncertainty)
+    Costabel, Dauge. Arch. Ration. Mech. Anal. 151 (2000) 221-276. 10.1007/s002050050197             (edge and corner singularities; check B and D against it)
+    Shifman, Friedmann, Leviatan. IEE Proc. Microw. Antennas Propag. 144 (1997) 235. 10.1049/ip-map:19971186
+    Tsitsas, Zouros, Fikioris, Leviatan. IEEE Trans. Antennas Propag. 66 (2018) 5443-5452. 10.1109/TAP.2018.2855963
+    Yurkin, Kahnert. J. Quant. Spectrosc. Radiat. Transf. 123 (2013) 176-183. 10.1016/j.jqsrt.2012.10.001
+    Young, Ruan. CMES 7 (2005) 223-232.                                                (first MFS for Maxwell; DOI not in Crossref)
+    Aberra. Complex Var. Theory Appl. 47 (2002) 1-15. 10.1080/02781070290002895
+    Hafner, Bomholt. The 3D Electromagnetic Wave Simulator. Wiley 1993.                (how MMP treats cubes)
+
+Added and verified against Crossref in this pass:
+
+    Hochman, Leviatan, White. J. Comput. Phys. 238 (2013) 337-358. 10.1016/j.jcp.2012.08.015
+    Gustafsson, Sakai. Geom. Dedicata 76 (1999) 1-30. 10.1023/A:1005184009159
+    Karageorghis, Fairweather. J. Acoust. Soc. Am. 104 (1998) 3212-3218.              (as cited by Liu and Barnett; not checked)
+    Kolezas, Fikioris, Roumeliotis. arXiv:2404.07914 (2024)
+    Kouroublakis, Tsitsas, Leviatan. arXiv:2607.28558 (2026)
+    Lundberg. arXiv:1009.5159 (2010)
+    Tran. arXiv:1710.06991 (2017)

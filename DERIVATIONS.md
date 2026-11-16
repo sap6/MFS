@@ -193,3 +193,83 @@ per kind (nu_2, tau_2) changes nothing. The tail on the diagonal carries only
 the radial law; the angular structure of the vertex singularity is left to
 the edge lines, which is presumably why the gain is a constant factor (about
 half a refinement level) rather than a change of rate.
+
+## E. Torus: where the continued field is singular
+
+Torus (rho - R)^2 + z^2 = a^2 about the z axis, a < R. Write
+c = sqrt(R^2 - a^2): the ring rho = c, z = 0 is the focal ring of the toroidal
+coordinates in which this torus is a coordinate surface (it lies inside the
+tube, between the inner wall and the centre circle).
+
+**Claim (argued, then checked numerically; not a theorem here).** The
+scattered field of a plane wave continues analytically into the tube except
+at the centre circle rho = R and at the focal ring rho = c (and possibly
+between them); seen from the centre circle the singular set reaches out to
+the distance
+
+    delta = R - c = R - sqrt(R^2 - a^2).
+
+A source torus concentric with the tube must therefore have minor radius
+a_s > delta. As a fraction of a: 0.127 (a/R = 0.25), 0.268 (0.5), 0.5 (0.8),
+tending to 1 for a -> R. A fat torus leaves little room.
+
+**Why.** Three ways to see it, none a full proof for Maxwell:
+
+1. *Reflection.* In the meridian half-plane write zeta = rho + i z. The
+   Schwarz function of the meridian circle is S(zeta) = R + a^2 / (zeta - R).
+   In two dimensions the continuation of the field is singular only where S
+   is, at zeta = R. For a body of revolution the reduced equation has a
+   singular coefficient on the axis rho = 0, and the reflection formula picks
+   up a second singularity where the reflected point falls on the axis:
+   zeta + S(zeta) = 0, i.e. zeta^2 = R^2 - a^2, zeta = c. (General theory:
+   Millar, Arch. Ration. Mech. Anal. 81 (1983), the axially symmetric
+   Helmholtz equation; not read, publisher access needed.)
+2. *Images.* In a plane through the axis the tube is cut in two discs. The
+   singularity at the centre of one disc is, for the other disc, an outside
+   source; its image lies at distance a^2 / (2R) from that disc's centre,
+   towards the axis; the image of the image at a^2 / (2R - a^2/(2R)), and so
+   on. The sequence d -> a^2 / (2R - d) increases to its fixed point
+   d = R - c. So the singularities between centre circle and focal ring
+   accumulate at the focal ring.
+3. *Static limit.* For Laplace's equation the field outside the torus is a
+   series of toroidal harmonics P_{n-1/2}(cosh tau) exp(i n sigma), each
+   singular only on the focal ring. With boundary data from an entire
+   function the coefficients decay like exp(-2 n tau_0) (tau_0 the surface),
+   so the series converges outside the torus tau = 2 tau_0, whose meridian
+   circle has the diameter [R - a^2/R, R] and contains both c and R. The
+   singular set of the Helmholtz and Laplace continuations has the same
+   convex hull (cited by Hochman, Leviatan and White 2013 from the MAS
+   literature).
+
+**Check** (`python3 torus_singularities.py`, k = 2 pi unless stated). Sources
+on a circle of radius b about (rho0, 0) in the meridian plane; if the
+continuation is analytic outside the distance delta from (rho0, 0), the n-th
+Fourier coefficient of the dipole density around that circle decays like
+(delta / b)^n. Fitted delta for a/R = 0.8 (c = 0.6), source circle
+(1.0, 0.60): wave along the axis 0.395-0.401; in the plane of the ring
+0.39-0.40; oblique 0.391-0.400; k = 4 pi 0.398 (one clean window). Predicted
+0.400; the first image alone would give 0.32, the point R - a^2/R 0.64.
+With the centre moved outwards to rho0 = 1.1 the fitted distance becomes
+0.49 (predicted |1.1 - c| = 0.50): the singularity is on the side of the
+axis, not symmetric about the centre circle. For a/R = 0.5 and 0.25 the
+decay is too fast to fit cleanly (0.15-0.17 against 0.134; 0.03-0.04 against
+0.032): consistent, not decisive.
+
+Second check (`fig_torus_sources.py`): with a fixed number of sources the
+coefficient norm stays of order 1 down to the predicted radius and then
+grows by orders of magnitude: a/R = 0.8: 1.9, 3.6, 41, 7e4 for a_s/a = 0.55,
+0.50, 0.45, 0.40 (predicted 0.5); a/R = 0.5: 13, 49, 460, 2e4 for 0.30, 0.25,
+0.20, 0.15 (0.268); a/R = 0.25: 24, 770, 2e4 for 0.15, 0.10, 0.07 (0.127).
+This is the behaviour Barnett and Betcke prove for the disc (their Theorems
+6 and 7).
+
+**Status and literature.** The enclosure rule itself is old (MAS "main
+singularities", Kyurkchan, Sternin and Shatalov; Barnett and Betcke). For a
+torus with an elliptic meridian section Karkashadze and Zaridze place the
+auxiliary contour around the foci of the ellipse, which for a circular
+section is the centre circle only. In even dimensions the Schwarz potential
+of the torus is singular only on the centre circle (Aberra 2002, as quoted
+by Lundberg, arXiv:1009.5159); the extra ring in three dimensions comes from
+the logarithmic branch of the Riemann function. I have not found the focal
+ring stated for the 3D torus; Millar 1983 and Khavinson and Shapiro's
+Schwarz-potential papers must be read before anything is claimed.

@@ -71,6 +71,36 @@ Overleaf import, i.e. still the thesis text). Nothing was pushed there.
 8. **Conclusion.** Three sentences; no "robust and efficient for all shapes".
    Appendix: exponents of the cube vertex (DERIVATIONS D), parameters.
 
+### Addition of the third session: a torus section (recommended, author decides)
+
+Place: after the sphere, before "why inner surfaces fail" (new section 3b).
+About one page and two figures (`fig_cost_torus`, `fig_torus_sources`).
+
+- What it shows: the thesis's own layout (sources on an inner copy of the
+  surface) converges on a non-convex, ring-shaped conductor: 1e-11 in 10 s,
+  any incident wave, against 0.8% in 334 s for Bempp.
+- What it adds to the argument: the inner copy may not be arbitrary. The
+  continued field is singular on the centre circle and on the focal ring
+  rho = sqrt(R^2 - a^2), so a_s > R - sqrt(R^2 - a^2) (DERIVATIONS E). The
+  coefficient norm stays near 1 above that radius and grows by orders of
+  magnitude below it: the picture the thesis drew for the sphere (error and
+  |alpha| against R), now with a threshold that a formula predicts.
+- It makes the sequence of shapes a single story: sphere (singular point at
+  the centre, any radius works), torus (singular rings inside the tube, the
+  radius is bounded), almond (singular curve within 6% of the rim, no inner
+  copy works), cube (singular set reaches the surface at the edges, tails).
+- Limits to state: no closed-form reference; Bempp confirms 0.8% directly
+  and 7e-5 by extrapolating the cross-section; the mode-by-mode solver uses
+  the rotational symmetry of the body; MAS has been applied to tori before
+  (Karkashadze and Zaridze) and acoustic MFS uses tori as test bodies (Cai,
+  Bagge, Martinsson 2026); the focal-ring statement is argued and measured,
+  not proved (read Millar 1983 first).
+
+New references to work into sections 1 and 4 (LITERATURE section 7): the
+Gopal-Trefethen question about 3D (quote it in the introduction); Hochman,
+Leviatan, White 2013; Kangro 2012; Bogdanov, Karkashadze, Zaridze on
+rounding edges; Gustafsson 1998 next to the skeleton theorem.
+
 ## 3. Figures and tables that exist
 
 | Item | Script | Status |
@@ -82,7 +112,8 @@ Overleaf import, i.e. still the thesis text). Nothing was pushed there.
 | Almond RCS against Bempp, 3 frequencies | `fig_almond_rcs.py` | done |
 | Almond RCS against measurement and reference simulation, 4 frequencies | `fig_almond_benchmark.py` | done, new |
 | Exponent tables (edge, tip cone, cube vertex) | `cone_exponents.py`, DERIVATIONS | done, new |
-| Source-layout sketches (cube cross-section at an edge; almond mid-plane) | - | **missing** |
+| Torus error against time; residual and coefficient norm against source radius | `fig_cost_torus.py`, `fig_torus_sources.py` | done, new (third session) |
+| Source-layout sketches (cube cross-section at an edge; almond mid-plane) | `explainer/make_diagrams.py` draws them from the solvers' real coordinates (SVG, for the author's explainer) | drafts exist; redraw for print |
 | Residual map near an edge with and without tail | `diag_cube.py` prints it | no figure yet |
 
 ## 4. What must be said plainly (limits)
