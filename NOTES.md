@@ -28,7 +28,7 @@ to JCP. Status of each element:
 | Mie-validated convergence for the PEC sphere in N and source radius | done |
 | Almond at benchmark frequencies against published RCS data or Bempp | done against Bempp at 1.19, 7, 9.92 GHz, all look angles, HH and VV (T4); overlay of the measured curves (Woo et al.) left to the author |
 | Cube result | honest account of where plain MFS degrades is done; edge sources with a singular tail reach about 0.15% (Bempp-limited reference) and converge with depth (T1, in progress) |
-| Cost comparison with a boundary element solver | cube: table done (`fig_cost_cube.py`), MFS 2x to 10x faster than Bempp between 0.7% and 0.2% and still converging; sphere and almond tables and all plots open (T5) |
+| Cost comparison with a boundary element solver | done for sphere, cube and almond, tables and figures (T5) |
 | Helmholtz material | shrinks to about a page (write-up) |
 
 Aim: the cube and almond should work well with the method, not only be shown
@@ -170,6 +170,11 @@ converging towards the MFS field.
     0.0056%. Bempp with 2106, 4212, 9558 dofs: 28, 89, 412 s for 1.3%, 0.67%,
     0.30% (compilation excluded by a warm-up solve).
 
+21. **Sphere cost table** (`python3 fig_cost_sphere.py`, k = 2 pi, against Mie,
+    container, no symmetry used): MFS with 300, 600, 1200, 2400 unknowns: 0.06,
+    0.16, 1.0, 5.4 s for 2.7e-3, 2.7e-6, 2.0e-9, 1.8e-13. Bempp with 1269,
+    2733, 4824, 9750 dofs: 15, 46, 112, 411 s for 3.2%, 1.4%, 0.76%, 0.37%.
+
 ## 3. Current best commands
 
 ```
@@ -235,8 +240,12 @@ and the confocal solver kept as the record of the failed layout).
       0.46 dB at a null). MFS self-convergence at 9.92 GHz: row spacing 0.4,
       collocation 0.22, or layout 8:5 change HH by at most 0.036, 0.004, 0.034
       dB and VV by at most 0.0024 dB. Figure: `fig_almond_rcs.py`.
-- [ ] **T5 Error-versus-time plots,** MFS against Bempp, for sphere, cube and
-      almond. One script per figure.
+- [x] **T5 Error-versus-time plots.** Done 2026-11-16: `fig_cost_sphere.py`,
+      `fig_cost_cube.py`, `fig_cost_almond.py` (tables in section 2, items 15,
+      20, 21; PDFs and PNGs next to the scripts), plus `fig_almond_rcs.py`.
+      All timed in the container (4 cores) with compilation excluded. State in
+      the paper: the cube and almond MFS runs use the two mirror symmetries of
+      the incidence and Bempp does not; the sphere runs use none.
 - [ ] **T6 Literature check.** Is a 3D lightning-type method for Maxwell new?
       Must cite and compare with: method of auxiliary sources (Fikioris et
       al.), discrete sources method (Eremin, Doicu, Wriedt; sources on the
