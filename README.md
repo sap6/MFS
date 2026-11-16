@@ -17,6 +17,13 @@ This repository contains the code and notebooks supporting my MSci research proj
 
 ---
 
+> **Paper in preparation.** The work towards the journal version (exterior
+> scattering by perfect conductors, validated against Mie, Bempp and published
+> benchmark data) is in [`validation/`](./validation); start from
+> [`NOTES.md`](./NOTES.md), [`DERIVATIONS.md`](./DERIVATIONS.md),
+> [`LITERATURE.md`](./LITERATURE.md) and [`PAPER_OUTLINE.md`](./PAPER_OUTLINE.md).
+> The notebooks below are the MSci project as submitted.
+
 ## Table of Contents
 
 - [Overview](#overview)

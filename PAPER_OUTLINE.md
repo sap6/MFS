@@ -20,16 +20,18 @@ Overleaf import, i.e. still the thesis text). Nothing was pushed there.
   current on the interior medial surface.
 - Sources on the skeleton, clustered geometrically towards the singular set,
   plus a "singular tail" whose exponents are *computed* (edge: 2/3, 5/3, 4/3,
-  7/3 from the Meixner expansion; tip: 0.2996 + 2 from the elliptic cone),
-  give convergence on both shapes: cube to 0.016% (self-convergence) and
-  0.03% against an independent graded-mesh BEM; almond to 0.006% (nose-on)
-  and 0.01-0.14 dB against a published fine-mesh reference at four
-  frequencies, inside the 1 dB scatter of the measurements.
+  7/3 from the Meixner expansion; cube vertex: 0.454 and 0.840 + 2; almond
+  tip: 0.2996 + 2 from the elliptic cone), give convergence on both shapes:
+  cube to 0.011% (self-convergence) and 0.02% against an independent
+  graded-mesh BEM; almond to 0.006% (nose-on) and 0.01-0.14 dB against a
+  published fine-mesh reference at four frequencies, inside the 1 dB scatter
+  of the measurements.
 - Cost, stated without spin: sphere and almond 30 to several hundred times
-  faster than Bempp at far higher accuracy; cube 3-10 times faster than Bempp on a
-  quasi-uniform mesh, about level with Bempp on an edge-graded mesh at 0.15%
-  and ahead below 0.1%; for a general incident wave the cube costs about
-  twice the symmetric case and graded Bempp is then faster at 0.1-0.4%.
+  faster than Bempp at far higher accuracy; cube 10-15 times faster than Bempp on a
+  quasi-uniform mesh at 0.2%, about level with Bempp on an edge-graded mesh
+  at 0.15-0.2% and ahead below 0.1%; for a general incident wave the cube
+  costs 1.6-1.9 times the symmetric case and graded Bempp is then faster at
+  0.1-0.4%. The cube's selling point is the rate, not the cost at 0.2%.
 
 ## 2. Proposed sections
 
@@ -57,8 +59,8 @@ Overleaf import, i.e. still the thesis text). Nothing was pushed there.
    bisector planes at depths d_j = d_0 2^-j; modes in a log-stretched
    variable; electric and magnetic; weights; the tail and its exponents
    (DERIVATIONS B, table); balanced refinement. Results: convergence table,
-   optical theorem, graded-BEM reference, oblique incidence by parity
-   classes. Figure: `fig_cost_cube`; a sketch of the layout is still needed.
+   optical theorem, graded-BEM reference, vertex tail, oblique incidence by
+   parity classes. Figure: `fig_cost_cube`; a sketch of the layout is still needed.
 6. **Skeleton sources and the tip tail (almond).** Rows on the mid-plane
    towards the focal curve; parity classes; tip cone exponents (DERIVATIONS
    C, table) and `cone_exponents.py`; results at 1.19 GHz against Bempp, and
@@ -85,14 +87,15 @@ Overleaf import, i.e. still the thesis text). Nothing was pushed there.
 
 ## 4. What must be said plainly (limits)
 
-- Below 0.03% the cube reference is the MFS itself. Independent evidence:
-  graded Bempp at 2592 to 10368 unknowns is 0.13%, 0.060%, 0.038%, 0.030%
-  from it and its cross-section rises towards the MFS value; the optical
-  theorem mismatch is 5e-5.
+- Below 0.02% the cube reference is the MFS itself. Independent evidence:
+  graded Bempp (reference quadrature) at 4608, 7200, 10368 unknowns is
+  0.058%, 0.032%, 0.022% from it, 0.016% when extrapolated, and its
+  cross-section rises towards the MFS value; the optical theorem mismatch
+  is 4e-5.
 - The cube and nose-on almond timings use two mirror symmetries; Bempp uses
-  none. General incidence is implemented for both shapes (cube: 83, 163,
-  360 s for 0.37%, 0.15%, 0.07%).
-- Bempp ran with dense assembly and LU. Assembly is 97% or more of its time,
+  none. General incidence is implemented for both shapes (cube: 86, 176,
+  370 s for 0.27%, 0.11%, 0.055%).
+- Bempp ran with dense assembly and LU. Assembly is 98% of its time,
   so a better linear solver would not change the comparison; matrix
   compression (FMM, H-matrices) or higher-order elements would, and were not
   tried. Graded meshes were tried and are reported.
@@ -103,8 +106,9 @@ Overleaf import, i.e. still the thesis text). Nothing was pushed there.
   There is no automatic construction for a general body.
 - The polyhedron theorem is for convex bodies.
 - Almond: agreement with the published reference simulation is 0.01-0.14 dB
-  on average, but single deep nulls differ by up to 4 dB (HH, 10.25 GHz,
-  35.5 degrees); see NOTES for which layout checks were made there.
+  on average, but single deep nulls differ by up to 4.3 dB (HH, 10.25 GHz,
+  35.5 degrees, a null at -66.7 dBsm). The MFS is self-converged to 0.02 dB
+  there (NOTES item 30); which simulation is right in the null is open.
 
 ## 5. Critique of the current manuscript (referee style)
 
@@ -160,12 +164,12 @@ Minor:
 
 | Question | Answer |
 |---|---|
-| Is the cube reference independent? | Section 4, first bullet; NOTES section 2, items 22-23 |
+| Is the cube reference independent? | Section 4, first bullet; NOTES section 2, item 29 |
 | Are the tail exponents tuned? | No: DERIVATIONS B and C; fitted sets were replaced by computed ones with no loss |
-| Is the comparison with BEM fair? | Graded meshes, timing split, symmetry statement: NOTES items 22, 24, 25 |
+| Is the comparison with BEM fair? | Graded meshes, timing split, symmetry statement: NOTES items 26-28 |
 | Does it work for other incidences? | Cube: `cube_general.py`; almond: all look angles in the benchmark figure |
 | Is the almond compared with measurements? | Yes, public Austin benchmark data, four frequencies |
-| Why not a vertex tail on the cube? | Not needed to 0.016%; exponents are given (0.454, 0.840) for whoever wants more digits |
+| What about the vertices of the cube? | Vertex tail with computed exponents (0.454, 0.840), 12 unknowns, error down by a third to 40%: NOTES item 25 |
 | Novelty against lightning and MAS work? | LITERATURE section 1 |
 
 ## 7. Decisions for the authors

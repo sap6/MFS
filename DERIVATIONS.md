@@ -113,15 +113,15 @@ Let m be the mirror in the bisector plane; it maps the exterior wedge (opening
    rho^(e - 1) gives line weights (d_i / d_J)^e. That is the weight used in
    `TailLine`, and the exponents in the last column are the ones to use.
 
-**Check** (balanced family of `fig_cost_cube.py`, error against the J = 9 field,
-J = 5 and J = 7):
-the derived set with one exponent per component, (2/3 | 5/3 | 4/3 | 7/3),
-gives the same error as the set used so far, which had a second, integer
-exponent per component (1, 2, 1, 2), with 10% fewer unknowns; adding the
-derived second terms (8/3, 11/3) changes nothing. See `NOTES.md` for the
-numbers. The integer exponents were not physical (item 2) and are dropped.
-Exponents one too low for the transverse components gave garbage in an
-earlier session, in line with the table.
+**Check** (`check_tail_exponents.py`, balanced family without vertex tail,
+error against the J = 9 field): the derived set with one exponent per
+component, (2/3 | 5/3 | 4/3 | 7/3), gives 0.314% at J = 5 and 0.049% at J = 7;
+the set used before, which had a second, integer exponent per component
+(1, 2, 1, 2), gives 0.327% and 0.049% with 8-10% more unknowns; adding the
+derived second terms (8/3, 11/3) gives 0.316% at J = 5. The integer exponents
+were not physical (item 2) and are dropped. Exponents one too low for the
+transverse components gave garbage in an earlier session, in line with the
+table.
 
 ## C. Exponents of the almond's tip
 

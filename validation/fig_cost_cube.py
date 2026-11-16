@@ -130,10 +130,10 @@ def report():
 # Fixed colour, marker and dash per method (colour is never the only cue, so
 # the figure survives greyscale printing). Hues checked for colour-blind
 # separation with the dataviz palette validator.
-STYLE = {"MFS+tail": ("#2a78d6", "o", "-", "MFS, edge sources + tail"),
-         "Bempp": ("#eb6834", "D", "-.", "Bempp, quasi-uniform mesh"),
+STYLE = {"MFS+tail": ("#2a78d6", "o", "-", "MFS, edge sources + tails"),
          "MFS no tail": ("#1baf7a", "s", "--", "MFS, edge sources, no tail"),
          "plain MFS": ("#eda100", "^", ":", "plain MFS (inner cube)"),
+         "Bempp": ("#eb6834", "D", "-.", "Bempp, quasi-uniform mesh"),
          "Bempp graded": ("#e87ba4", "v", (0, (5, 1, 1, 1)), "Bempp, mesh graded to the edges")}
 INK, MUTED = "#1f1f1e", "#6b6a64"
 

@@ -303,33 +303,61 @@ are from the first.)
 
 ```
 python3 pec_sphere_convergence.py && python3 plot_pec_sphere.py
-python3 fig_cost_cube.py ; python3 fig_cost_almond.py ; python3 fig_cost_sphere.py ; python3 fig_almond_rcs.py   # tables and figures from saved data (add `run` to recompute)
-python3 bem_reference.py cube                      # writes bem_cube_h*.npz
-python3 pec_cube_lightning3d.py 4,5,6 tag=NAME kinds=em q=0.5 gamma=2.0 col_p=3 col_q=0.5 beta=0.5 sym=1 tail=9
+python3 fig_cost_cube.py ; python3 fig_cost_almond.py ; python3 fig_cost_sphere.py   # tables and figures from saved data (add `run` to recompute)
+python3 fig_almond_rcs.py ; python3 fig_almond_benchmark.py                         # almond RCS against Bempp / against the Austin benchmark
+python3 cube_general.py 6 60 25 35                # cube, any plane wave (from theta, phi; polarisation angle), four parity classes
+python3 check_tail_exponents.py 5                 # edge and vertex tail variants at one depth
+python3 cone_exponents.py ; python3 cone_exponents.py cube   # tip exponents of the almond cone; vertex exponents of the cube
+python3 bem_optical.py 0.1,0.07,0.05,0.04         # Bempp, quasi-uniform cube meshes: field, cross-sections, time
+python3 bem_cube_graded.py 8,12,16 2              # Bempp, meshes graded to the edges; add "8 10" for reference quadrature, --wave=60,25,35 for an oblique wave
+python3 pec_cube_lightning3d.py 4,5,6 tag=NAME kinds=em q=0.5 gamma=2.0 col_p=3 col_q=0.5 beta=0.5 sym=1 tail=9   # single-knob runs (no vertex tail, no balanced refinement)
 python3 diag_cube.py 5 "tail_n=9"                 # residual map by zone, optical theorem
-python3 bem_optical.py 0.1,0.07,0.05              # Bempp cross-sections and far field
-python3 pec_almond_skeleton.py 1.19 --bem
+python3 pec_almond_skeleton.py 1.19 --bem         # nose-on case only (see its header)
 python3 almond_rcs.py 1.19 6:3 10 --s=0.5         # monostatic RCS, HH and VV, compares with stored Bempp
-python3 proto2d_square.py TE ; python3 proto2d_ellipse.py     # 2D prototypes, seconds
-python3 proto2d_square_tail.py TE                 # 2D singular tail
+python3 proto2d_square.py TE ; python3 proto2d_ellipse.py ; python3 proto2d_square_tail.py TE   # 2D prototypes, seconds
 ```
 
-Cube cost with tail (container, 4 cores): J = 4: 1470 unknowns, 37 + 7 s;
-J = 5: 1800, 49 + 13 s; J = 6: 2124, 62 + 22 s. Without tail at J = 10: 3126
-unknowns, 35k rows, ~90 + 85 s for 0.58%.
-Almond: 979 sources -> 21 s solve; 1597 -> 50 s.
+Cube cost (second container, 4 cores): section 2, item 27. Almond: about
+3 min per frequency for all look angles and both polarisations (6:3 layout);
+the 8:5 layout takes 7 min.
 
-Files: `mie.py` (reference), `bem_reference.py` (Bempp EFIE),
-`pec_cube_lightning3d.py` + `line_kernel.py` (current cube solver),
-`diag_cube.py` (residual map), `bem_optical.py` (Bempp cross-sections, timed),
-`pec_almond_skeleton.py` (current almond solver), `pec_almond.py` (geometry, mesh,
-and the confocal solver kept as the record of the failed layout).
+Files: `mie.py` (reference); `pec_cube_lightning3d.py` + `line_kernel.py`
+(cube library and solver for the standard wave; `Sources`, `SymSources`,
+`TailLine`, `VertexTail`); `fig_cost_cube.py` (balanced refinement family
+`balanced()`, cost table); `cube_general.py` (any wave); `diag_cube.py`
+(residual map); `pec_almond_skeleton.py` (almond library; its main is the
+nose-on case); `almond_rcs.py` (general almond solver); `pec_almond.py`
+(geometry, mesh, and the confocal solver kept as the record of the failed
+layout); `cone_exponents.py` (singularity exponents of cones and of the cube
+vertex); `bem_reference.py`, `bem_optical.py`, `bem_cube_graded.py`,
+`bem_almond_rcs.py` (Bempp); `austin_almond/` (third-party benchmark data,
+own licence, see its README).
 
 ## 4. Task list (one per session)
 
-Done on 2026-11-16 (details in section 2, items 8-21): T0 clean-up, T1 cube
-stall, T2 almond robustness, T3 almond general incidence, T4 almond at 7 and
-9.92 GHz, T5 error-versus-time tables and figures.
+Done in the first session of 2026-11-16 (section 2, items 8-21): T0 clean-up,
+T1 cube stall, T2 almond robustness, T3 almond general incidence, T4 almond
+at 7 and 9.92 GHz, T5 error-versus-time tables and figures.
+
+Done in the second session of 2026-11-16 (items 22-32), at the author's
+request to finish the list in one go:
+
+- **T6 Literature check**: `LITERATURE.md`. arXiv full texts read; everything
+  else checked against Crossref records or abstracts only, because publisher
+  sites are blocked. No 3D edge-singular MFS for Maxwell or Helmholtz found;
+  Kong and Shen (arXiv:2610.26540, October 2026) call the 3D edge and vertex
+  case open. arXiv 2605.15527 is MFS for Maxwell in bi-periodic layered media
+  (smooth interfaces), not a competitor.
+- **T7 Outline and critique**: `PAPER_OUTLINE.md` (the manuscript itself was
+  only read, at commit 4f8731f).
+- **T8 Measured almond data**: done with the public Austin benchmark instead
+  of digitised curves from Woo et al. (item 30).
+- **T9 Cube vertices**: exponents computed, vertex tail implemented and
+  adopted (item 25).
+- **T10 Cube, general incidence**: `cube_general.py` (item 26).
+- **T11 Tidy**: headers of both solver modules now say what is library, what
+  is the standard case and where the general solver is. Files were *not*
+  renamed (every script imports them by name).
 
 T3 check of the thesis case (wave along -z, polarised along y, 1.19 GHz):
 MFS backscatter 0.110432 m^2 (row spacing 0.5) and 0.110436 m^2 (0.4); Bempp
@@ -337,57 +365,31 @@ MFS backscatter 0.110432 m^2 (row spacing 0.5) and 0.110436 m^2 (0.4); Bempp
 
 Open, in the order I would take them:
 
-- [ ] **T6 Literature check** (needs arXiv access, see section 7). Is a 3D
-      lightning-type or singular-source MFS for Maxwell new? Must cite and
-      compare with: method of auxiliary sources (Fikioris et al.), discrete
-      sources method (Eremin, Doicu, Wriedt; sources on the axis/skeleton are
-      close to our almond layout), generalized multipole technique, Gopal &
-      Trefethen lightning solvers, 2023 regularized MFS for PEC, arXiv
-      2605.15527 (could not be identified by search), Barnett & Betcke. Read
-      full texts and verify every citation by DOI.
-      *Search-level pass only so far (abstracts and snippets, nothing
-      verified):*
-      - No 3D lightning-type or singular-source MFS for Maxwell or Helmholtz
-        on a polyhedron turned up. The lightning Stokes paper says a 3D
-        extension is "undoubtedly possible, but not straightforward".
-      - Closest precedents for building the edge singularity into a source
-        model, all 2D: Leviatan et al., IEE Proc. 1997 (fields near edges
-        expanded in infinite-wedge solutions, current filaments elsewhere;
-        triangular cylinder); Valtchev et al. (MFS enriched with
-        corner-adapted functions, J. Comput. Appl. Math. 470); Barnett &
-        Betcke 2010 (MFS plus Fourier-Bessel corner functions for polygons).
-        Our tails differ: they stay inside the MFS (fixed-weight sums of
-        fundamental solutions), which is what carries over to 3D edges and to
-        the almond tip.
-      - To read: lightning Helmholtz solver (arXiv 2310.01665; sources on the
-        interior bisectors, the 2D version of our layout); Tsitsas, Zouros,
-        Fikioris, Leviatan, IEEE TAP 2018 (MAS currents diverge when the
-        auxiliary curve does not enclose the singularities; supports our
-        almond and cube explanations); a 2026 MFS paper on 3D harmonic
-        problems on the unit cube (arXiv 2603.09926); multibody MFS (arXiv
-        2603.19113); "Lightning-fast method of fundamental solutions"
-        (graphics, 3D Laplace).
-      - Also needed for the new material: the tip-singularity exponent of an
-        elliptic cone (to replace the fitted exponent set by a computed one,
-        or at least to cite), and the corner exponents of the cube.
-- [ ] **T7 Paper outline and critique** (separate write-up session, section 6).
-- [ ] **T8 Measured almond data.** Overlay the monostatic curves of Woo et
-      al. 1993 (IEEE AP Magazine) on `fig_almond_rcs`. The author has to
-      supply digitised curves; nothing was compared with measurements yet.
-- [ ] **T9 Cube beyond 0.02% (optional).** The balanced family is still
-      converging at J = 9 (optical mismatch 4.6e-5). Nothing singular is built
-      in at the vertices; if a referee asks for more digits, a vertex tail
-      (same idea as the almond tip, exponents fitted from a set) is the
-      candidate. Not needed for the paper as it stands.
-- [ ] **T10 General incidence for the cube (optional).** The cube solver is
-      hard-wired to this incidence (even in x, odd in y). The almond's
-      parity-class machinery (`parity_class`, `class_part` in the almond
-      scripts) shows how to do any incidence with 4 (or, with the third
-      mirror, 8) class solves that share the assembly.
-- [ ] **T11 Tidy the solvers (optional).** `pec_almond_skeleton.py` main
-      still runs the nose-on case with row spacing 0.7 and no tip tail (fine
-      for that class only); `almond_rcs.py` is the general, current solver.
-      The cube keeps the name `pec_cube_lightning3d.py`.
+- [ ] **T12 Read what could not be fetched** (author or a session with
+      publisher access): the list at the end of `LITERATURE.md`. Most urgent:
+      Ye et al. 2023 (regularised MFS for 3D PEC), De Smedt and Van Bladel
+      1986 (compare their exponent tables with ours), Kelley et al. 2020
+      (measurement uncertainty to quote), Liu's thesis.
+- [ ] **T13 Write-up** (author writes; section 6 and `PAPER_OUTLINE.md`).
+      Still missing for it: sketches of the two source layouts (cube
+      cross-section at an edge; almond mid-plane), and a figure of the
+      boundary residual near an edge with and without tail.
+- [ ] **T14 Re-time the sphere and almond cost tables (optional).** They were
+      timed in the first container; the cube table in the second, which is
+      about 20% slower. Each table is consistent in itself. Re-run
+      `fig_cost_sphere.py run` and `fig_cost_almond.py run` if one machine
+      for all tables is wanted.
+- [ ] **T15 Vertex treatment beyond the diagonal (optional).** The vertex
+      tail carries only the radial law; a tail on the three bisector planes
+      near the vertex (with the angular structure of the vertex singularity)
+      might change the rate rather than a constant. Not needed for the paper.
+- [ ] **T16 A compressed or higher-order BEM as competitor (optional).**
+      Bempp was used with dense assembly; item 27 says what that does and
+      does not show.
+- [ ] **T17 Non-convex polyhedra (optional, new work).** The skeleton
+      theorem and the layouts cover convex bodies only.
+- [ ] **T18 Rename the solver files (optional)**, e.g. `cube_mfs.py`,
+      `almond_mfs.py`, once nothing else is in flight.
 
 ## 5. Experiment log (newest last; one line each)
 
@@ -420,6 +422,17 @@ Open, in the order I would take them:
 - Cost tables: sphere, cube, almond (section 2, items 15, 20, 21).
 - Almond, thesis broadside case: MFS 0.110432 m^2, Bempp 0.110008 m^2 (9558 dofs).
 
+- Edge tail exponents, derived set against the old one: J = 5 0.314% / 0.327%, J = 7 0.049% / 0.049%; derived second terms: no change.
+- Tip cone exponents (almond): nu = 0.29959 the only one below 1; single exponent 2.2996 equals the fitted set of four (residual 0.24%, RCS within 0.0002 dB).
+- Cube vertex exponents: nu = 0.45417 (known value reproduced), tau = 0.8400. Vertex tail: 0.31 / 0.133 / 0.049% -> 0.20 / 0.086 / 0.029% (J = 5, 6, 7).
+- Graded Bempp, grading scan at 2592 dofs: g = 1, 2, 2.5 (q 6/8), 3: 0.63%, 0.15%, 0.20%, 4.8%. Quadrature 4/6, 6/8, 8/10 at 4608 dofs: 0.104%, 0.060%, 0.057%.
+- Graded Bempp reference (q 8/10), 4608 / 7200 / 10368 dofs: 0.058%, 0.032%, 0.022% from MFS J = 9; extrapolated 0.016%.
+- Cube cost table re-timed in one container: MFS J = 3..8 22-284 s for 1.27%-0.011%; Bempp uniform 63-832 s for 0.68%-0.19%; graded 32-161 s for 0.44%-0.105%.
+- Cube, oblique wave, J = 5, 6, 7: 86, 176, 370 s for 0.27%, 0.112%, 0.055% against graded Bempp; standard wave reproduced to 2e-15.
+- Almond against the Austin benchmark, 3.5-10.25 GHz: 0.04-0.14 dB (HH), 0.01-0.02 dB (VV) from the reference simulation; about 1 dB from measurements, as the reference is.
+- Almond 10.25 GHz, layouts 6:3 and 8:5: 0.0006 dB mean difference, 0.024 dB in the -66.7 dBsm null where the reference simulation differs by 4.3 dB.
+- Two jobs at once: QR 20 times slower, timings of that batch discarded.
+
 ## 6. Write-up session
 
 - Attach both `sap6/MFS` and `sap6/mfs-paper`. Read this file and the
@@ -434,26 +447,53 @@ Open, in the order I would take them:
   the singular tail at edges and tip; (4) accuracy and cost against Bempp, and
   the almond benchmark RCS. Keep the thesis shapes.
 - Numbers the paper can state, each with its script: section 1 table and
-  section 2 items 15, 19, 20, 21 (`fig_cost_*.py`, `fig_almond_rcs.py`,
-  `almond_rcs.py`). Figures exist as PDF and PNG in `validation/`.
-- What the paper must not claim, or must qualify:
-  - No comparison with measured almond data was made (T8).
-  - The cube and almond timings use the two mirror symmetries of the chosen
-    incidence; Bempp uses none. For a general incidence the MFS needs up to
-    four class solves (almond: implemented; cube: not implemented, T10).
-  - The cube reference below 0.2% is the MFS itself; the independent check
-    is the h^(4/3)-extrapolated Bempp field (agreement 0.05%) and the
-    cross-section (2.9281 extrapolated Bempp against 2.9278-2.9284 MFS).
-  - The almond tip exponents are a fitted set, not derived; the edge
-    exponents of the cube are the standard wedge values, sorted by a parity
-    argument that is in these notes but has not been written out as a proof.
-  - "Skeleton" completeness (the field of a polyhedron is a layer potential
-    on the bisector planes, by reflecting the exterior field across each
-    face) is my own argument from this session, unchecked against the
-    literature; treat it as a conjecture to verify or cite.
-  - Novelty of the 3D tail is unverified until T6 is done.
-  - Bempp was used with default settings, dense LU, no preconditioning or
-    compression; say so, since a tuned BEM could be faster.
+  section 2 items 19-21 and 24-30 (`fig_cost_*.py`, `fig_almond_rcs.py`,
+  `fig_almond_benchmark.py`, `cube_general.py`, `cone_exponents.py`,
+  `check_tail_exponents.py`). Figures exist as PDF and PNG in `validation/`.
+  Outline, critique and likely referee questions: `PAPER_OUTLINE.md`.
+- What the paper must not claim, or must qualify (state of each caveat of
+  the first session after the second):
+  - *Measured almond data*: resolved. Compared with the public Austin
+    benchmark at four frequencies (item 30). Say that the measured curves
+    differ from both simulations by about 1 dB; quote the measurement
+    uncertainty from Kelley et al. 2020 once read (T12). Not compared with
+    Woo et al.'s original 1993 curves.
+  - *Symmetry in the timings*: resolved as a statement, not as an advantage.
+    General incidence is implemented for both shapes; for the cube it costs
+    1.6-1.9 times the symmetric case (item 26). Bempp uses no symmetry and
+    needs none.
+  - *Independent cube reference*: improved from 0.05% to 0.02%. Graded Bempp
+    with reference quadrature is 0.022% from the MFS field and its
+    extrapolation 0.016% (item 29). Below that the reference is still the
+    MFS itself (self-convergence 0.011% at J = 8, optical mismatch 4e-5).
+  - *Exponents*: resolved. Edge, tip and vertex exponents are derived or
+    computed (`DERIVATIONS.md` B-D), and the fitted or guessed sets were
+    replaced with no loss. The derivations are written out but have not been
+    read by anyone else; Timo should check B.
+  - *Skeleton completeness*: now a proof for convex polyhedra
+    (`DERIVATIONS.md` A), elementary but not found in the literature; for the
+    almond (smooth, non-polyhedral) it remains the standard continuation
+    argument plus numerical evidence, not a theorem.
+  - *Novelty*: searched (T6). No precedent found for a 3D MFS with
+    edge-singular sources for Maxwell or Helmholtz. Safe wording and the
+    closest prior work are in `LITERATURE.md` section 1. Several key papers
+    were seen as abstracts only (T12).
+  - *Bempp settings*: partly resolved. Graded meshes and higher quadrature
+    were tried and are reported; assembly is 98% of Bempp's time, so the
+    linear solver is not the issue. Not tried: matrix compression,
+    higher-order elements, other BEM codes (T16).
+  - *New caveat*: on the cube the MFS does **not** beat a well-graded BEM
+    mesh at 0.1-0.4% for a general incident wave (item 26), and is level with
+    it at 0.15-0.2% in the symmetric case (item 27). Its advantage there is
+    the convergence rate (0.011% in under 5 min), not the cost at engineering
+    accuracy. On the sphere and the almond the advantage is large and not in
+    doubt.
+  - *New caveat*: single deep nulls of the almond RCS differ from the
+    published reference simulation by up to 4.3 dB while the MFS is
+    self-converged to 0.02 dB there (item 30). Report it; do not claim the
+    MFS value is the right one without a third computation.
+  - Everything is at most about 9 wavelengths in size, and the layouts are
+    built by hand per shape.
 - Known problems in the current manuscript: thesis wording ("this project",
   "chapter"); 2D Helmholtz material too long (cut to about a page); interior
   problems labelled as scattering; no Mie comparison; claim of exponential
@@ -480,7 +520,8 @@ Open, in the order I would take them:
   (`bem_optical.py`, `bem_almond_rcs.py`); it is only good for Bempp
   reference runs. To use it for anything else, bring it to the current
   branch first (fetch, show the author the diff, then check out). Use it for:
-  Bempp with more than about 10k dofs, where it is about twice as fast.
+  Bempp with more than about 5k dofs, where it is 3-4 times as fast
+  (2592 dofs: 22 s against 75 s).
   Run commands there as `/home/sap/Projects/MFS/.venv/bin/python3 -W ignore
   script.py ...` from `~/Projects/MFS/validation`; background jobs there do
   not notify the session, so read their output file to check.
@@ -490,9 +531,24 @@ Open, in the order I would take them:
   Long jobs: start them in the background and write results to a file.
 - **Bempp timings** must exclude its one-off compilation: do a small warm-up
   solve first (the `fig_cost_*` scripts do).
-- **Network.** WebSearch works. arxiv.org (and mirrors) cannot be fetched
-  from the cloud session, neither by the fetch tool nor from the container.
-  For T6 the author has to allow it or supply the PDFs.
+- **Network** (second session): arxiv.org (PDFs and the export API),
+  api.crossref.org and api.openalex.org (heavily rate-limited: one request
+  every 10 s at best) work from the container; public GitHub repositories can
+  be cloned. Publisher sites (sciencedirect, dl.acm.org, mdpi, and by
+  implication ieeexplore) are blocked. `pip install` of packages that are
+  not in CLAUDE.md's list was refused by the permission system (scikit-fem);
+  write the few lines needed instead.
+- **One job at a time, really** (item 31). Chain jobs in one background
+  command; wait for a process with `tail --pid=PID -f /dev/null`.
+- **Two containers, two speeds.** The second container of 16 November was
+  about 20% slower than the first for both the MFS and Bempp. Never mix
+  timings from different sessions in one table; `fig_cost_cube.py` data and
+  all cube Bempp files were re-timed together.
+- **Laptop worktree**: `~/Projects/MFS-ccr` on `flowx13` is a git worktree of
+  the working branch (local branch `laptop-bem`), made so that the old clone
+  `~/Projects/MFS` (detached at efac0ae with hand edits) stays untouched. It
+  uses the old clone's `.venv`. Remove it with `git worktree remove
+  ../MFS-ccr` from `~/Projects/MFS` when no longer wanted.
 - **Scratch outputs** named `*_t_*.npy/json` and `almond_rcs_*.npz` are
   ignored by git on purpose.
 - **Figures** follow one style (colour plus marker plus dash per method, so
