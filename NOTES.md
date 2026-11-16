@@ -1,6 +1,6 @@
 # Project notes
 
-Last updated: 2026-11-15. All scripts are in `validation/`. Problem throughout:
+Last updated: 2026-11-16. All scripts are in `validation/`. Problem throughout:
 exterior scattering of a plane wave by a perfectly conducting (PEC) body,
 tangential E_sc = -tangential E_inc on the surface, least-squares collocation.
 
@@ -27,13 +27,15 @@ to JCP. Status of each element:
 | Tangential-trace formulation | done in all current solvers |
 | Mie-validated convergence for the PEC sphere in N and source radius | done |
 | Almond at benchmark frequencies against published RCS data or Bempp | done against Bempp at 1.19, 7, 9.92 GHz, all look angles, HH and VV (T4); overlay of the measured curves (Woo et al.) left to the author |
-| Cube result | honest account of where plain MFS degrades is done; edge sources with a singular tail reach about 0.15% (Bempp-limited reference) and converge with depth (T1, in progress) |
+| Cube result | done: plain MFS stalls at 21-30%; edge sources with the singular tail converge to 0.016% (J = 8) and agree with extrapolated Bempp to 0.05% (T1) |
 | Cost comparison with a boundary element solver | done for sphere, cube and almond, tables and figures (T5) |
 | Helmholtz material | shrinks to about a page (write-up) |
 
-Aim: the cube and almond should work well with the method, not only be shown
-as limitations. If the cube cannot be pushed much below 0.5%, present what it
-reaches honestly alongside the explanation of why plain MFS fails there.
+Aim (met on 2026-11-16): the cube and almond work well with the method and
+beat Bempp in accuracy and time, with the plain-MFS failures kept as the
+motivation. The one new idea behind both is the same: where the field is
+singular (cube edges, almond tip), sources below the cut-off depth are tied
+together by power laws instead of being left free ("singular tail").
 
 ## 1. Results so far
 
@@ -48,10 +50,10 @@ reaches honestly alongside the explanation of why plain MFS fails there.
 | NASA almond, 1.19 / 7 / 9.92 GHz, monostatic RCS, HH and VV | skeleton sources + tip tail, four parity classes | within 0.03 / 0.04 / 0.12 dB rms of Bempp; self-converged to 0.001 dB (1.19 GHz) and 0.01 dB rms (9.92 GHz) | Bempp 9558 / 13632 dofs |
 | NASA almond, 1.19 GHz, nose-on | skeleton sources on mid-plane | self-converged to 5e-5, optical mismatch 1e-4; Bempp approaches it like 1/N (0.67%, 0.29%, 0.20%) | Bempp 4212, 9558, 13632 dofs |
 
-Bempp itself: sphere 0.4% with 9750 dofs (307 s); cube at h = 0.05 (8514 dofs,
-334 s in the container, 156 s on the 16-core laptop) is about 0.15-0.2% from the
-extrapolated limit, not 0.12% (that was only the change from h = 0.07); almond 98 s (4212 dofs) and 275 s (9558 dofs), still
-converging towards the MFS field.
+Bempp itself (container, compilation excluded): sphere 0.37% with 9750 dofs
+(411 s); cube 0.26% at h = 0.05 (8514 dofs, 323 s) and 0.19% at h = 0.04 (13302
+dofs, 689 s); almond 0.67% (4212 dofs, 89 s) and 0.30% (9558 dofs, 412 s). In
+every case Bempp converges towards the MFS field.
 
 ## 2. What we learned (do not re-test)
 
@@ -203,58 +205,26 @@ and the confocal solver kept as the record of the failed layout).
 
 ## 4. Task list (one per session)
 
-- [x] **T0 Clean-up.** Done 2026-11-16: one-off cube result files and the
-      superseded solvers `pec_cube_edge.py`, `pec_cube_lightning.py`,
-      `check_cube_dipole.py` removed; their helpers now live in
-      `pec_cube_lightning3d.py`. Kept on purpose: `pec_almond.py` (geometry,
-      mesh, and the confocal solver that documents why a shrunk source surface
-      fails) and `results_pec_cube.json` (uniform sources, 25%). Plain MFS on
-      the cube is reproduced by `pec_cube_lightning3d.py -1 n_base=8`.
-- [x] **T1 Cube stall.** Solved 2026-11-16 by the singular tail (section 2,
-      items 8-11). Self-convergence 0.21%, 0.083%, 0.050% for J = 6, 7, 8;
-      optical-theorem mismatch 3e-4; cross-section agrees with h^(4/3)-
-      extrapolated Bempp to 2e-4. Open: the optical mismatch stops falling at
-      3e-4 from J = 7 (next error source not identified; vertices are the
-      candidate, as nothing singular is built in there).
-- [x] **T2 Almond robustness.** Done 2026-11-16. `solve()` now refines the
-      collocation until rows/unknowns >= 2.5. Layouts with 979, 1597, 2246
-      sources: field changes 5.5e-5 and 4.0e-5, optical-theorem mismatch
-      0.8e-4 to 1.5e-4, cross-section 5.7452e-3 to 5.7455e-3 m^2. Bempp with
-      4212, 9558, 13632 dofs differs from the MFS by 0.667%, 0.292%, 0.204%:
-      proportional to 1/N with the MFS as the limit. The boundary residual
-      stays at 2-4e-3 while the field converges (it does not radiate; where it
-      sits was not checked).
-- [x] **T3 Almond, general incidence.** Covered by `almond_rcs.py`: any
-      plane wave is handled through the four parity classes. Only in-plane
-      look angles were run; the thesis case (d = -z, p = y) goes through the
-      same `solve_class` but was not run or checked.
-- [x] **T4 Almond at benchmark frequencies.** Done 2026-11-16 against Bempp;
-      **not** against the measured data of Woo et al. 1993, which could not be
-      fetched from the cloud session (the author should overlay digitised
-      curves). Monostatic RCS, HH and VV, azimuth 0-180 degrees, layout 6:3
-      with row spacing 0.5: about 4200 unknowns per class and 2 minutes per
-      frequency at 1.19, 7 and 9.92 GHz alike (the source count is set by the
-      geometry, not the wavelength, up to 8.35 wavelengths). MFS against Bempp
-      (9558 dofs at 1.19 GHz, 13632 at 7 and 9.92): rms 0.023 / 0.029 dB (HH /
-      VV) at 1.19, 0.044 / 0.026 dB at 7, 0.115 / 0.088 dB at 9.92 GHz (max
-      0.46 dB at a null). MFS self-convergence at 9.92 GHz: row spacing 0.4,
-      collocation 0.22, or layout 8:5 change HH by at most 0.036, 0.004, 0.034
-      dB and VV by at most 0.0024 dB. Figure: `fig_almond_rcs.py`.
-- [x] **T5 Error-versus-time plots.** Done 2026-11-16: `fig_cost_sphere.py`,
-      `fig_cost_cube.py`, `fig_cost_almond.py` (tables in section 2, items 15,
-      20, 21; PDFs and PNGs next to the scripts), plus `fig_almond_rcs.py`.
-      All timed in the container (4 cores) with compilation excluded. State in
-      the paper: the cube and almond MFS runs use the two mirror symmetries of
-      the incidence and Bempp does not; the sphere runs use none.
-- [ ] **T6 Literature check.** Is a 3D lightning-type method for Maxwell new?
-      Must cite and compare with: method of auxiliary sources (Fikioris et
-      al.), discrete sources method (Eremin, Doicu, Wriedt; sources on the
-      axis/skeleton are close to our almond layout), generalized multipole
-      technique, Gopal & Trefethen lightning solvers, 2023 regularized MFS for
-      PEC, arXiv 2605.15527, Barnett & Betcke 2008. Read full texts.
-      *Search-level pass, 2026-11-16 (abstracts and snippets only; arxiv.org is
-      blocked from the cloud session, so no full text was read and nothing
-      here is verified):*
+Done on 2026-11-16 (details in section 2, items 8-21): T0 clean-up, T1 cube
+stall, T2 almond robustness, T3 almond general incidence, T4 almond at 7 and
+9.92 GHz, T5 error-versus-time tables and figures.
+
+T3 check of the thesis case (wave along -z, polarised along y, 1.19 GHz):
+MFS backscatter 0.110432 m^2 (row spacing 0.5) and 0.110436 m^2 (0.4); Bempp
+0.109478 (4212 dofs) and 0.110008 m^2 (9558 dofs), converging towards the MFS.
+
+Open, in the order I would take them:
+
+- [ ] **T6 Literature check** (needs arXiv access, see section 7). Is a 3D
+      lightning-type or singular-source MFS for Maxwell new? Must cite and
+      compare with: method of auxiliary sources (Fikioris et al.), discrete
+      sources method (Eremin, Doicu, Wriedt; sources on the axis/skeleton are
+      close to our almond layout), generalized multipole technique, Gopal &
+      Trefethen lightning solvers, 2023 regularized MFS for PEC, arXiv
+      2605.15527 (could not be identified by search), Barnett & Betcke. Read
+      full texts and verify every citation by DOI.
+      *Search-level pass only so far (abstracts and snippets, nothing
+      verified):*
       - No 3D lightning-type or singular-source MFS for Maxwell or Helmholtz
         on a polyhedron turned up. The lightning Stokes paper says a 3D
         extension is "undoubtedly possible, but not straightforward".
@@ -264,8 +234,9 @@ and the confocal solver kept as the record of the failed layout).
         triangular cylinder); Valtchev et al. (MFS enriched with
         corner-adapted functions, J. Comput. Appl. Math. 470); Barnett &
         Betcke 2010 (MFS plus Fourier-Bessel corner functions for polygons).
-        Our tail differs: it stays inside the MFS (fixed-weight sums of
-        fundamental solutions), which is what carries over to 3D edges.
+        Our tails differ: they stay inside the MFS (fixed-weight sums of
+        fundamental solutions), which is what carries over to 3D edges and to
+        the almond tip.
       - To read: lightning Helmholtz solver (arXiv 2310.01665; sources on the
         interior bisectors, the 2D version of our layout); Tsitsas, Zouros,
         Fikioris, Leviatan, IEEE TAP 2018 (MAS currents diverge when the
@@ -273,8 +244,28 @@ and the confocal solver kept as the record of the failed layout).
         almond and cube explanations); a 2026 MFS paper on 3D harmonic
         problems on the unit cube (arXiv 2603.09926); multibody MFS (arXiv
         2603.19113); "Lightning-fast method of fundamental solutions"
-        (graphics, 3D Laplace); arXiv 2605.15527 (not yet seen).
-- [ ] **T7 Paper outline** (separate write-up session, see section 6).
+        (graphics, 3D Laplace).
+      - Also needed for the new material: the tip-singularity exponent of an
+        elliptic cone (to replace the fitted exponent set by a computed one,
+        or at least to cite), and the corner exponents of the cube.
+- [ ] **T7 Paper outline and critique** (separate write-up session, section 6).
+- [ ] **T8 Measured almond data.** Overlay the monostatic curves of Woo et
+      al. 1993 (IEEE AP Magazine) on `fig_almond_rcs`. The author has to
+      supply digitised curves; nothing was compared with measurements yet.
+- [ ] **T9 Cube beyond 0.02% (optional).** The balanced family is still
+      converging at J = 9 (optical mismatch 4.6e-5). Nothing singular is built
+      in at the vertices; if a referee asks for more digits, a vertex tail
+      (same idea as the almond tip, exponents fitted from a set) is the
+      candidate. Not needed for the paper as it stands.
+- [ ] **T10 General incidence for the cube (optional).** The cube solver is
+      hard-wired to this incidence (even in x, odd in y). The almond's
+      parity-class machinery (`parity_class`, `class_part` in the almond
+      scripts) shows how to do any incidence with 4 (or, with the third
+      mirror, 8) class solves that share the assembly.
+- [ ] **T11 Tidy the solvers (optional).** `pec_almond_skeleton.py` main
+      still runs the nose-on case with row spacing 0.7 and no tip tail (fine
+      for that class only); `almond_rcs.py` is the general, current solver.
+      The cube keeps the name `pec_cube_lightning3d.py`.
 
 ## 5. Experiment log (newest last; one line each)
 
@@ -294,6 +285,19 @@ and the confocal solver kept as the record of the failed layout).
 - Almond, skeleton sources, nose-on, 1.19 GHz: residual 3.7%, 0.31%, 0.24%; field
   change 5e-5; 0.30% from Bempp (9558 dofs); 2246 sources under-sampled.
 
+- 2D square with tail (3 unknowns per corner): TE 1e-2 -> 7.8e-5, TM 1e-3 -> 2.4e-7 at J = 4.
+- Cube, first 3D tail (same exponents for all components): 1.9%, 0.85%, 0.46% (J = 4, 5, 6); wrong exponents for transverse components: garbage (65%).
+- Cube, tail with physical exponents in the edge frame: 0.87%, 0.35%, 0.25% vs Bempp h = 0.05.
+- Cube, one knob at a time at J = 4-6 (modes, base grid, vertex rays, collocation, weights, depth spacing, taper): no single knob matters; n_base = 8 with coarse collocation: 95% error.
+- Cube, balanced refinement J = 5..9: changes 0.196%, 0.085%, 0.033%, 0.016%; optical 8.2e-4 .. 4.6e-5; 0.05% from extrapolated Bempp.
+- Bempp cube h = 0.1 .. 0.04: cross-section 2.91892, 2.92320, 2.92473, 2.92560; 57 .. 689 s; quadrature order irrelevant.
+- Almond 1.19 GHz nose-on, collocation following the sources: layouts agree to 5e-5; Bempp 0.667%, 0.292%, 0.204% (1/N).
+- Almond RCS, first run: HH off by 20-25% at oblique angles; residual of the (+,+) class 19%, half of it within 1 mm of the tip.
+- Almond tip tail: (+,+) residual 19% -> 2.8%; with row spacing 0.5: 0.23%; 0.4: 0.034%. Without the tail at spacing 0.4: HH wrong by up to 1.2 dB.
+- Almond RCS vs Bempp, rms dB (HH / VV): 0.023 / 0.029 (1.19 GHz), 0.044 / 0.026 (7 GHz), 0.115 / 0.088 (9.92 GHz).
+- Cost tables: sphere, cube, almond (section 2, items 15, 20, 21).
+- Almond, thesis broadside case: MFS 0.110432 m^2, Bempp 0.110008 m^2 (9558 dofs).
+
 ## 6. Write-up session
 
 - Attach both `sap6/MFS` and `sap6/mfs-paper`. Read this file and the
@@ -303,7 +307,31 @@ and the confocal solver kept as the record of the failed layout).
 - Proposed story: (1) MFS for 3D Maxwell with a Mie-validated stability and
   convergence study on the sphere; (2) why plain MFS fails on the thesis's cube
   and almond (singularities of the continued field); (3) source layouts that
-  fix it (edge line sources; skeleton sources). Keep the thesis shapes.
+  fix it: sources on the skeleton (cube: bisector planes of the edges; almond:
+  mid-plane up to the focal curve), clustered towards the singular set, plus
+  the singular tail at edges and tip; (4) accuracy and cost against Bempp, and
+  the almond benchmark RCS. Keep the thesis shapes.
+- Numbers the paper can state, each with its script: section 1 table and
+  section 2 items 15, 19, 20, 21 (`fig_cost_*.py`, `fig_almond_rcs.py`,
+  `almond_rcs.py`). Figures exist as PDF and PNG in `validation/`.
+- What the paper must not claim, or must qualify:
+  - No comparison with measured almond data was made (T8).
+  - The cube and almond timings use the two mirror symmetries of the chosen
+    incidence; Bempp uses none. For a general incidence the MFS needs up to
+    four class solves (almond: implemented; cube: not implemented, T10).
+  - The cube reference below 0.2% is the MFS itself; the independent check
+    is the h^(4/3)-extrapolated Bempp field (agreement 0.05%) and the
+    cross-section (2.9281 extrapolated Bempp against 2.9278-2.9284 MFS).
+  - The almond tip exponents are a fitted set, not derived; the edge
+    exponents of the cube are the standard wedge values, sorted by a parity
+    argument that is in these notes but has not been written out as a proof.
+  - "Skeleton" completeness (the field of a polyhedron is a layer potential
+    on the bisector planes, by reflecting the exterior field across each
+    face) is my own argument from this session, unchecked against the
+    literature; treat it as a conjecture to verify or cite.
+  - Novelty of the 3D tail is unverified until T6 is done.
+  - Bempp was used with default settings, dense LU, no preconditioning or
+    compression; say so, since a tuned BEM could be faster.
 - Known problems in the current manuscript: thesis wording ("this project",
   "chapter"); 2D Helmholtz material too long (cut to about a page); interior
   problems labelled as scattering; no Mie comparison; claim of exponential
@@ -315,3 +343,35 @@ and the confocal solver kept as the record of the failed layout).
   writing help in a declaration, research use in the methods).
 - Overleaf routine: push Overleaf -> GitHub before a session, work on a
   branch, merge, then pull GitHub -> Overleaf. Ask before pushing.
+
+## 7. Working environment (read before running anything)
+
+- **Where to run.** The cloud container (4 cores, 15 GB) is the primary copy
+  and is fast enough for everything except large Bempp meshes. Its dense QR
+  is faster than the laptop's. Rough times here: cube J = 6: 77 s, J = 8:
+  220 s; almond RCS, all angles: 2 min per frequency; Bempp 13k dofs: 11 min.
+- **The author's laptop** (`flowx13`, 16 cores, 15 GB, Linux) can be attached
+  through Remote Control (folder `Projects`). It has a clone at
+  `~/Projects/MFS` with a virtual environment `.venv` (numpy, scipy, numba,
+  bempp-cl, gmsh). That clone is at an **old commit (efac0ae) plus hand-made
+  edits** to `pec_almond_skeleton.py` and two extra scripts
+  (`bem_optical.py`, `bem_almond_rcs.py`); it is only good for Bempp
+  reference runs. To use it for anything else, bring it to the current
+  branch first (fetch, show the author the diff, then check out). Use it for:
+  Bempp with more than about 10k dofs, where it is about twice as fast.
+  Run commands there as `/home/sap/Projects/MFS/.venv/bin/python3 -W ignore
+  script.py ...` from `~/Projects/MFS/validation`; background jobs there do
+  not notify the session, so read their output file to check.
+- **Session restarts.** The cloud worker was restarted several times in one
+  day. Files in the repository survive; the scratch folder and running jobs
+  do not. Put anything worth keeping in `validation/` and commit often.
+  Long jobs: start them in the background and write results to a file.
+- **Bempp timings** must exclude its one-off compilation: do a small warm-up
+  solve first (the `fig_cost_*` scripts do).
+- **Network.** WebSearch works. arxiv.org (and mirrors) cannot be fetched
+  from the cloud session, neither by the fetch tool nor from the container.
+  For T6 the author has to allow it or supply the PDFs.
+- **Scratch outputs** named `*_t_*.npy/json` and `almond_rcs_*.npz` are
+  ignored by git on purpose.
+- **Figures** follow one style (colour plus marker plus dash per method, so
+  they print in greyscale); see `STYLE` in the `fig_*.py` scripts.
