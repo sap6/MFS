@@ -280,7 +280,8 @@ class TailLine:
 
 class Sources:
     def __init__(self, J, n_base=6, depth0=0.2, q=0.25, gamma=2.0, n0=4, angles=(0.0,), kinds="e", vrays=1,
-                 tail_n=0, tail_q=0.5, tail_e=(2 / 3, 1.0), tail_m=(1.0, 4 / 3), tail_normal=0):
+                 tail_n=0, tail_q=0.5, tail_e=(2 / 3, 1.0), tail_m=(1.0, 4 / 3), tail_normal=0,
+                 tail_er=None, tail_mr=None):
         self.depths = depth0 * q ** np.arange(J + 1) if J >= 0 else np.array([])
         pts = [base_sources(n_base, depth0)]
         # inward rays from every vertex: the body diagonal, optionally three more
@@ -310,6 +311,10 @@ class Sources:
                 ea = tail_m if ln.kernel is magnetic_pairs else tail_e
                 er = tuple(e + 1 for e in ea) if tail_normal else (
                     (2.0, 7 / 3)[:len(ea)] if ln.kernel is magnetic_pairs else (5 / 3, 2.0)[:len(ea)])
+                if ln.kernel is magnetic_pairs and tail_mr is not None:
+                    er = tail_mr
+                elif ln.kernel is not magnetic_pairs and tail_er is not None:
+                    er = tail_er
                 self.lines.append(TailLine(ln, tail_n, tail_q, ea, er, tail_normal))
         self.n_unknowns = 3 * (len(self.points) + len(self.mpoints) + sum(l.n for l in self.lines))
 
@@ -334,16 +339,19 @@ class Sources:
 
 
 class SymSources(Sources):
-    """Sources reduced by the two mirror symmetries of the problem
-    (E_inc = y_hat exp(-ikz)): even under x -> -x, odd under y -> -y.
-    Only a quarter of the sources is kept; each basis function is the
-    symmetrised sum over the four images, evaluated by reflecting targets."""
+    """Sources reduced by the mirrors x -> -x and y -> -y. A field of parity
+    (sx, sy) satisfies E(R x) = s R E(x) for each mirror R. The default
+    (+1, -1) is the class of E_inc = y_hat exp(-ikz): even under x -> -x, odd
+    under y -> -y; a general plane wave has a part in each of the four
+    classes (cube_general.py). Only a quarter of the sources is kept; each
+    basis function is the symmetrised sum over the four images, evaluated by
+    reflecting targets."""
 
-    GROUP = [(np.array([1.0, 1, 1]), 1.0), (np.array([-1.0, 1, 1]), 1.0),
-             (np.array([1.0, -1, 1]), -1.0), (np.array([-1.0, -1, 1]), -1.0)]
-
-    def __init__(self, *args, **kw):
+    def __init__(self, *args, parity=(1.0, -1.0), **kw):
         super().__init__(*args, **kw)
+        sx, sy = self.parity = (float(parity[0]), float(parity[1]))
+        self.GROUP = [(np.array([1.0, 1, 1]), 1.0), (np.array([-1.0, 1, 1]), sx),
+                      (np.array([1.0, -1, 1]), sy), (np.array([-1.0, -1, 1]), sx * sy)]
         self.points = self.points[(self.points[:, 0] > 0) & (self.points[:, 1] > 0)]
         self.mpoints = self.mpoints[(self.mpoints[:, 0] > 0) & (self.mpoints[:, 1] > 0)] if len(self.mpoints) else self.mpoints
         lines, keep = [], [np.ones((len(self.points) + len(self.mpoints), 3), bool)]
@@ -356,7 +364,7 @@ class SymSources(Sources):
                 continue
             if ln.yb < 0:                        # x-lines: b is y; y-lines: b is x
                 continue
-            sigma = 1.0 if ln.ax == 0 else -1.0  # parity of the reflection that maps the line to itself
+            sigma = sx if ln.ax == 0 else sy     # parity of the reflection that maps the line to itself
             par = (-1.0) ** getattr(ln, 'deg', np.arange(ln.n))[:, None]
             sc = np.where(np.arange(3) == getattr(ln, 'axis_index', ln.ax), -1.0, 1.0)[None, :] * (-1.0 if mag else 1.0)
             lines.append(ln)

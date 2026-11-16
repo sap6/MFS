@@ -41,7 +41,7 @@ def class_part(x, k, d, p, sig):
     return out / 4
 
 
-def solve_class(k, y, sy, sz, d, p, s_col, ratio=2.5, tail=None):
+def solve_class(k, y, sy, sz, d, p, s_col, ratio=2.5, tail=None, exps=a.TIP_EXPS, mexps=()):
     """Coefficients for all waves (d, p) in the class (sy, sz), and its backscatter amplitudes p . F(-d)."""
     comps, sig = a.parity_class(sy, sz)
     x, w, nrm = a.collocation(a.ETA_F, s_col, a.col_hmax(k))
@@ -52,7 +52,7 @@ def solve_class(k, y, sy, sz, d, p, s_col, ratio=2.5, tail=None):
     sw = np.sqrt(w / w.sum())
     A = a.matrix(x, y, k, T, comps, sig)
     if tail is not None:
-        A = np.concatenate((A, a.tail_matrix(x, tail, k, T, comps, sig)), axis=1)
+        A = np.concatenate((A, a.tail_matrix(x, tail, k, T, comps, sig, exps, mexps)), axis=1)
     A *= np.repeat(sw, 2)[:, None]
     scale = np.linalg.norm(A, axis=0)
     A /= scale
@@ -65,13 +65,13 @@ def solve_class(k, y, sy, sz, d, p, s_col, ratio=2.5, tail=None):
     rfar = 1.0e5
     Ffar = a.matrix(-rfar * d, y, k, None, comps, sig)                                       # (3 n_wave, unknowns)
     if tail is not None:
-        Ffar = np.concatenate((Ffar, a.tail_matrix(-rfar * d, tail, k, None, comps, sig)), axis=1)
+        Ffar = np.concatenate((Ffar, a.tail_matrix(-rfar * d, tail, k, None, comps, sig, exps, mexps)), axis=1)
     Ffar = Ffar * rfar * np.exp(-1j * k * rfar)
     F = np.einsum("nau,un->na", Ffar.reshape(len(d), 3, -1), c)                               # field of wave n in its own direction
     return np.einsum("na,na->n", p, F), res, len(x) * 2, A.shape[1]
 
 
-def rcs(freq, n_mid=6, J=3, step=2.0, s_col=0.3, tip=True, s=0.5):
+def rcs(freq, n_mid=6, J=3, step=2.0, s_col=0.3, tip=True, s=0.5, tip_exps="cone", n_e=2, n_m=1):
     """s: spacing of the sources along a row, as a fraction of the distance to
     the surface. It is the main convergence parameter for the waves that
     drive current along the axis (0.7: 3%, 0.5: 0.2%, 0.4: 0.03% residual)."""
@@ -85,7 +85,8 @@ def rcs(freq, n_mid=6, J=3, step=2.0, s_col=0.3, tip=True, s=0.5):
         amp, res2 = 0, 0
         for sy in (+1, -1):
             t0 = time.time()
-            f, res, rows, unk = solve_class(k, y, sy, sz, d, p, s_col, tail=tail)
+            ee, me = a.tip_exponents(sy, sz, n_e, n_m) if tip_exps == "cone" else (a.TIP_EXPS, ())
+            f, res, rows, unk = solve_class(k, y, sy, sz, d, p, s_col, tail=tail, exps=ee, mexps=me)
             amp, res2 = amp + f, res2 + res ** 2
             print(f"  {name} class (sy={sy:+d}, sz={sz:+d}): unknowns={unk} rows={rows} largest residual / largest "
                   f"right-hand side over the angles = {res[0].max() / res[1].max():.1e} ({time.time() - t0:.0f}s)", flush=True)

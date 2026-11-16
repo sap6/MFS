@@ -116,7 +116,25 @@ def row_etas(n_mid, J, q, beyond=()):
     return etas + [ETA_F + f * GAP for f in beyond]
 
 
-TIP_EXPS = (2.2, 2.4, 2.7, 3.0)
+TIP_EXPS = (2.2, 2.4, 2.7, 3.0)          # the fitted set used before the cone exponents were computed
+
+# Exponents of the tip cone (half-angles 34.09 and 12.71 degrees), from cone_exponents.py:
+# electric type E = grad(r^nu Y), magnetic type H = grad(r^tau Z); keyed by the mirror
+# parities (y, z) of the potential Y or Z.
+CONE_NU = {(1, 1): (0.29959, 1.46427, 2.02232), (-1, 1): (1.10372, 2.24730), (1, -1): (1.04120, 2.10576),
+           (-1, -1): (2.01295, 3.04849)}
+CONE_TAU = {(1, 1): (1.05604, 1.98580), (-1, 1): (0.96803, 1.96545), (1, -1): (0.87905, 1.75454),
+            (-1, -1): (1.97538, 2.90094)}
+
+
+def tip_exponents(sy, sz, n_e=2, n_m=1):
+    """Dipole exponents of the tip tail for the class (sy, sz), from the cone.
+    A field E ~ r^(nu - 1) is produced by electric dipoles of strength r^(nu + 2)
+    (per source, sources spaced in proportion to r); its potential has the
+    parities of the class. The magnetic-type fields H ~ r^(tau - 1) come from
+    magnetic dipoles r^(tau + 2); H is a pseudovector, so its potential has the
+    opposite parities. Returns (electric exponents, magnetic exponents)."""
+    return (tuple(v + 2 for v in CONE_NU[(sy, sz)][:n_e]), tuple(v + 2 for v in CONE_TAU[(-sy, -sz)][:n_m]))
 
 
 def tip_tail(n_mid, J, q, beyond=(), s=0.7, tip_cut=0.004, hmax=np.inf, tip_end=4e-7):
