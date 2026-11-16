@@ -27,7 +27,7 @@ to JCP. Status of each element:
 | Tangential-trace formulation | done in all current solvers |
 | Mie-validated convergence for the PEC sphere in N and source radius | done |
 | Almond at benchmark frequencies against published RCS data or Bempp | 1.19 GHz done against Bempp; higher frequencies and RCS data open (T2, T4) |
-| Cube result | honest account of where plain MFS degrades is done; the edge-source method reaches 0.5% and should be pushed further (T1) |
+| Cube result | honest account of where plain MFS degrades is done; edge sources with a singular tail reach about 0.15% (Bempp-limited reference) and converge with depth (T1, in progress) |
 | Cost comparison with a boundary element solver | numbers exist for all three shapes; needs proper error-versus-time plots (T5) |
 | Helmholtz material | shrinks to about a page (write-up) |
 
@@ -42,12 +42,14 @@ reaches honestly alongside the explanation of why plain MFS fails there.
 | Unit sphere, k = 2pi | dipoles on inner sphere R = 0.5 | 2e-9 (N = 400, <1 s); 2e-14 (N = 1200) | Mie |
 | Unit sphere, k = 4pi | same | 1.3e-12 (N = 1200) | Mie |
 | Unit cube, k = 2pi | uniform dipoles on inner cube | stalls at 25% | Bempp |
-| Unit cube, k = 2pi | lightning-type edge sources | 0.5% (J = 10); 0.8% at J = 12 (stall) | Bempp (~0.1%) |
+| Unit cube, k = 2pi | lightning-type edge sources, no tail | 0.5% (J = 10); 0.8% at J = 12 (stall) | Bempp h = 0.05 |
+| Unit cube, k = 2pi | edge sources + singular tail (section 2, item 8) | 0.87%, 0.35%, 0.25% (J = 4, 5, 6); 0.15% against extrapolated Bempp; optical-theorem mismatch 3.8e-4 | Bempp h = 0.05 and its extrapolation |
 | NASA almond, 1.19 GHz, nose-on | confocal / shrunk source surface | unstable or 20%+ | - |
 | NASA almond, 1.19 GHz, nose-on | skeleton sources on mid-plane | self-converged to 5e-5; 0.3% from Bempp | Bempp 9558 dofs |
 
-Bempp itself: sphere 0.4% with 9750 dofs (307 s); cube 0.12% at h = 0.05
-(8514 dofs, 334 s); almond 98 s (4212 dofs) and 275 s (9558 dofs), still
+Bempp itself: sphere 0.4% with 9750 dofs (307 s); cube at h = 0.05 (8514 dofs,
+334 s in the container, 156 s on the 16-core laptop) is about 0.15-0.2% from the
+extrapolated limit, not 0.12% (that was only the change from h = 0.07); almond 98 s (4212 dofs) and 275 s (9558 dofs), still
 converging towards the MFS field.
 
 ## 2. What we learned (do not re-test)
@@ -82,33 +84,72 @@ converging towards the MFS field.
 7. Did not help on the cube: bigger base grid, cell-averaged ("moment")
    testing, more modes beyond gamma = 2, extra corner rays (0.58% -> 0.51%).
 
+8. **Singular tail (the fix for the cube stall).** The error of the edge
+   sources was the cut-off of the edge singularity at the deepest free depth
+   d_J (error ~ d_J^0.55), not conditioning or sampling. Below d_J, sources at
+   depths d_J * 2^-i (i = 1..9, remainder lumped into the last) are tied
+   together with fixed weights (d_i/d_J)^e, one unknown set per exponent e.
+   The exponents must be the physical ones, in the frame of the edge (axis,
+   radial = along the bisector, normal), sorted by mirror symmetry about the
+   bisector plane: electric axis 2/3, 1; electric radial 5/3, 2; magnetic axis
+   1, 4/3; magnetic radial 2, 7/3; no normal components. Giving every
+   component 2/3 (axis) and 5/3 (transverse) doubles the error; exponents one
+   too low for the transverse components give garbage. 2D prototype
+   (`proto2d_square_tail.py`): TE 1e-2 -> 8e-5 and TM 1e-3 -> 2e-7 at J = 4 with
+   three tail unknowns per corner; in TE only the normal dipole with 5/3
+   matters, monopole tails do nothing (parity).
+9. With the tail, did not matter (J = 4 or 5): more modes (gamma 3), bigger
+   base grid, 4 vertex rays, col_p 4, deeper collocation, beta 0.25 (beta 0.01
+   is worse), denser depths (q = 0.71), a third exponent, tail length 14
+   instead of 9, tapering the tail to zero at the line ends (slightly worse).
+10. Error measures that need no reference: the optical theorem
+    (sigma_ext = sigma_sca, `cross_sections()`); it is not automatic for
+    collocation. It is useless for Bempp, where Galerkin makes it hold to 1e-7
+    on any mesh. Bempp cube cross-sections: 2.91892, 2.92320, 2.92473 for
+    h = 0.1, 0.07, 0.05 (quadrature order does not matter), extrapolating to
+    2.9255-2.9275; MFS J = 6: sigma_ext 2.92686, sigma_sca 2.92576.
+11. The Bempp mesh sequence converges towards the MFS field: MFS (J = 6) is
+    0.63%, 0.36%, 0.25% from Bempp h = 0.1, 0.07, 0.05.
+
 ## 3. Current best commands
 
 ```
 python3 pec_sphere_convergence.py && python3 plot_pec_sphere.py
 python3 bem_reference.py cube                      # writes bem_cube_h*.npz
-python3 pec_cube_lightning3d.py 6,8,10 tag=NAME kinds=em q=0.5 gamma=2.0 col_p=3 col_q=0.5 beta=0.5 sym=1
+python3 pec_cube_lightning3d.py 4,5,6 tag=NAME kinds=em q=0.5 gamma=2.0 col_p=3 col_q=0.5 beta=0.5 sym=1 tail=9
+python3 diag_cube.py 5 "tail_n=9"                 # residual map by zone, optical theorem
+python3 bem_optical.py 0.1,0.07,0.05              # Bempp cross-sections and far field
 python3 pec_almond_skeleton.py 1.19 --bem
 python3 proto2d_square.py TE ; python3 proto2d_ellipse.py     # 2D prototypes, seconds
+python3 proto2d_square_tail.py TE                 # 2D singular tail
 ```
 
-Cube cost at J = 10: 3126 unknowns, 35k rows, assembly ~90 s, solve ~85 s.
+Cube cost with tail (container, 4 cores): J = 4: 1470 unknowns, 37 + 7 s;
+J = 5: 1800, 49 + 13 s; J = 6: 2124, 62 + 22 s. Without tail at J = 10: 3126
+unknowns, 35k rows, ~90 + 85 s for 0.58%.
 Almond: 979 sources -> 21 s solve; 1597 -> 50 s.
 
 Files: `mie.py` (reference), `bem_reference.py` (Bempp EFIE),
 `pec_cube_lightning3d.py` + `line_kernel.py` (current cube solver),
-`pec_almond_skeleton.py` (current almond solver), `pec_almond.py` (geometry and
-mesh only; its confocal solver is superseded), `pec_cube_lightning.py` (shared
-helpers; its solver is superseded), `pec_cube_edge.py` (superseded).
+`diag_cube.py` (residual map), `bem_optical.py` (Bempp cross-sections, timed),
+`pec_almond_skeleton.py` (current almond solver), `pec_almond.py` (geometry, mesh,
+and the confocal solver kept as the record of the failed layout).
 
 ## 4. Task list (one per session)
 
-- [ ] **T0 Clean-up.** Delete one-off result files (`results_pec_cube_lightning3d_*`
-      except the final run, `cube_lightning3d_field_*`, quick JSONs), remove
-      superseded solvers, move shared helpers into one module.
-- [ ] **T1 Cube stall.** Error rises from 0.58% (J = 10) to 0.8% (J = 12).
-      Check in 2D what breaks at depth 5e-5 first; candidates: sampling at the
-      deepest levels, rank cutoff `cond`, corners. Target 0.1%.
+- [x] **T0 Clean-up.** Done 2026-11-16: one-off cube result files and the
+      superseded solvers `pec_cube_edge.py`, `pec_cube_lightning.py`,
+      `check_cube_dipole.py` removed; their helpers now live in
+      `pec_cube_lightning3d.py`. Kept on purpose: `pec_almond.py` (geometry,
+      mesh, and the confocal solver that documents why a shrunk source surface
+      fails) and `results_pec_cube.json` (uniform sources, 25%). Plain MFS on
+      the cube is reproduced by `pec_cube_lightning3d.py -1 n_base=8`.
+- [x] **T1 Cube stall.** Solved 2026-11-16 by the singular tail (section 2,
+      items 8-11). Self-convergence 0.21%, 0.083%, 0.050% for J = 6, 7, 8;
+      optical-theorem mismatch 3e-4; cross-section agrees with h^(4/3)-
+      extrapolated Bempp to 2e-4. Open: the optical mismatch stops falling at
+      3e-4 from J = 7 (next error source not identified; vertices are the
+      candidate, as nothing singular is built in there).
 - [ ] **T2 Almond robustness.** The 2246-source run was under-sampled
       (rows/unknowns 1.6, residual 4.5%): refine collocation with the sources.
       Confirm MFS accuracy with a finer Bempp mesh.

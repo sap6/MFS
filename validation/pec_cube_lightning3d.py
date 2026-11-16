@@ -23,10 +23,33 @@ import sys
 import time
 
 import numpy as np
-from scipy.linalg import lstsq
+from scipy.linalg import lstsq, qr, solve_triangular
 
-from pec_cube_lightning import H, K, base_sources, graded_nodes, incident
+import mie
 from pec_sphere_convergence import dyadic, fibonacci_sphere
+
+K = 2 * np.pi                    # cube side = one wavelength
+D = np.array([0.0, 0.0, -1.0])   # propagation direction
+P = np.array([0.0, 1.0, 0.0])    # polarisation
+H = 0.5                          # half side length
+
+
+def base_sources(n, depth):
+    """n x n midpoint grid on each face of an inner cube at `depth` below the faces."""
+    h = H - depth
+    s = (np.arange(n) + 0.5) / n * 2 * h - h
+    U, V = np.meshgrid(s, s, indexing="ij")
+    out = []
+    for ax, sign in itertools.product(range(3), (-1, 1)):
+        b, c = [i for i in range(3) if i != ax]
+        y = np.zeros((U.size, 3))
+        y[:, ax], y[:, b], y[:, c] = sign * h, U.ravel(), V.ravel()
+        out.append(y)
+    return np.concatenate(out)
+
+
+def incident(pts):
+    return mie.plane_wave(pts, K, D, P)
 
 LEG = np.polynomial.legendre
 
@@ -76,8 +99,8 @@ def magnetic_pairs(dvec):
     return f[..., None, None] * out
 
 
-def cube_surface(levels, p, q):
-    s, w = graded_nodes_capped(levels, p, q)
+def cube_surface(levels, p, q, hmax=0.1):
+    s, w = graded_nodes_capped(levels, p, q, hmax)
     U, V = np.meshgrid(s, s, indexing="ij")
     W = np.outer(w, w).ravel()
     pts, wts, t1, t2 = [], [], [], []
@@ -93,10 +116,10 @@ def cube_surface(levels, p, q):
             np.stack((np.concatenate(t1), np.concatenate(t2)), axis=1))
 
 
-def cube_cells(levels, p, q):
+def cube_cells(levels, p, q, hmax=0.1):
     """As cube_surface, plus for every node the index of its quadrature cell
     and the smaller side length of that cell."""
-    s, w = graded_nodes_capped(levels, p, q)
+    s, w = graded_nodes_capped(levels, p, q, hmax)
     n1 = len(s) // p
     pid = np.repeat(np.arange(n1), p)                      # 1D panel of each node
     plen = np.repeat(np.add.reduceat(w, np.arange(0, len(s), p)), p)
@@ -104,7 +127,7 @@ def cube_cells(levels, p, q):
     A, B = np.meshgrid(plen, plen, indexing="ij")
     cell = (I * n1 + Jj).ravel()
     hmin = np.minimum(A, B).ravel()
-    x, wts, T = cube_surface(levels, p, q)
+    x, wts, T = cube_surface(levels, p, q, hmax)
     cells = np.concatenate([cell + f * n1 * n1 for f in range(6)])
     return x, wts, T, cells, np.tile(hmin, 6)
 
@@ -363,8 +386,8 @@ def quarter(x):
     return (x[:, 0] > 0) & (x[:, 1] > 0)
 
 
-def solve(src, col_levels, col_p, col_q, beta, cond=1e-12, moments=0):
-    x, w, T, cells, hmin = cube_cells(col_levels, col_p, col_q)
+def solve(src, col_levels, col_p, col_q, beta, cond=1e-12, moments=0, hmax=0.1):
+    x, w, T, cells, hmin = cube_cells(col_levels, col_p, col_q, hmax)
     if isinstance(src, SymSources):
         sel = quarter(x)
         x, w, T, cells, hmin = x[sel], w[sel], T[sel], cells[sel], hmin[sel]
@@ -390,7 +413,14 @@ def solve(src, col_levels, col_p, col_q, beta, cond=1e-12, moments=0):
     scale = np.linalg.norm(A, axis=0)
     A /= scale
     t1 = time.time()
-    c, _, rank, _ = lstsq(A, b, lapack_driver="gelsy", cond=cond, overwrite_a=True, overwrite_b=True)
+    # plain QR is about twice as fast as rank-revealing QR; fall back to the
+    # latter only if R shows the columns to be numerically dependent
+    Q, R = qr(A, mode="economic", overwrite_a=True)
+    dR = np.abs(np.diag(R))
+    if dR.min() > cond * dR.max():
+        c, rank = solve_triangular(R, Q.conj().T @ b), len(dR)
+    else:
+        c, _, rank, _ = lstsq(Q @ R, b, lapack_driver="gelsy", cond=cond)
     return c / scale, {"rows": len(b), "unknowns": src.n_unknowns, "rank": int(rank),
                        "t_assemble": t1 - t0, "t_solve": time.time() - t1,
                        "coef_norm": float(np.linalg.norm(c))}
@@ -452,7 +482,7 @@ def main(Js, beta=1 / 3, q=0.25, gamma=2.0, col_q=1 / 3, col_p=2, n_base=6, tag=
                                                tail_n=tail, tail_q=tail_q, tail_e=te_, tail_m=tm_, tail_normal=tail_normal)
         d_min = src.depths[-1] if J >= 0 else 0.2
         col_levels = max(2, int(np.ceil(np.log(d_min / (2 * H)) / np.log(col_q))) + col_extra)
-        c, info = solve(src, col_levels, col_p, col_q, beta, moments=moments, cond=cond)
+        c, info = solve(src, col_levels, col_p, col_q, beta, moments=moments, cond=cond, hmax=col_hmax)
         E = (src.matrix(pts) @ c).reshape(-1, 3)
         info.update(J=J, d_min=float(d_min), beta=beta, q=q, gamma=gamma, col_q=col_q, col_p=col_p,
                     n_base=n_base)
