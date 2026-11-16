@@ -223,7 +223,7 @@ are from the first.)
     change nothing.
 25. **Cube vertices** (`python3 cone_exponents.py cube`, `DERIVATIONS.md` D).
     Exponents outside a cube corner: nu = 0.45417 (the known value), 1.23087;
-    tau = 0.8400, 1.20635. A vertex tail on the body diagonal (`VertexTail`,
+    tau = 0.840, 1.20635. A vertex tail on the body diagonal (`VertexTail`,
     e = nu + 2 and tau + 2, 12 unknowns) cuts the error by a third to 40% at
     every depth: J = 5: 0.31% -> 0.20%, J = 6: 0.133% -> 0.086%, J = 7: 0.049%
     -> 0.029% (against J = 9), and 0.059% -> 0.042% against graded Bempp. A
@@ -424,7 +424,7 @@ Open, in the order I would take them:
 
 - Edge tail exponents, derived set against the old one: J = 5 0.314% / 0.327%, J = 7 0.049% / 0.049%; derived second terms: no change.
 - Tip cone exponents (almond): nu = 0.29959 the only one below 1; single exponent 2.2996 equals the fitted set of four (residual 0.24%, RCS within 0.0002 dB).
-- Cube vertex exponents: nu = 0.45417 (known value reproduced), tau = 0.8400. Vertex tail: 0.31 / 0.133 / 0.049% -> 0.20 / 0.086 / 0.029% (J = 5, 6, 7).
+- Cube vertex exponents: nu = 0.45417 (known value reproduced), tau = 0.840. Vertex tail: 0.31 / 0.133 / 0.049% -> 0.20 / 0.086 / 0.029% (J = 5, 6, 7).
 - Graded Bempp, grading scan at 2592 dofs: g = 1, 2, 2.5 (q 6/8), 3: 0.63%, 0.15%, 0.20%, 4.8%. Quadrature 4/6, 6/8, 8/10 at 4608 dofs: 0.104%, 0.060%, 0.057%.
 - Graded Bempp reference (q 8/10), 4608 / 7200 / 10368 dofs: 0.058%, 0.032%, 0.022% from MFS J = 9; extrapolated 0.016%.
 - Cube cost table re-timed in one container: MFS J = 3..8 22-284 s for 1.27%-0.011%; Bempp uniform 63-832 s for 0.68%-0.19%; graded 32-161 s for 0.44%-0.105%.

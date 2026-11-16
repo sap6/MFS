@@ -298,7 +298,7 @@ class VertexTail:
     body diagonal at distances d * qt**i below the deepest free one, tied
     together with weights (d_i / d)**e. Near the vertex the field behaves
     like r^(nu - 1) (electric type, nu = 0.45417) and H like r^(tau - 1)
-    (tau = 0.8400), see cone_exponents.py and DERIVATIONS.md D; dipoles of
+    (tau = 0.840), see cone_exponents.py and DERIVATIONS.md D; dipoles of
     strength r^e on a geometric row give a field r^(e - 3), so e = nu + 2
     for electric and tau + 2 for magnetic dipoles. Optional (vtail_n > 0)."""
 

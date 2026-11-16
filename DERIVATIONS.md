@@ -174,7 +174,7 @@ Same two families as in C, on the sphere minus the spherical triangle cut out
 by the cube (`python3 cone_exponents.py cube`):
 
     nu  (Dirichlet): 0.45417, 1.23087, 1.78427, 2.11761, 2.51450
-    tau (Neumann):   0.8400,  1.20635, 1.8061,  2 (regular), 2.44666
+    tau (Neumann):   0.840,  1.20635, 1.8061,  2 (regular), 2.44666
 
 So E ~ r^(-0.546) (electric type) and H ~ r^(-0.160) (magnetic type) at a
 vertex. 0.45417 is the known value for the exterior of a cube corner. They

@@ -120,7 +120,7 @@ Shen have a 3D point-singularity version).
   cones, including elliptic cones and pyramidal corners. Boersma and Jansen
   1990 (Eindhoven report 90-WSK-01, no DOI) **[search snippet only]**.
   Our numbers (`cone_exponents.py`): almond tip nu = 0.29959; cube vertex
-  nu = 0.45417, tau = 0.8400. The value 0.4542 for the exterior of a cube
+  nu = 0.45417, tau = 0.840. The value 0.4542 for the exterior of a cube
   corner is standard (Fichera 1975 **[meta]**); the tables of De Smedt and
   Van Bladel should be compared with ours once the paper is at hand.
 - Betcke and Trefethen 2005 **[meta]**: the method of particular solutions
