@@ -26,7 +26,7 @@ to JCP. Status of each element:
 |---|---|
 | Tangential-trace formulation | done in all current solvers |
 | Mie-validated convergence for the PEC sphere in N and source radius | done |
-| Almond at benchmark frequencies against published RCS data or Bempp | 1.19 GHz done against Bempp; higher frequencies and RCS data open (T2, T4) |
+| Almond at benchmark frequencies against published RCS data or Bempp | 1.19 GHz done and confirmed (T2); higher frequencies and monostatic RCS open (T4) |
 | Cube result | honest account of where plain MFS degrades is done; edge sources with a singular tail reach about 0.15% (Bempp-limited reference) and converge with depth (T1, in progress) |
 | Cost comparison with a boundary element solver | numbers exist for all three shapes; needs proper error-versus-time plots (T5) |
 | Helmholtz material | shrinks to about a page (write-up) |
@@ -45,7 +45,7 @@ reaches honestly alongside the explanation of why plain MFS fails there.
 | Unit cube, k = 2pi | lightning-type edge sources, no tail | 0.5% (J = 10); 0.8% at J = 12 (stall) | Bempp h = 0.05 |
 | Unit cube, k = 2pi | edge sources + singular tail (section 2, item 8) | 0.87%, 0.35%, 0.25% (J = 4, 5, 6); 0.15% against extrapolated Bempp; optical-theorem mismatch 3.8e-4 | Bempp h = 0.05 and its extrapolation |
 | NASA almond, 1.19 GHz, nose-on | confocal / shrunk source surface | unstable or 20%+ | - |
-| NASA almond, 1.19 GHz, nose-on | skeleton sources on mid-plane | self-converged to 5e-5; 0.3% from Bempp | Bempp 9558 dofs |
+| NASA almond, 1.19 GHz, nose-on | skeleton sources on mid-plane | self-converged to 5e-5, optical mismatch 1e-4; Bempp approaches it like 1/N (0.67%, 0.29%, 0.20%) | Bempp 4212, 9558, 13632 dofs |
 
 Bempp itself: sphere 0.4% with 9750 dofs (307 s); cube at h = 0.05 (8514 dofs,
 334 s in the container, 156 s on the 16-core laptop) is about 0.15-0.2% from the
@@ -150,9 +150,14 @@ and the confocal solver kept as the record of the failed layout).
       extrapolated Bempp to 2e-4. Open: the optical mismatch stops falling at
       3e-4 from J = 7 (next error source not identified; vertices are the
       candidate, as nothing singular is built in there).
-- [ ] **T2 Almond robustness.** The 2246-source run was under-sampled
-      (rows/unknowns 1.6, residual 4.5%): refine collocation with the sources.
-      Confirm MFS accuracy with a finer Bempp mesh.
+- [x] **T2 Almond robustness.** Done 2026-11-16. `solve()` now refines the
+      collocation until rows/unknowns >= 2.5. Layouts with 979, 1597, 2246
+      sources: field changes 5.5e-5 and 4.0e-5, optical-theorem mismatch
+      0.8e-4 to 1.5e-4, cross-section 5.7452e-3 to 5.7455e-3 m^2. Bempp with
+      4212, 9558, 13632 dofs differs from the MFS by 0.667%, 0.292%, 0.204%:
+      proportional to 1/N with the MFS as the limit. The boundary residual
+      stays at 2-4e-3 while the field converges (it does not radiate; where it
+      sits was not checked).
 - [ ] **T3 Almond, general incidence (optional).** Broadside incidence
       (d = -z, p = y, the thesis case) has one mirror symmetry and needs all six
       dipole components. Not required; do it only if the paper wants more than
@@ -167,6 +172,28 @@ and the confocal solver kept as the record of the failed layout).
       axis/skeleton are close to our almond layout), generalized multipole
       technique, Gopal & Trefethen lightning solvers, 2023 regularized MFS for
       PEC, arXiv 2605.15527, Barnett & Betcke 2008. Read full texts.
+      *Search-level pass, 2026-11-16 (abstracts and snippets only; arxiv.org is
+      blocked from the cloud session, so no full text was read and nothing
+      here is verified):*
+      - No 3D lightning-type or singular-source MFS for Maxwell or Helmholtz
+        on a polyhedron turned up. The lightning Stokes paper says a 3D
+        extension is "undoubtedly possible, but not straightforward".
+      - Closest precedents for building the edge singularity into a source
+        model, all 2D: Leviatan et al., IEE Proc. 1997 (fields near edges
+        expanded in infinite-wedge solutions, current filaments elsewhere;
+        triangular cylinder); Valtchev et al. (MFS enriched with
+        corner-adapted functions, J. Comput. Appl. Math. 470); Barnett &
+        Betcke 2010 (MFS plus Fourier-Bessel corner functions for polygons).
+        Our tail differs: it stays inside the MFS (fixed-weight sums of
+        fundamental solutions), which is what carries over to 3D edges.
+      - To read: lightning Helmholtz solver (arXiv 2310.01665; sources on the
+        interior bisectors, the 2D version of our layout); Tsitsas, Zouros,
+        Fikioris, Leviatan, IEEE TAP 2018 (MAS currents diverge when the
+        auxiliary curve does not enclose the singularities; supports our
+        almond and cube explanations); a 2026 MFS paper on 3D harmonic
+        problems on the unit cube (arXiv 2603.09926); multibody MFS (arXiv
+        2603.19113); "Lightning-fast method of fundamental solutions"
+        (graphics, 3D Laplace); arXiv 2605.15527 (not yet seen).
 - [ ] **T7 Paper outline** (separate write-up session, see section 6).
 
 ## 5. Experiment log (newest last; one line each)

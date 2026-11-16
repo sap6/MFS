@@ -19,7 +19,7 @@ import time
 
 import numpy as np
 from numba import njit, prange
-from scipy.linalg import lstsq
+from scipy.linalg import lstsq, qr, solve_triangular
 
 from pec_almond import L, T0, T1, semi_axes
 from pec_sphere_convergence import fibonacci_sphere, tangent_basis
@@ -85,12 +85,20 @@ def sym_block(x, T, use_T, y, comps, refl, sig, k, out):
                         out[m, 2, n, ci] += sig[gi] * v2
 
 
-def matrix(x, y, k, T=None):
+def parity_class(sy, sz):
+    """Dipole components that survive on the mid-plane, and the image signs,
+    for fields with parity sy under y -> -y and sz under z -> -z (parity of
+    the tangential-to-mirror electric field). The nose-on case is (-1, +1)."""
+    comps = np.array([0, 1, 5]) if sz > 0 else np.array([2, 3, 4])
+    return comps, np.array([1.0, sy, sz, sy * sz])
+
+
+def matrix(x, y, k, T=None, comps=COMPS, sig=SIG):
     nc = 2 if T is not None else 3
-    out = np.empty((len(x), nc, len(y), len(COMPS)), complex)
+    out = np.empty((len(x), nc, len(y), len(comps)), complex)
     sym_block(np.ascontiguousarray(x), np.ascontiguousarray(T) if T is not None else np.zeros((1, 2, 3)),
-              T is not None, np.ascontiguousarray(y), COMPS, REFL, SIG, k, out)
-    return out.reshape(len(x) * nc, len(y) * len(COMPS))
+              T is not None, np.ascontiguousarray(y), comps, REFL, sig, k, out)
+    return out.reshape(len(x) * nc, len(y) * len(comps))
 
 
 # ---------- sources on the mid-plane -------------------------------------------
@@ -102,7 +110,7 @@ def surf_dist(x, y):
     return np.minimum(a - np.abs(y), b * np.sqrt(1 - eta ** 2))
 
 
-def source_rows(n_mid, J, q, beyond=(), s=0.7, tip_cut=0.004):
+def source_rows(n_mid, J, q, beyond=(), s=0.7, tip_cut=0.004, hmax=np.inf):
     etas = list((ETA_F - 3 * GAP) * np.cos((np.arange(n_mid) + 0.5) * np.pi / (2 * n_mid)))
     etas += [ETA_F - 2 * GAP * q ** j for j in range(J + 1)]
     etas += [ETA_F + f * GAP for f in beyond]
@@ -111,12 +119,12 @@ def source_rows(n_mid, J, q, beyond=(), s=0.7, tip_cut=0.004):
     for eta in etas:
         # front part: y = eta * a(x)
         x = 0.0
-        step = s * surf_dist(0.0, eta * ab(0.0)[0])
+        step = min(s * surf_dist(0.0, eta * ab(0.0)[0]), hmax)
         x += 0.5 * step
         while x < x_end:
             yv = eta * ab(x)[0]
             pts.append((x, yv))
-            x += s * surf_dist(x, yv)
+            x += min(s * surf_dist(x, yv), hmax)
         # rear part: confocal ellipse in the mid-plane
         Amu = np.sqrt(A_ ** 2 - B_ ** 2 * (1 - eta ** 2))
         psi = 0.0
@@ -124,7 +132,7 @@ def source_rows(n_mid, J, q, beyond=(), s=0.7, tip_cut=0.004):
         while psi < np.pi / 2:
             xv, yv = -Amu * np.sin(psi), eta * B_ * np.cos(psi)
             dist = surf_dist(xv, yv)
-            ds = s * dist
+            ds = min(s * dist, hmax)
             dpsi = ds / np.sqrt((Amu * np.cos(psi)) ** 2 + (eta * B_ * np.sin(psi)) ** 2)
             if first:
                 psi += 0.5 * dpsi
@@ -157,7 +165,7 @@ def collocation(eta_max, s=0.35, hmax=0.012, tip_cut=0.002, end_cut=0.02):
     phis, dphis = [], []
     phi = 0.0
     while phi < np.pi / 2:
-        dphi = min(s * rel_dist(phi + 1e-9) / np.sqrt(np.sin(phi) ** 2 + np.cos(phi) ** 2 / 9), 0.25)
+        dphi = min(s * rel_dist(phi + 1e-9) / np.sqrt(np.sin(phi) ** 2 + np.cos(phi) ** 2 / 9), hmax / B_)
         dphi = min(dphi, np.pi / 2 - phi)
         phis.append(phi + 0.5 * dphi)
         dphis.append(dphi)
@@ -191,13 +199,38 @@ def collocation(eta_max, s=0.35, hmax=0.012, tip_cut=0.002, end_cut=0.02):
     return pts, np.array(wts), nrm
 
 
-def incident(x, k):
-    return P_INC[None, :] * np.exp(1j * k * (x @ D_INC))[:, None]
+def incident(x, k, d=D_INC, p=P_INC):
+    return p[None, :] * np.exp(1j * k * (x @ d))[:, None]
 
 
-def solve(k, y, s_col=0.35, cond=1e-13, eta_max=None):
+def cross_sections(k, y, c, nt=48, nphi=96, rfar=1.0e5):
+    """Extinction and scattering cross-sections of the computed field; equal
+    for a perfect conductor (optical theorem). Their mismatch is an error
+    measure that needs no reference solution."""
+    g, w = np.polynomial.legendre.leggauss(nt)
+    ph = (np.arange(nphi) + 0.5) / nphi * 2 * np.pi
+    ct, phh = np.meshgrid(g, ph, indexing="ij")
+    st = np.sqrt(1 - ct ** 2)
+    dirs = np.column_stack(((st * np.cos(phh)).ravel(), (st * np.sin(phh)).ravel(), ct.ravel()))
+    wts = np.repeat(w, nphi) * 2 * np.pi / nphi
+    dirs = np.vstack((dirs, D_INC[None, :]))
+    F = (matrix(rfar * dirs, y, k) @ c).reshape(-1, 3) * rfar * np.exp(-1j * k * rfar)
+    ext = 4 * np.pi / k * float(np.imag(np.conj(P_INC) @ F[-1]))
+    sca = float(np.sum(wts * np.sum(np.abs(F[:-1]) ** 2, axis=1)))
+    return ext, sca
+
+
+def col_hmax(k):
+    """Largest collocation spacing: 0.012 m, or a fifth of the wavelength."""
+    return min(0.012, 2 * np.pi / k / 5)
+
+
+def solve(k, y, s_col=0.35, cond=1e-13, eta_max=None, ratio=2.5):
     eta_max = eta_max if eta_max is not None else ETA_F
-    x, w, nrm = collocation(eta_max, s_col)
+    x, w, nrm = collocation(eta_max, s_col, col_hmax(k))
+    if 2 * len(x) < ratio * len(COMPS) * len(y):      # keep rows / unknowns >= ratio
+        s_col *= np.sqrt(2 * len(x) / (ratio * len(COMPS) * len(y)))
+        x, w, nrm = collocation(eta_max, s_col, col_hmax(k))
     T = tangent_basis(nrm)
     sw = np.sqrt(w / w.sum())
     t0 = time.time()
@@ -206,13 +239,18 @@ def solve(k, y, s_col=0.35, cond=1e-13, eta_max=None):
     scale = np.linalg.norm(A, axis=0)
     A /= scale
     t1 = time.time()
-    c, _, rank, _ = lstsq(A, b, lapack_driver="gelsy", cond=cond, overwrite_a=True, overwrite_b=True)
-    return c / scale, {"rows": len(b), "unknowns": len(scale), "rank": int(rank), "N": len(y),
+    Q, R = qr(A, mode="economic", overwrite_a=True)       # plain QR; rank-revealing only if needed
+    dR = np.abs(np.diag(R))
+    if dR.min() > cond * dR.max():
+        c, rank = solve_triangular(R, Q.conj().T @ b), len(dR)
+    else:
+        c, _, rank, _ = lstsq(Q @ R, b, lapack_driver="gelsy", cond=cond)
+    return c / scale, {"rows": len(b), "unknowns": len(scale), "rank": int(rank), "N": len(y), "s_col": float(s_col),
                        "t_assemble": t1 - t0, "t_solve": time.time() - t1, "coef_norm": float(np.linalg.norm(c))}
 
 
 def boundary_residual(k, y, c, eta_max, s=0.27):
-    x, w, nrm = collocation(eta_max, s)
+    x, w, nrm = collocation(eta_max, s, col_hmax(k))
     T = tangent_basis(nrm)
     rhs = -np.einsum("mab,mb->ma", T, incident(x, k))
     res = (matrix(x, y, k, T) @ c).reshape(-1, 2) - rhs
@@ -240,11 +278,16 @@ if __name__ == "__main__":
     print(f"f = {freq} GHz, k = {k:.3f}, almond length = {L * k / (2 * np.pi):.2f} wavelengths", flush=True)
     configs = [dict(n_mid=4, J=1, q=0.5), dict(n_mid=6, J=3, q=0.5), dict(n_mid=8, J=5, q=0.5),
                dict(n_mid=10, J=7, q=0.5)]
+    for a in sys.argv[2:]:
+        if a.startswith("--configs="):          # e.g. --configs=6:3,8:5  (n_mid:J)
+            configs = [dict(n_mid=int(p.split(":")[0]), J=int(p.split(":")[1]), q=0.5) for p in a[10:].split(",")]
     results, fields = [], []
     for cfg in configs:
-        y = source_rows(**cfg)
+        y = source_rows(**cfg, hmax=2 * np.pi / k / 4)
         c, info = solve(k, y)
-        info.update(cfg, bc=boundary_residual(k, y, c, ETA_F))
+        info.update(cfg, bc=boundary_residual(k, y, c, ETA_F, 0.77 * info["s_col"]))
+        info["sigma_ext"], info["sigma_sca"] = cross_sections(k, y, c)
+        info["optical"] = abs(info["sigma_ext"] - info["sigma_sca"]) / info["sigma_sca"]
         E = (matrix(pts, y, k) @ c).reshape(-1, 3)
         if fields:
             info["change"] = float(np.linalg.norm(E - fields[-1]) / np.linalg.norm(E))
@@ -252,11 +295,15 @@ if __name__ == "__main__":
         results.append(info)
         print(f"{cfg}: N={info['N']} unk={info['unknowns']} rows={info['rows']} rank={info['rank']} "
               f"bc={info['bc']:.2e} change={info.get('change', float('nan')):.2e} |c|={info['coef_norm']:.1e} "
-              f"asm={info['t_assemble']:.0f}s solve={info['t_solve']:.0f}s", flush=True)
+              f"asm={info['t_assemble']:.0f}s solve={info['t_solve']:.0f}s\n      sigma_ext={info['sigma_ext']:.6e} "
+              f"sigma_sca={info['sigma_sca']:.6e} optical={info['optical']:.1e}", flush=True)
         np.save(f"almond_skeleton_field_{freq}GHz.npy", np.array(fields))
         json.dump(results, open(f"results_pec_almond_skeleton_{freq}GHz.json", "w"), indent=1)
-    if "--bem" in sys.argv:
-        for ndof, Eb, t in bem_reference(k, pts):
+    bem_sizes = [a[6:] for a in sys.argv if a.startswith("--bem=")]      # e.g. --bem=40x36,60x54,70x63
+    if "--bem" in sys.argv or bem_sizes:
+        sizes = (tuple(tuple(int(v) for v in p.split("x")) for p in bem_sizes[0].split(","))
+                 if bem_sizes else ((40, 36), (60, 54)))
+        for ndof, Eb, t in bem_reference(k, pts, sizes):
             line = f"BEM dofs={ndof} ({t:.0f}s):"
             for r, E in zip(results, fields):
                 line += f" {np.linalg.norm(E - Eb) / np.linalg.norm(Eb):.2e}"
