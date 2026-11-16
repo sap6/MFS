@@ -28,7 +28,7 @@ to JCP. Status of each element:
 | Mie-validated convergence for the PEC sphere in N and source radius | done |
 | Almond at benchmark frequencies against published RCS data or Bempp | 1.19 GHz done and confirmed (T2); higher frequencies and monostatic RCS open (T4) |
 | Cube result | honest account of where plain MFS degrades is done; edge sources with a singular tail reach about 0.15% (Bempp-limited reference) and converge with depth (T1, in progress) |
-| Cost comparison with a boundary element solver | numbers exist for all three shapes; needs proper error-versus-time plots (T5) |
+| Cost comparison with a boundary element solver | cube: table done (`fig_cost_cube.py`), MFS 2x to 10x faster than Bempp between 0.7% and 0.2% and still converging; sphere and almond tables and all plots open (T5) |
 | Helmholtz material | shrinks to about a page (write-up) |
 
 Aim: the cube and almond should work well with the method, not only be shown
@@ -43,7 +43,7 @@ reaches honestly alongside the explanation of why plain MFS fails there.
 | Unit sphere, k = 4pi | same | 1.3e-12 (N = 1200) | Mie |
 | Unit cube, k = 2pi | uniform dipoles on inner cube | stalls at 25% | Bempp |
 | Unit cube, k = 2pi | lightning-type edge sources, no tail | 0.5% (J = 10); 0.8% at J = 12 (stall) | Bempp h = 0.05 |
-| Unit cube, k = 2pi | edge sources + singular tail (section 2, item 8) | 0.87%, 0.35%, 0.25% (J = 4, 5, 6); 0.15% against extrapolated Bempp; optical-theorem mismatch 3.8e-4 | Bempp h = 0.05 and its extrapolation |
+| Unit cube, k = 2pi | edge sources + singular tail, balanced refinement (section 2, items 8, 12) | 0.93%, 0.33%, 0.13%, 0.049%, 0.016% for J = 4..8 against J = 9; J = 9 is 0.05% from extrapolated Bempp; optical mismatch down to 4.6e-5 | MFS J = 9, extrapolated Bempp |
 | NASA almond, 1.19 GHz, nose-on | confocal / shrunk source surface | unstable or 20%+ | - |
 | NASA almond, 1.19 GHz, nose-on | skeleton sources on mid-plane | self-converged to 5e-5, optical mismatch 1e-4; Bempp approaches it like 1/N (0.67%, 0.29%, 0.20%) | Bempp 4212, 9558, 13632 dofs |
 
@@ -110,6 +110,31 @@ converging towards the MFS field.
     2.9255-2.9275; MFS J = 6: sigma_ext 2.92686, sigma_sca 2.92576.
 11. The Bempp mesh sequence converges towards the MFS field: MFS (J = 6) is
     0.63%, 0.36%, 0.25% from Bempp h = 0.1, 0.07, 0.05.
+
+12. **Refine everything together.** With the tail, depth J alone converges
+    only to about 0.1%: other resolution limits then show (variants at J = 6
+    differ by 0.03-0.12%). The balanced family (`balanced()` in
+    `fig_cost_cube.py`: n0 = 2J - 4 modes offset, base grid 4/6/8 with
+    interior panels 0.25/0.15/0.1) converges cleanly: J = 5, 6, 7, 8 change by
+    0.196%, 0.085%, 0.033%; optical mismatch 8.2e-4, 3.3e-4, 1.5e-4, 7.9e-5;
+    distance to extrapolated Bempp 0.33%, 0.14%, 0.07%, 0.05%.
+    A fine base grid needs fine interior collocation: n_base = 8 with panels
+    of 0.25 gives garbage (95%) without any warning except the optical
+    mismatch (0.5).
+13. Timing on the same machine (container, 4 cores): Bempp h = 0.1, 0.07,
+    0.05, 0.04 takes 57, 166, 323, 689 s and is 0.68%, 0.40%, 0.25%, 0.18% from
+    the converged MFS field. The MFS uses the two mirror symmetries of this
+    incidence; Bempp does not (say so in the paper).
+14. LAPACK: plain QR is twice as fast as gelsy and equally accurate here
+    (rank was always full). The laptop's 16 cores speed up Bempp and the
+    Numba assembly about 2x but its dense QR was slower than the container's.
+
+15. **Cube cost table** (`python3 fig_cost_cube.py`, container, 4 cores, error
+    against MFS J = 9): MFS + tail J = 3..8: 16.5, 25, 42, 77, 154, 220 s for
+    2.7%, 0.93%, 0.33%, 0.13%, 0.049%, 0.016%. Bempp h = 0.1, 0.07, 0.05, 0.04:
+    57, 166, 323, 689 s for 0.68%, 0.39%, 0.26%, 0.19%. Edge sources without
+    tail, J = 4, 6, 8: 9, 37, 125 s for 5.4%, 2.5%, 1.1%. Plain MFS, 72 to 450
+    unknowns: 30% to 21%, no convergence.
 
 ## 3. Current best commands
 

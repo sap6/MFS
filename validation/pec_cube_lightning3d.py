@@ -469,7 +469,7 @@ def load_bem():
     return np.load(files[0]) if files else None
 
 
-def main(Js, beta=1 / 3, q=0.25, gamma=2.0, col_q=1 / 3, col_p=2, n_base=6, tag="run", angles="0", kinds="e", moments=0,
+def main(Js, beta=1 / 3, q=0.25, gamma=2.0, col_q=1 / 3, col_p=2, n_base=6, n0=4, tag="run", angles="0", kinds="e", moments=0,
          col_hmax=0.1, sym=0, vrays=1, cond=1e-12, tail=0, tail_q=0.5, tail_e="0.6667:1", tail_m="1:1.3333", tail_normal=0,
          col_extra=1, diag=0):
     angles = tuple(float(a) for a in str(angles).split(":"))
@@ -478,7 +478,7 @@ def main(Js, beta=1 / 3, q=0.25, gamma=2.0, col_q=1 / 3, col_p=2, n_base=6, tag=
     pts = bem["pts"] if bem is not None else 2.0 * fibonacci_sphere(400)
     results, prev = [], None
     for J in Js:
-        src = (SymSources if sym else Sources)(J, n_base=n_base, q=q, gamma=gamma, angles=angles, kinds=kinds, vrays=vrays,
+        src = (SymSources if sym else Sources)(J, n_base=n_base, q=q, gamma=gamma, n0=n0, angles=angles, kinds=kinds, vrays=vrays,
                                                tail_n=tail, tail_q=tail_q, tail_e=te_, tail_m=tm_, tail_normal=tail_normal)
         d_min = src.depths[-1] if J >= 0 else 0.2
         col_levels = max(2, int(np.ceil(np.log(d_min / (2 * H)) / np.log(col_q))) + col_extra)

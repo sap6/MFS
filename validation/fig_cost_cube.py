@@ -18,18 +18,25 @@ import numpy as np
 
 import pec_cube_lightning3d as m
 
-FAST = dict(q=0.5, gamma=2.0, kinds="em", n_base=4)
-COL = dict(col_p=3, col_q=0.5, beta=0.5, hmax=0.25)
+COL = dict(col_p=3, col_q=0.5, beta=0.5)
 J_REF = 9
 
 
-def run_mfs(J, pts, tail=9, n_base=4):
+def balanced(J):
+    """All resolution parameters grow with the depth J: modes per line
+    (n0 + 2 log(1/d)), base grid, and the collocation that samples it."""
+    n0 = max(4, 2 * J - 4)
+    n_base, hmax = (4, 0.25) if J <= 5 else (6, 0.15) if J == 6 else (8, 0.1)
+    return dict(q=0.5, gamma=2.0, kinds="em", n0=n0, n_base=n_base), hmax
+
+
+def run_mfs(J, pts, tail=9, n_base=None):
     t0 = time.time()
-    kw = dict(FAST, n_base=n_base)
+    kw, hmax = balanced(J) if n_base is None else (dict(q=0.5, gamma=2.0, kinds="em", n_base=n_base), 0.1)
     src = m.SymSources(J, tail_n=tail, **kw)
     d_min = src.depths[-1] if J >= 0 else 0.2
     lv = max(2, int(np.ceil(np.log(d_min / (2 * m.H)) / np.log(COL["col_q"]))) + 1)
-    c, info = m.solve(src, lv, COL["col_p"], COL["col_q"], COL["beta"], hmax=COL["hmax"] if J >= 0 else 0.1)
+    c, info = m.solve(src, lv, COL["col_p"], COL["col_q"], COL["beta"], hmax=hmax)
     E = (src.matrix(pts) @ c).reshape(-1, 3)
     t = time.time() - t0
     ext, sca = m.cross_sections(src, c)
@@ -40,7 +47,7 @@ def run():
     pts = np.load("bem_cube_h0.05.npz")["pts"]
     run_mfs(2, pts)                                    # warm-up (compilation, threads)
     out = {"pts": pts}
-    for name, Js, kw in (("tail", range(3, J_REF + 1), {}), ("notail", (4, 6, 8, 10), dict(tail=0)),
+    for name, Js, kw in (("tail", range(3, J_REF + 1), {}), ("notail", (4, 6, 8), dict(tail=0)),
                          ("plain", (4, 6, 8, 10), None)):
         rows = []
         for J in Js:
