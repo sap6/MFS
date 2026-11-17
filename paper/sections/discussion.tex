@@ -9,7 +9,10 @@
 
 \emph{The boundary element code.} Bempp is a low-order code, and we ran it with dense matrices. We chose its fastest assembly backend, graded the meshes of the cube and raised the quadrature orders where that helped (\ref{sec:bempp}). We did not compare with a high-order or a compressed boundary element method. On the smooth bodies a high-order method would narrow the gap considerably.
 
-\emph{Size.} All bodies are at most nine wavelengths long. The cost of the dense factorisation grows with the cube of the number of unknowns, and we make no claim for larger problems.
+\emph{Size.} All bodies are at most nine wavelengths long. The cost of the dense factorisation grows with the cube of the number of unknowns, and we make no claim for larger problems. For the cube we have results at one and two wavelengths only.
+%% TODO (authors): at three wavelengths the scaling of Section 6.6 (interior panels, modes) did not give a convergent
+%% layout (errors near 1e-2, NOTES.md item 57). Either investigate (task T25) or state it here.
+At three wavelengths the scaling of the parameters that we used at two wavelengths did not give a convergent layout, and we have not investigated why.
 
 \emph{Generality.} Each layout was built by hand from the skeleton of its shape. We have no automatic construction for a general body. \autoref{thm:skeleton} covers convex polyhedra only.
 

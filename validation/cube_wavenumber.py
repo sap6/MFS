@@ -55,7 +55,8 @@ if __name__ == "__main__":
         import bem_cube_sym as b
         import bempp_cl.api as bempp
         b.K = m.K
-        ref = np.load(f"cube_wavenumber_k{S:g}.npz")["dense_E10"]
+        d = np.load(f"cube_wavenumber_k{S:g}.npz")
+        ref = d["dense_E10"] if "dense_E10" in d else d["dense_E9"]
         rows = []
         for reg, sing, ns in ((4, 6, (12, 16, 24, 32, 40)), (6, 8, (16, 24, 32, 40)), (8, 10, (16, 24, 32, 40))):
             bempp.GLOBAL_PARAMETERS.quadrature.regular = reg
@@ -65,23 +66,24 @@ if __name__ == "__main__":
                 E, N, sizes, ts, grid = b.solve(n, 2.0, pts)
                 rows.append((reg, sing, n, N, sum(ts), rel(E, ref)))
                 print(f"k = {S:g} * 2 pi, Bempp with symmetry, graded n = {n}, quadrature {reg}/{sing}: dofs {N}, {sum(ts):.1f} s, "
-                      f"difference from the MFS (two depths, J = 10): {rel(E, ref):.2e}", flush=True)
+                      f"difference from the MFS reference: {rel(E, ref):.2e}", flush=True)
                 np.savez(f"cube_wavenumber_k{S:g}_bem.npz", rows=np.array(rows))
     else:
         dn = int(round(4 * (S - 1)))
         base = lambda J: (4, 0.25 / S) if J <= 5 else (6, 0.15 / S)     # interior panels scaled with the wavelength
         res = {}
-        for fam, Js in (("balanced", range(4, 9)), ("dense", range(5, 11))):
+        JREF = 10 if S <= 2 else 9                         # memory: one class of the reference must stay below about 5 GB
+        for fam, Js in (("balanced", range(4, 9)), ("dense", range(5, JREF + 1))):
             for J in Js:
                 E, t, info = run(J, fam, *base(J), dn, pts)
                 res[(fam, J)] = (E, t, info)
                 print(f"{fam:8s} J = {J:2d}: unknowns/class {max(info['per_class'])} rows {info['rows']} t = {t:5.1f} s optical {info['optical']:.1e} "
                       f"sigma_ext {info['ext']:.6f} |c| {info['coef_norm']:.1f}", flush=True)
         E, t, info = run(8, "dense", 8, 0.15 / S, dn + 4, pts)
-        ref = res[("dense", 10)][0]
+        ref = res[("dense", JREF)][0]
         print(f"check: dense J = 8 with base 8 and {dn + 4} more modes differs from the family's J = 8 by {rel(E, res[('dense', 8)][0]):.2e} "
               f"(optical {info['optical']:.1e})")
-        print("errors against dense J = 10:")
+        print(f"errors against dense J = {JREF}:")
         for (fam, J), (E, t, info) in res.items():
             print(f"  {fam:8s} J = {J:2d}  t = {t:5.1f} s  {rel(E, ref):.2e}")
         np.savez(f"cube_wavenumber_k{S:g}.npz", pts=pts, k=m.K, **{f"{fam}_E{J}": v[0] for (fam, J), v in res.items()},

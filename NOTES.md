@@ -887,8 +887,23 @@ towards the MFS field.
       1605. Two wavenumbers only: do not write "the advantage grows with
       k" as a law. The k = 4 pi family was tuned in half an hour and the
       grading of the Bempp mesh was not re-tuned (g = 2 as at k = 2 pi).
-      Not done: oblique wave at k = 4 pi, k = 6 pi (memory: the dense
-      family at J = 9 would need about 5 GB per class).
+      Not done: oblique wave at k = 4 pi.
+    - **k = 6 pi (three wavelengths) FAILED with the same scaling**
+      (`cube_wavenumber.py 3`: hmax / 3, modes + 8): one depth J = 4..8
+      and two depths J = 5..9 differ from one another by 1e-2 to 6e-2, the
+      optical mismatch stays near 1e-3 to 3e-3, nothing converges. Quick
+      variants at J = 6, none convergent: base grid 8 or 10 (|c| grows to
+      17 and 340; fields move by 4e-3 to 8e-3); modes + 12 (optical 3e-4
+      but field 1e-2 away); modes + 16 and + 24 (worse: |c| 800, optical
+      3.5e-2, i.e. under-sampled); finer interior collocation 0.035 (no
+      help). So the layout does not simply scale to three wavelengths.
+      Guesses, untested: the base grid at fixed depth 0.2 has too few
+      points per wavelength while a finer one at that depth is
+      ill-conditioned (move it closer with k); the modes in the stretched
+      variable resolve the middle of a three-wavelength edge poorly; the
+      collocation along the edges must grow with the modes. The draft says
+      so in one sentence in the discussion ("Size"), with a TODO. The Bempp
+      run for k = 6 pi was stopped (no usable MFS reference).
 
 ## 3. Current best commands
 
@@ -1006,11 +1021,13 @@ Open, in the order I would take them:
 - [x] **T21 Why does one depth per octave stall?** Answered in items 53-54: a
       fixed ratio has a fixed attainable accuracy (2D model: 8e-5, 6e-6, 1e-9
       for ratios 0.5, 0.6, 0.71); tapered depths help in 2D but not in 3D.
-- [ ] **T25 Cube at higher wavenumbers (optional, item 57).** k = 4 pi is
-      done for the standard wave. Open: oblique wave at k = 4 pi; k = 6 pi
-      (needs the classes solved one at a time, or the full octahedral
-      symmetry); re-tune the grading of the Bempp mesh at k = 4 pi before
-      quoting factors as a trend.
+- [ ] **T25 Cube at higher wavenumbers (item 57).** k = 4 pi is done for
+      the standard wave. **k = 6 pi fails with the same scaling** (errors
+      near 1e-2): find out why, in 2D first (`proto2d_*`: a square of
+      three wavelengths with the same family), then base depth and modes
+      in 3D. A referee will ask. Also open: oblique wave at k = 4 pi;
+      re-tune the grading of the Bempp mesh at k = 4 pi before quoting
+      factors as a trend.
 - [ ] **T26 Use all 48 symmetries of the cube in the assembly (optional).**
       The line integrals are 70% of the time at the coarse levels (2.7 of
       3.8 s at J = 6). The three faces of an octant are images of one
@@ -1122,6 +1139,7 @@ Open, in the order I would take them:
 - Cube tables re-run with 12/8 (final, item 56): one depth J = 6..9: 3.1, 4.3, 6.3, 8.6 s; two depths J = 8..11: 20, 30, 46, 68 s; all fields equal to the 20/10 run to below 1e-7 (J = 11: 8e-7).
 - Cube at k = 4 pi with the k = 2 pi collocation and 4 more modes: one depth J = 4..9: 1.0e-2, 3.6e-2, 1.1e-3, 6.8e-4, 2.1e-3, 3.4e-3 (erratic); two depths stall near 2e-4 to 3e-4.
 - Cube at k = 4 pi, hmax halved, 4 more modes (item 57): one depth J = 5..8: 2.3e-3, 1.1e-3, 4.8e-4, 3.3e-4 in 2.5 to 10 s; two depths J = 7..9: 3.7e-4, 1.55e-4, 7.4e-5 in 23 to 52 s; Bempp with symmetry 8/10, 28800 dofs: 2.6e-4 away, 72 s.
+- Cube at k = 6 pi, hmax / 3, 8 more modes: no convergence (fields 1e-2 to 6e-2 apart, optical 1e-3 to 3e-3); variants at J = 6 (base 8, 10; modes + 12, 16, 24; hmax 0.035) did not help (item 57). Failure recorded, not resolved.
 
 ## 6. Write-up session
 
