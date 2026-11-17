@@ -1,6 +1,6 @@
 """What sets the floor of the cube family near 5e-5 (NOTES item 42)?
 Variants at a fixed deepest depth, compared with the reference field (two
-depths per octave, J = 10) and with one another. The d9_* variants test the
+depths per octave, J = 11) and with one another. The d9_* variants test the
 reference family itself at J = 9.
 
     python3 cube_floor.py NAME [NAME ...]      # see VARIANTS
@@ -45,7 +45,7 @@ def rel(a, b):
 
 if __name__ == "__main__":
     d = np.load("fig_cost_cube.npz")
-    pts, ref = d["pts"], d["dense_E10"]
+    pts, ref = d["pts"], d["dense_E11"]
     cm.run(2, pts=pts)
     fields = {}
     for name in sys.argv[1:]:

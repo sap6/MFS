@@ -48,7 +48,7 @@ if __name__ == "__main__":
     ax.set_title("(c) almond, 1.19 GHz, nose-on", loc="left", fontsize=8.5)
     ax = axs[1, 1]
     d = np.load("fig_cost_cube.npz")
-    ref = d["dense_E10"]
+    ref = d["dense_E11"]
     for key, col, mk, ls, lab in (("tail", BLUE, "o", "-", "MFS, one depth per octave"), ("dense", NAVY, "h", (0, (6, 1.5)), "MFS, two depths per octave")):
         rows = [r for r in d[key] if not (key == "dense" and int(r[0]) == 10)]
         curve(ax, [r[1] for r in rows], [rel(d[f"{key}_E{int(r[0])}"], ref) for r in rows], col, mk, ls, lab)

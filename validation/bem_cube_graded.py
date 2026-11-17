@@ -108,7 +108,7 @@ if __name__ == "__main__":
     bempp.GLOBAL_PARAMETERS.quadrature.regular = reg
     bempp.GLOBAL_PARAMETERS.quadrature.singular = sing
     pts = np.load("bem_cube_h0.05.npz")["pts"]
-    ref = np.load("fig_cost_cube.npz")["dense_E10"] if not wave else None       # the MFS reference field
+    ref = np.load("fig_cost_cube.npz")["dense_E11"] if not wave else None       # the MFS reference field
     solve(cube_grid(4, 1.0), pts)                       # warm-up: compilation
     for n in ns:
         E, far, ndof, (ta, tl, te) = solve(cube_grid(n, g), pts, d, p)

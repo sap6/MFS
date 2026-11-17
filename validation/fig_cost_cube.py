@@ -21,7 +21,7 @@ import numpy as np
 import cube_mfs
 from cube_mfs import COL, balanced  # noqa: F401  (re-exported: other scripts import them from here)
 
-J_REF = 10          # reference: the family with two depths per octave at this level
+J_REF = 11          # reference: the family with two depths per octave at this level
 J_FAST = 9          # deepest level of the family with one depth per octave
 
 
@@ -51,6 +51,22 @@ def run():
             print(f"{name:7s} J/n={J:2d} unknowns={unk:5d} rows={nrow:6d} time={t:6.1f}s optical={opt:.1e}", flush=True)
             out[name] = np.array(rows)
             np.savez("fig_cost_cube.npz", **out)
+
+
+def extend():
+    """Adds the levels of the two-depth family up to J_REF that are missing in
+    fig_cost_cube.npz, without re-timing the rest."""
+    out = dict(np.load("fig_cost_cube.npz"))
+    pts = out["pts"]
+    run_mfs(2, pts, family="dense")
+    rows = [tuple(r) for r in out["dense"]]
+    for J in range(int(rows[-1][0]) + 1, J_REF + 1):
+        E, t, unk, nrow, opt = run_mfs(J, pts, family="dense")
+        rows.append((J, t, unk, nrow, opt))
+        out[f"dense_E{J}"] = E
+        print(f"dense   J/n={J:2d} unknowns={unk:5d} rows={nrow:6d} time={t:6.1f}s optical={opt:.1e}", flush=True)
+        out["dense"] = np.array(rows)
+        np.savez("fig_cost_cube.npz", **out)
 
 
 def rel(a, b):
@@ -172,6 +188,8 @@ def plot(curves, fname="fig_cost_cube"):
 
 
 if __name__ == "__main__":
+    if len(sys.argv) > 1 and sys.argv[1] == "extend":
+        extend()
     if len(sys.argv) > 1 and sys.argv[1] == "run":
         run()
     plot(report())
