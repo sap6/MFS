@@ -85,7 +85,7 @@ def report():
     # Bempp extrapolated from its two finest meshes, error ~ N^(-2/3) (h^(4/3), the edge-limited rate)
     f1, f2 = (float(b["ndof"]) ** (-2 / 3) for b in bem[-2:])
     ext = bem[-1]["E"] + (bem[-1]["E"] - bem[-2]["E"]) * f2 / (f1 - f2)
-    print(f"reference: MFS with tails, two depths per octave, J = {int(d['ref_info'][0])}, finer interior grid. It differs from extrapolated quasi-uniform Bempp by {rel(ref, ext):.2e}")
+    print(f"reference: MFS with tails, two depths per octave, J = {int(d['ref_info'][0])}. It differs from extrapolated quasi-uniform Bempp by {rel(ref, ext):.2e}")
     curves = {}
     print("method        size   unknowns   time[s]   error vs MFS ref   error vs extrap. Bempp   optical")
     for name, label in (("tail", "MFS+tail"), ("dense", "MFS dense"), ("notail", "MFS no tail"), ("plain", "plain MFS")):

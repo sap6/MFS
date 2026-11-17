@@ -26,10 +26,10 @@ def rel(a, b):
 
 def data():
     d = np.load("fig_cost_cube.npz")
-    ref = d["ref_E"]                                    # two depths per octave at J = 12 with the finer interior grid
+    ref = d["ref_E"]                                    # the finest level, J = 12
     out = {}
     for name, key in (("tail", "MFS+tail"), ("dense", "MFS dense"), ("notail", "MFS no tail"), ("plain", "plain MFS")):
-        rows = [(4 * r[2], rel(d[f"{name}_E{int(r[0])}"], ref)) for r in d[name] if not (name == "dense" and int(r[0]) == int(d["ref_info"][0]))]
+        rows = [(4 * r[2], rel(d[f"{name}_E{int(r[0])}"], ref)) for r in d[name] if (name not in ("tail", "dense") or int(r[0]) >= 4) and not (name == "dense" and int(r[0]) == int(d["ref_info"][0]))]
         out[key] = np.array(rows)
     rows = sorted((int(b["ndof"]), rel(b["E"], ref)) for b in (np.load(f) for f in glob.glob("bem_cube_h*_q4.npz")) if int(b["ndof"]) > 1000)
     out["Bempp"] = np.array(rows)
@@ -49,8 +49,8 @@ def data():
     return out
 
 
-def fit(c, lo=1, hi=-1):
-    """Fit to the levels J = 4..10: J = 3 is too coarse and J = 11 is too close to the reference."""
+def fit(c, lo=0, hi=-1):
+    """Fit to the levels J = 4..10: J = 11 is too close to the reference."""
     x, y = np.sqrt(c[lo:hi, 0]), np.log(c[lo:hi, 1])
     p = np.polyfit(x, y, 1)
     return p, np.exp(np.abs(y - np.polyval(p, x)).max())
@@ -67,14 +67,15 @@ if __name__ == "__main__":
     plt.rcParams.update({"font.size": 9, "axes.edgecolor": MUTED, "axes.labelcolor": INK, "text.color": INK,
                          "xtick.color": MUTED, "ytick.color": MUTED, "axes.linewidth": 0.6})
     fig, ax = plt.subplots(figsize=(6.0, 4.4))
-    labels = {"MFS+tail": "MFS with tails, one depth per octave", "MFS dense": "MFS with tails, two depths per octave",
-              "MFS no tail": "MFS, edge sources, no tail", "plain MFS": "plain MFS (inner cube)",
+    labels = {"MFS+tail": "MFS, one depth per octave", "MFS dense": "MFS (two depths per octave)",
+              "MFS no tail": "MFS without the tails", "plain MFS": "plain MFS (inner cube)",
               "Bempp": "Bempp, quasi-uniform meshes", "Bempp sym": "Bempp, graded meshes (best setting per mesh)"}
-    xs = np.array([np.sqrt(c["MFS dense"][1, 0]) - 4, np.sqrt(c["MFS dense"][-1, 0]) + 8])
+    xs = np.array([np.sqrt(c["MFS dense"][0, 0]) - 4, np.sqrt(c["MFS dense"][-1, 0]) + 8])
     ax.semilogy(xs, np.exp(np.polyval(p, xs)), color=MUTED, lw=0.8, ls="-", zorder=1)
     ax.annotate(rf"${np.exp(p[1]):.2f}\,\exp({p[0]:.3f}\sqrt{{N_u}})$", (xs[1] - 42, np.exp(np.polyval(p, xs[1] - 42)) * 3.2), fontsize=8, color=MUTED, ha="left")
     for key in ("plain MFS", "MFS no tail", "MFS+tail", "MFS dense", "Bempp", "Bempp sym"):
-        col, mk, ls, _ = STYLE[key]
+        col, mk, ls, _ = STYLE[{"MFS+tail": "MFS dense", "MFS dense": "MFS+tail"}.get(key, key)]   # the layout of the paper in the
+        #                                                    colours of the other figures (solid blue); the one-depth variant dashed
         v = c[key]
         ax.semilogy(np.sqrt(v[:, 0]), v[:, 1], linestyle=ls, color=col, marker=mk, ms=5, lw=1.4, mec="white", mew=0.7, label=labels[key], zorder=3)
     ax.set_xlabel(r"$\sqrt{N_u}$,  $N_u$ = number of unknowns")

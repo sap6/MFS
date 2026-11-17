@@ -47,7 +47,7 @@ if __name__ == "__main__":
     ax.loglog(rho, r0, "--", color=GREEN, lw=1.6, label="edge sources, no tail")
     ax.loglog(rho, r1, "-", color=BLUE, lw=1.6, label="edge sources and tail")
     ax.axvline(dJ, color=MUTED, lw=0.7, ls=":")
-    ax.text(dJ * 1.15, ax.get_ylim()[0] * 2.5, "$d_J$", color=MUTED, fontsize=8)
+    ax.text(dJ * 1.15, ax.get_ylim()[0] * 2.5, r"$d_{\min}$", color=MUTED, fontsize=8)
     ax.set(xlabel="distance to the edge", ylabel="tangential residual  $|\\mathbf{t}\\cdot(\\mathbf{E}_N+\\mathbf{E}^{\\rm inc})|$")
     ax.grid(True, which="major", color="#e4e3df", lw=0.6)
     for sp in ("top", "right"):

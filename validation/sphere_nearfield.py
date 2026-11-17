@@ -60,14 +60,14 @@ if __name__ == "__main__":
         kind = k[:3]
         col, mk, ls = style[kind][count[kind]]
         count[kind] += 1
-        label = f"MFS, {3 * int(k[3:])} unknowns" if kind == "mfs" else f"Bempp, {int(k[3:])} unknowns"
+        label = f"MFS, $N = {int(k[3:])}$" if kind == "mfs" else f"Bempp, {int(k[3:])} unknowns"
         ax.loglog(d["delta"], d[k], linestyle=ls, color=col, marker=mk, ms=4.5, lw=1.4, mec="white", mew=0.6, label=label)
     ax.set_xlabel("distance from the surface")
     ax.set_ylabel("relative error against Mie")
     ax.grid(True, which="major", color="#e4e3df", lw=0.6)
     for sp in ("top", "right"):
         ax.spines[sp].set_visible(False)
-    ax.legend(frameon=False, fontsize=8)
+    ax.legend(frameon=False, fontsize=8, loc="center right", bbox_to_anchor=(1.0, 0.36))
     fig.tight_layout()
     fig.savefig("fig_sphere_nearfield.pdf")
     fig.savefig("fig_sphere_nearfield.png", dpi=200)

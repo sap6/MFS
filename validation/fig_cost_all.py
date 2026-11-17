@@ -62,10 +62,10 @@ if __name__ == "__main__":
     ax.xaxis.set_major_formatter(matplotlib.ticker.FuncFormatter(lambda v, pos: f"{v:g}"))
     ax = axs[1, 1]
     d = np.load("fig_cost_cube.npz")
-    ref = d["ref_E"]                                    # two depths per octave at J = 12 with the finer interior grid
+    ref = d["ref_E"]                                    # the finest level, J = 12
     jref = int(d["ref_info"][0])
     for key, col, mk, ls, lab in (("dense", BLUE, "o", "-", "MFS"), ("tail", NAVY, "h", (0, (6, 1.5)), "MFS, one depth per octave")):
-        rows = [r for r in d[key] if not (key == "dense" and int(r[0]) == jref)]
+        rows = [r for r in d[key] if int(r[0]) >= 4 and not (key == "dense" and int(r[0]) == jref)]
         curve(ax, [r[1] for r in rows], [rel(d[f"{key}_E{int(r[0])}"], ref) for r in rows], col, mk, ls, lab)
     bem = sorted((np.load(f) for f in glob.glob("bem_cube_h*_q4.npz")), key=lambda b: int(b["ndof"]))
     bem = [b for b in bem if int(b["ndof"]) > 1000]

@@ -70,7 +70,7 @@ def almond():
 
 def cube():
     d = np.load(os.path.join(V, "fig_cost_cube.npz"))
-    ref = d["ref_E"]                                    # two depths per octave at J = 12, finer interior grid
+    ref = d["ref_E"]                                    # the finest level, J = 12
     rows = []
     for name, label in (("tail", "one"), ("dense", "two")):
         if rows:
@@ -114,7 +114,7 @@ def cube():
             extra = f" (full mesh: {rel(full[N]['E'], ref):.2e})" if N in full and N in sym else ""
             print(f"    graded {q} dofs={N} err={rel(E, ref):.2e}{extra} t_full={tf} t_sym={ts}"
                   + (f" sigma_ext={float(full[N]['ext']):.6f}" if N in full else ""))
-    write("cube_bem", rows)
+    # (the table of Bempp with g = 2 only is no longer in the paper; the rows are still printed above)
     fine = sorted((np.load(f) for f in glob.glob(os.path.join(V, "bem_cube_graded_n*_g2_q8_10.npz"))), key=lambda b: int(b["ndof"]))
     from scipy.optimize import brentq
     (n1, E1), (n2, E2), (n3, E3) = ((float(b["n"]), b["E"]) for b in fine[-3:])

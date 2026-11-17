@@ -27,7 +27,7 @@ def style():
 
 def cube(J=6, fname="fig_cube_layout"):
     H = m.H
-    depths = 0.2 * 0.5 ** np.arange(J + 1)
+    depths = 0.2 * 2.0 ** (-0.5 * np.arange(2 * J + 1))            # two depths per octave, as in cube_mfs.dense
     tail = depths[-1] * 0.5 ** np.arange(1, 10)
     fig, axs = plt.subplots(1, 3, figsize=(7.4, 3.0), gridspec_kw=dict(width_ratios=[1, 1, 1.05]))
     # (a) cross-section of the cube through the middle of an edge, corner region
@@ -38,13 +38,13 @@ def cube(J=6, fname="fig_cube_layout"):
     c = np.sqrt(0.5)
     ax.plot(H - depths * c, H - depths * c, "o", color=BLUE, ms=4, mec="white", mew=0.5, label="free lines")
     ax.plot(H - tail * c, H - tail * c, "o", mfc="white", mec=ORANGE, ms=3, mew=0.8, label="tail lines")
-    s = (np.arange(6) + 0.5) / 6 * 2 * (H - 0.2) - (H - 0.2)
+    s = (np.arange(8) + 0.5) / 8 * 2 * (H - 0.2) - (H - 0.2)        # n_base = 8
     s = s[s > 0]
     ax.plot(s, np.full_like(s, H - 0.2), "s", color=GREEN, ms=3.5, mec="white", mew=0.4, label="base points")
     ax.plot(np.full_like(s, H - 0.2), s, "s", color=GREEN, ms=3.5, mec="white", mew=0.4)
-    nodes, _ = m.graded_nodes_capped(8, 3, 0.5, 0.15)
+    nodes, _ = m.graded_nodes_capped(8, 4, 0.5, 0.1)               # four nodes per panel, hmax = 0.1
     nodes = nodes[nodes > 0]
-    ax.plot(nodes, np.full_like(nodes, H), "|", color=INK, ms=5, mew=0.6, label="collocation")
+    ax.plot(nodes, np.full_like(nodes, H), "|", color=INK, ms=5, mew=0.6, label="boundary points")
     ax.plot(np.full_like(nodes, H), nodes, "_", color=INK, ms=5, mew=0.6)
     ax.text(0.085, 0.115, "bisector plane", fontsize=7.5, color=MUTED, rotation=45, rotation_mode="anchor")
     ax.set(xlim=(0, 0.56), ylim=(0, 0.56), aspect="equal", xlabel="$x$", ylabel="$y$")
@@ -56,10 +56,10 @@ def cube(J=6, fname="fig_cube_layout"):
     ax.plot(depths, np.zeros_like(depths), "o", color=BLUE, ms=4.5, mec="white", mew=0.5)
     ax.plot(tail, np.zeros_like(tail), "o", mfc="white", mec=ORANGE, ms=3.5, mew=0.8)
     for j, d in enumerate(depths):
-        if j in (0, J):
-            ax.annotate(f"$d_{{{j if j == 0 else 'J'}}}$", (d, 0), (d, 0.16), ha="center", fontsize=8)
-    ax.annotate("weights $2^{-ie}$", (tail[4], 0), (tail[4], -0.24), ha="center", fontsize=8, color=ORANGE)
-    ax.annotate("free", (depths[3], 0), (depths[3], -0.24), ha="center", fontsize=8, color=BLUE)
+        if j in (0, 2 * J):
+            ax.annotate("$d_0$" if j == 0 else r"$d_{\min}$", (d, 0), (d, 0.16), ha="center", fontsize=8)
+    ax.annotate("tail, fixed weights", (tail[4], 0), (tail[4], -0.24), ha="center", fontsize=8, color=ORANGE)
+    ax.annotate("free", (depths[6], 0), (depths[6], -0.24), ha="center", fontsize=8, color=BLUE)
     ax.set(xscale="log", xlim=(3e-6, 0.5), ylim=(-0.5, 0.5), yticks=[], xlabel="depth below the edge")
     ax.spines["left"].set_visible(False)
     ax.set_title("(b) depths on the bisector", loc="left", fontsize=8.5)
@@ -72,7 +72,7 @@ def cube(J=6, fname="fig_cube_layout"):
     ax.set(xlabel="stretched variable $u$", ylabel="position $t$ along the edge", xlim=(-1, 1), ylim=(-0.52, 0.52))
     ax.axhline(H, color=MUTED, lw=0.5, ls=":")
     ax.axhline(-H, color=MUTED, lw=0.5, ls=":")
-    ax.legend(frameon=False, fontsize=7.5, loc="upper left")
+    ax.legend(frameon=False, fontsize=7, loc="lower right", handlelength=1.8)
     ax.set_title("(c) parameter of a line", loc="left", fontsize=8.5)
     for ax in axs:
         for sp in ("top", "right"):
