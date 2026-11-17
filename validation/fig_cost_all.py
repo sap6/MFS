@@ -12,6 +12,7 @@ import matplotlib
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
+import matplotlib.ticker
 import numpy as np
 
 BLUE, NAVY, GREEN, ORANGE, PINK, PURPLE = "#2a78d6", "#184f96", "#1baf7a", "#eb6834", "#e87ba4", "#8a5cc7"
@@ -57,6 +58,8 @@ if __name__ == "__main__":
     curve(ax, d["mfs"][:-1, 2], [rel(d[f"mfs_E{i}"], ref) for i in range(len(d["mfs"]) - 1)], BLUE, "o", "-", "MFS")
     curve(ax, d["bem"][:, 1], [rel(d[f"bem_E{i}"], ref) for i in range(len(d["bem"]))], ORANGE, "D", "-.", "Bempp")
     ax.set_title("(c) almond, 1.19 GHz, nose-on", loc="left", fontsize=8.5)
+    ax.set_xticks([2, 5, 10, 20])
+    ax.xaxis.set_major_formatter(matplotlib.ticker.FuncFormatter(lambda v, pos: f"{v:g}"))
     ax = axs[1, 1]
     d = np.load("fig_cost_cube.npz")
     jref = int(d["dense"][-1][0])
@@ -66,12 +69,12 @@ if __name__ == "__main__":
         curve(ax, [r[1] for r in rows], [rel(d[f"{key}_E{int(r[0])}"], ref) for r in rows], col, mk, ls, lab)
     bem = sorted((np.load(f) for f in glob.glob("bem_cube_h*_q4.npz")), key=lambda b: int(b["ndof"]))
     bem = [b for b in bem if int(b["ndof"]) > 1000]
-    curve(ax, [float(b["t_solve"]) for b in bem], [rel(b["E"], ref) for b in bem], ORANGE, "D", "-.", "Bempp, quasi-uniform meshes")
+    curve(ax, [float(b["t_solve"]) for b in bem], [rel(b["E"], ref) for b in bem], ORANGE, "D", "-.", "Bempp, quasi-uniform")
     full = []                                           # graded meshes without the symmetry (g = 2): best quadrature at each time
     for tag in ("", "_q6_8", "_q8_10"):
         full += [(float(b["t_solve"]), rel(b["E"], ref)) for b in (np.load(g) for g in glob.glob(f"bem_cube_graded_n*_g2{tag}.npz"))]
     env = lower_envelope(full)
-    curve(ax, env[:, 0], env[:, 1], PINK, "v", (0, (5, 1, 1, 1)), "Bempp, graded meshes")
+    curve(ax, env[:, 0], env[:, 1], PINK, "v", (0, (5, 1, 1, 1)), "Bempp, graded")
     if os.path.exists("bem_grading_scan_k1_final.npz"):  # with the symmetry: best grading and quadrature at each time, re-timed
         env = np.load("bem_grading_scan_k1_final.npz")["rows"][:, [5, 6]]
     elif os.path.exists("bem_grading_scan_k1.npz"):
@@ -81,12 +84,13 @@ if __name__ == "__main__":
         for tag in ("", "_q6_8", "_q8_10"):
             best += [(float(b["t_solve"]), rel(b["E"], ref)) for b in (np.load(g) for g in glob.glob(f"bem_cube_sym_n*_g2{tag}.npz"))]
         env = lower_envelope(best)
-    curve(ax, env[:, 0], env[:, 1], "#9c3b12", "X", (0, (3, 1)), "Bempp, graded, with mirror symmetry")
+    curve(ax, env[:, 0], env[:, 1], "#9c3b12", "X", (0, (3, 1)), "Bempp, graded, with symmetry")
     ax.set_title("(d) cube, side one wavelength", loc="left", fontsize=8.5)
-    ax.set_ylim(8e-6, 3e-2)
+    ax.set_ylim(8e-7, 3e-2)
     for ax in axs.ravel():
         ax.grid(True, which="major", color="#e4e3df", lw=0.6)
-        ax.legend(frameon=False, fontsize=6.8, loc="upper right" if ax is axs[1, 1] else "lower left", handlelength=2.6)
+        ax.legend(frameon=False, fontsize=6.8, loc="lower left", handlelength=2.6)
+        ax.xaxis.set_minor_formatter(matplotlib.ticker.NullFormatter())
         for sp in ("top", "right"):
             ax.spines[sp].set_visible(False)
     for ax in axs[1]:

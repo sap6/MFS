@@ -21,3 +21,5 @@ paper/long/*.blg
 paper/long/*.spl
 paper/long/*.bbl
 paper/supplement.bbl
+validation/*_t.txt
+validation/*_t.log

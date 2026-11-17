@@ -6,6 +6,7 @@ It lives here, next to the code that produces its numbers, and is not yet in
 
     python3 make_tables.py                       # table bodies from ../validation/*.npz into tables/
     pdflatex main && bibtex main && pdflatex main && pdflatex main
+    pdflatex supplement && bibtex supplement && pdflatex supplement && pdflatex supplement
 
 - `main.tex`, `sections/*.tex`: the text. Lines starting with `%% TODO` are
   open points for the authors.
@@ -19,8 +20,10 @@ It lives here, next to the code that produces its numbers, and is not yet in
   the same name there.
 - `elsarticle.cls`, `elsarticle-num.bst`: copies of the journal class.
 
-`main.pdf` is the preprint layout (12 pt, 43 pages). `main_3p.pdf` is the same
-text in the journal's layout (26 pages): change the first line of `main.tex`
-to `\documentclass[final,3p,times]{elsarticle}` to rebuild it.
+`main.pdf` is the short paper (second draft, 12 pt preprint layout, 25 pages)
+and `supplement.pdf` its supplementary material (11 pages): derivations,
+settings and the tables that the text only summarises. `highlights.txt` holds
+the highlights. The first draft (43 pages) is kept in `long/`; it is
+superseded and builds there with `TEXINPUTS=..: pdflatex main`.
 
 LaTeX packages: see the `apt-get` line in `../CLAUDE.md`.
