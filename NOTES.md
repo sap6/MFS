@@ -1035,6 +1035,7 @@ Open, in the order I would take them:
 - Cube one depth per octave with base 6 / 0.15, J = 10, 11, 12: 2.85e-4, 4.6e-4, 9.0e-4 (optical 3.0e-5, 3.1e-5, 1.2e-4); with 8 / 0.1 they were 1.3e-4..1.8e-4.
 - Cube tables re-run with the adopted grid (item 56): one depth J = 7, 8, 9: 5.2, 7.7, 10.5 s for 3.6e-4, 1.6e-4, 1.5e-4; two depths J = 8, 9, 10: 24, 36, 50 s for 1.2e-4, 3.6e-5, reference.
 - Cube two depths per octave, J = 11 (new reference): 76 s, optical 1.7e-6, sigma_ext 2.927982; J = 8, 9, 10 differ from it by 1.35e-4, 5.05e-5, 1.46e-5.
+- Cube, tail length 9 / 6 / 4 lines, one depth per octave: J = 6: 3.9 / 3.4 / 3.2 s for 9.5e-4 / 8.7e-4 / 1.8e-3; J = 8: 7.4 / 6.9 / 6.9 s for 1.72e-4 / 1.83e-4 / 5.3e-4. Six lines save 10% at equal error; not adopted (assembly of the free lines dominates: 2.7 of 3.8 s at J = 6).
 
 ## 6. Write-up session
 
@@ -1050,8 +1051,9 @@ voice of the thesis and with the academic-humanizer rules (item 50).
 - Open in the draft (marked `%% TODO`): title; acknowledgements; AI
   declaration; measurement uncertainty from Kelley et al.; Millar 1983;
   comparison of the exponent tables with De Smedt and Van Bladel.
-- Length: 42 pages in the 12 pt preprint format (`main.pdf`), **26 pages in
-  the journal's own layout** (`main_3p.pdf`, rebuilt after item 56). The author's target is 25, which the journal layout
+- Length: 41 pages in the 12 pt preprint format (`main.pdf`), **25 pages in
+  the journal's own layout** (`main_3p.pdf`, rebuilt after item 56; float
+  placement relaxed in the preamble so that figures share pages with text). The author's target is 25, which the journal layout
   meets. If the preprint format must come down too, in the order I would
   try: (1) the three cost tables of sphere, torus and almond duplicate
   their figures; `validation/fig_cost_all.pdf` is one four-panel figure
