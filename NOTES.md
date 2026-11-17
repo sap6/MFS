@@ -1590,6 +1590,45 @@ towards the MFS field.
       singular set and layout: new research, not a showcase.
     - Length: 37 pages in the preprint layout, 22 in the journal layout.
 
+70. **Second independent check (numbers against the data), and what was
+    changed.** A fresh agent recomputed every number of the cube and cost
+    sections from the .npz files. Confirmed: Table 2, the fit, the orders,
+    the no-tail errors, the general-wave and two-wavelength numbers, the
+    near-surface numbers, Table 4. Corrected:
+    - the tails are 5% of the unknowns at J = 8 (9% was the one-depth
+      variant);
+    - ratios stated too favourably: Bempp is about nine times faster at
+      1e-3 and three times at 3.5e-4 (text had eight and four); at two
+      wavelengths the MFS is about twice as fast from 3e-4 down (text had
+      "more than twice below 4e-4"); for the general wave Bempp is faster
+      "at every accuracy at which we ran both";
+    - the gain from the mirror symmetry in Bempp was re-measured on this
+      machine: g = 2, 6/8, 4608 to 14112 dofs: 18, 36, 72, 131 s without
+      against 3.3, 5.5, 10.0, 16.4 s with: **five to eight times** (text
+      had "three to eight" from another machine);
+    - two wavelengths, J = 8: 8 more modes instead of 4 change the field
+      by 7.8e-6 (re-measured with the single rule);
+    - three wavelengths: "established to about 1e-3" (Bempp is 7e-4 to
+      9e-4 away; the MFS fields scatter by 2e-4 to 6e-4);
+    - torus: the optical mismatch of the 21120-unknown run is 4e-12
+      (9e-14 is the 40320-unknown reference);
+    - Figure 3 still drew the old layout (one depth per octave, six base
+      points): `fig_layouts.py` now draws two depths per octave and eight
+      base points; the smallest depth is called d_min in text and figures
+      (d_J was not the J-th depth); figures and Table 2 all start at J = 4;
+    - the line extends over |t| <= 1/2 - d (not "between the body
+      diagonals"); free lines carry three components, tails two;
+    - simpler text: the modes formula moved to Appendix B; the
+      under-sampling paragraph cut to the one counter-example; the edge
+      derivation works one term as an example; the paragraph on the depth
+      ratio split, with the stall of one depth per octave at J = 10..12
+      (1.3e-4 to 1.8e-4, log) stated; "standard wave" defined; Bempp's
+      tuning described once; the MFS is described as used "as it stands",
+      not "in its best configuration".
+    - Not done (optional points of the check): the symbol J for level,
+      current and almond rows; a sketch of the wedge for the edge
+      derivation; tapered depths in 3D (T21) are not mentioned in the paper.
+
 ## 3. Current best commands
 
 ```
@@ -1697,7 +1736,7 @@ Open, in the order I would take them:
 
 - [ ] **T13 Write-up, continued** (the author leads). The paper is one
       document (`paper/main.tex`, 37 preprint pages, 22 in the journal
-      layout; items 64-69). To do: the author's pass over every section;
+      layout; items 64-70). To do: the author's pass over every section;
       abstract and highlights; the TODO on Khavinson and Lundberg in
       Section 4.2; acknowledgements and the AI declaration; a final
       `time_paper.sh` on a fixed machine; then copy to `sap6/mfs-paper`
