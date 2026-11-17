@@ -118,21 +118,21 @@ the cube without that qualification.
 | Unit sphere, k = 4pi | same | 1.3e-12 (N = 1200) | Mie |
 | Unit cube, k = 2pi | uniform dipoles on inner cube | stalls at 25% | Bempp |
 | Unit cube, k = 2pi | lightning-type edge sources, no tail | 0.5% (J = 10); 0.8% at J = 12 (stall) | Bempp h = 0.05 |
-| Unit cube, k = 2pi | edge sources + edge and vertex tails, balanced refinement (section 2, items 8, 12, 22, 25) | 1.27%, 0.52%, 0.20%, 0.089%, 0.033%, 0.011% for J = 3..8 against J = 9; optical mismatch down to 4.0e-5 | MFS J = 9; graded Bempp (10368 dofs) is 0.022% from J = 9, its extrapolation 0.016% |
-| Unit cube, oblique wave (from theta 60, phi 25, polarisation angle 35 degrees) | the same, four parity classes (`cube_general.py`) | see item 26 | graded Bempp, 10368 dofs |
+| Unit cube, k = 2pi | edge sources + edge and vertex tails, **one depth per octave** (`cube_mfs.balanced`) | 1.28%, 0.53%, 0.21%, 0.094%, 0.039%, 0.019%, 0.0125% for J = 3..9 (1.2 to 14 s), then stalls | MFS dense J = 10 |
+| Unit cube, k = 2pi | the same with **two depths per octave** (`cube_mfs.dense`) | 1.39%, 0.51%, 0.20%, 0.081%, 0.032%, 0.012%, 0.0035% for J = 3..9 (2.7 to 45 s); optical mismatch down to 5.5e-6 at J = 10; no stall | its own J = 10 (estimated error 2.5e-5); graded Bempp (14112 dofs, quadrature 8/10) is 0.014% away, its extrapolation 0.010%; cross-sections agree to 4e-5 |
+| Unit cube, oblique wave (from theta 60, phi 25, polarisation angle 35 degrees) | the same, eight parity classes | one depth: 0.62% to 0.017% for J = 4..9 (2.2 to 27 s); two depths: 0.014% at J = 8 | MFS dense J = 10 for that wave; graded Bempp 10368 dofs is 0.040% away |
 | Torus R = 1, a = 0.5, k = 2pi (also a = 0.25, 0.8; any wave) | dipoles on the inner torus a_s = 0.5 a, solved mode by mode about the axis | field 5e-7 (8064 unknowns, 3 s), 2e-9 (13824, 7 s), 7e-12 (21120, 10 s) against the finest run; residual 1e-10, optical mismatch 9e-14 | finest MFS (40320 unknowns); Bempp 9600 dofs is 0.82% away and its 1/N extrapolation of the cross-section agrees to 7e-5 |
 | NASA almond, 1.19 GHz, nose-on | confocal / shrunk source surface | unstable or 20%+ | - |
 | NASA almond, 1.19 / 7 / 9.92 GHz, monostatic RCS, HH and VV | skeleton sources + tip tail, four parity classes | within 0.03 / 0.04 / 0.12 dB rms of Bempp; self-converged to 0.001 dB (1.19 GHz) and 0.01 dB rms (9.92 GHz) | Bempp 9558 / 13632 dofs |
-| NASA almond, 1.19 GHz, nose-on | skeleton sources on mid-plane | self-converged to 5e-5, optical mismatch 1e-4; Bempp approaches it like 1/N (0.67%, 0.29%, 0.20%) | Bempp 4212, 9558, 13632 dofs |
+| NASA almond, 1.19 GHz, nose-on | skeleton sources on mid-plane (0.028% in 2.1 s, 0.0056% in 3.2 s) | self-converged to 5e-5, optical mismatch 1e-4; Bempp approaches it like 1/N (0.67%, 0.29%, 0.20%) | Bempp 4212, 9558, 13632 dofs |
 | NASA almond, 3.5 / 5.125 / 7 / 10.25 GHz, monostatic RCS, HH and VV | the same solver as the RCS row above, tip exponents from the cone | mean difference from the Austin reference simulation 0.04-0.14 dB (HH), 0.01-0.02 dB (VV); from the measurements 0.6-1.8 dB, the same as the reference simulation's own distance from them | Austin RCS benchmark III-A (Kelley et al. 2020) |
 
-Bempp itself (container, compilation excluded): sphere 0.37% with 9750 dofs
-(411 s); cube, quasi-uniform: 0.26% at h = 0.05 (8514 dofs, 393 s) and 0.19% at
-h = 0.04 (13302 dofs, 832 s); cube, graded to the edges: 0.105% with 4608 dofs
-(161 s); almond 0.67% (4212 dofs, 89 s) and 0.30% (9558 dofs, 412 s). In every
-case Bempp converges towards the MFS field. (Cube times are from the second
-session's container, about 20% slower than the first; sphere and almond times
-are from the first.)
+Bempp itself (OpenCL backend, one machine, item 43 and 47): sphere 0.37% with
+9750 dofs (19 s); torus 0.82% (9600 dofs, 21 s); cube, quasi-uniform: 0.19%
+(13302 dofs, 49 s); cube, graded to the edges: 0.106% (4608 dofs, 6.1 s),
+0.029% (10368 dofs, quadrature 6/8, 56 s), 0.014% (14112 dofs, quadrature
+8/10, 166 s); almond 0.30% (9558 dofs, 19 s). In every case Bempp converges
+towards the MFS field.
 
 ## 2. What we learned (do not re-test)
 
@@ -610,6 +610,33 @@ are from the first.)
       J = 8 (11.5 GB); `cube_mfs.run` splits the classes into groups
       (`max_gb`). One run was killed by the kernel for lack of memory before
       the size estimate was fixed.
+48. **Figures made in this session** (all in `validation/`, print style):
+    `fig_layouts.py` (cube: section through an edge, depths, stretched
+    variable; almond: mid-plane rows, focal curve, tip tail);
+    `fig_edge_residual.py` (residual on a face against the distance to an
+    edge, J = 6, with and without tail: without, 1.6 at every distance below
+    1e-3; with, 1.2e-2 for 1e-4..1e-3 and 0.13 for 1e-5..1e-4; below the last
+    tail line, d_J/512, it rises again); `fig_sphere.py` (replaces the old
+    six-panel PNG); `fig_cost_cube.py` now with both MFS families and graded
+    Bempp at two quadrature settings.
+49. **First draft of the paper**: `paper/` (see section 6). 38 pages in
+    preprint format: 28 of text with figures and tables, 5 of appendices,
+    the rest references. `python3 make_tables.py && pdflatex main && bibtex
+    main && pdflatex main && pdflatex main`. Every table body is generated
+    from the data files; numbers in the running text were typed from the
+    same output and must be re-checked if any table is re-run
+    (`make_tables.py` prints them). `check_bib.py` compares every title in
+    `refs.bib` with its Crossref record (all agree; four were corrected);
+    the arXiv entries were checked against the arXiv API.
+50. **Writing rules used for the draft** (from the author's thesis and the
+    academic-humanizer skill, github.com/AIScientists-Dev/academic-humanizer):
+    "we", British spelling, define before use, explain each formula in a
+    sentence; no em-dashes; sentences under about 30 words; every claim
+    carries its number, figure or citation; no "novel", "robust",
+    "comprehensive", "paves the way"; verbs no stronger than the evidence
+    ("show", "reach", "agree to"); hedges only where the result is uncertain
+    (torus bound, skeleton statement for smooth bodies); limits stated in
+    their own section.
 
 ## 3. Current best commands
 
@@ -620,7 +647,15 @@ python3 fig_cost_torus.py ; python3 fig_torus_sources.py                        
 python3 bem_torus.py 12,20,28,40 0.5                                               # Bempp on the torus (optional: theta phi pol of the wave)
 python3 fig_cost_cube.py ; python3 fig_cost_almond.py ; python3 fig_cost_sphere.py   # tables and figures from saved data (add `run` to recompute)
 python3 fig_almond_rcs.py ; python3 fig_almond_benchmark.py                         # almond RCS against Bempp / against the Austin benchmark
-python3 cube_general.py 6 60 25 35                # cube, any plane wave (from theta, phi; polarisation angle), four parity classes
+python3 cube_mfs.py 4,5,6,7,8 [60 25 35]          # cube, the solver: standard wave, or any plane wave (from theta, phi; polarisation angle); eight parity classes
+python3 cube_oblique_table.py                     # cube, oblique wave: both MFS families and graded Bempp against the dense reference (add `run`, 12 min)
+python3 cube_floor.py J10 dense_p4 dense_colq     # what limits the one-depth-per-octave family (item 47)
+python3 test_line_tree.py 5                       # accuracy of the fast line quadrature against the adaptive rule
+python3 fig_layouts.py ; python3 fig_edge_residual.py 6 ; python3 fig_sphere.py   # layout sketches; residual near an edge; sphere convergence figure
+python3 almond_null.py 6:3 fit                    # the HH null at 10.25 GHz: position, depth, best-fitting shift
+python3 sphere_scaling.py                         # sphere: sources needed against the wavenumber
+python3 bem_backend.py 0.14,0.1 ; python3 bem_overhead.py   # Bempp: Numba against OpenCL, single against double; fixed cost per assembly
+./retime_all.sh                                   # every cost table on this machine, one job after another (20 min); then cd ../paper && python3 make_tables.py
 python3 check_tail_exponents.py 5                 # edge and vertex tail variants at one depth
 python3 cone_exponents.py ; python3 cone_exponents.py cube   # tip exponents of the almond cone; vertex exponents of the cube
 python3 bem_optical.py 0.1,0.07,0.05,0.04         # Bempp, quasi-uniform cube meshes: field, cross-sections, time
@@ -632,14 +667,18 @@ python3 almond_rcs.py 1.19 6:3 10 --s=0.5         # monostatic RCS, HH and VV, c
 python3 proto2d_square.py TE ; python3 proto2d_ellipse.py ; python3 proto2d_square_tail.py TE   # 2D prototypes, seconds
 ```
 
-Cube cost (second container, 4 cores): section 2, item 27. Almond: about
-3 min per frequency for all look angles and both polarisations (6:3 layout);
-the 8:5 layout takes 7 min.
+Costs: section 2, items 43 and 47 (everything before them is obsolete). Almond:
+43 s per frequency at 1.19 GHz for all look angles and both polarisations
+(6:3 layout).
 
-Files: `mie.py` (reference); `pec_cube_lightning3d.py` + `line_kernel.py`
-(cube library and solver for the standard wave; `Sources`, `SymSources`,
-`TailLine`, `VertexTail`); `fig_cost_cube.py` (balanced refinement family
-`balanced()`, cost table); `cube_general.py` (any wave); `diag_cube.py`
+Files: `mie.py` (reference); `cube_mfs.py` (the cube solver: `Cube`, `run`,
+families `balanced` and `dense`); `line_tree.py` (fast line integrals and
+point dipoles, mirror images summed inside); `lsq.py` (QR without Q,
+semi-normal equations, `factor`); `pec_cube_lightning3d.py` + `line_kernel.py`
+(source classes `Sources`, `TailLine`, `VertexTail`, collocation grids, and
+the old two-mirror solver `SymSources`, kept as a check); `fig_cost_cube.py`
+(cost table, both families); `cube_general.py` (old command line, calls
+`cube_mfs`); `bem_env.py` (memory for Bempp's OpenCL driver); `diag_cube.py`
 (residual map); `pec_almond_skeleton.py` (almond library; its main is the
 nose-on case); `almond_rcs.py` (general almond solver); `pec_almond.py`
 (geometry, mesh, and the confocal solver kept as the record of the failed
@@ -682,34 +721,46 @@ Done in the third session of 2026-11-16 (items 33-38), at the author's
 request: **T19 Torus** (new example, solver, singular set, cost table
 against Bempp, two figures) and a second literature pass with full texts.
 
+Done in the overnight session of 2026-11-17 (items 39-50), at the author's
+request: both codes at their best (Bempp: OpenCL and three smaller fixes; MFS:
+cube solver 25 times faster), all cost tables re-timed (**T14**), part of
+**T16** (Bempp's fast backend; no symmetric, high-order or compressed BEM),
+**T18** in part (`cube_mfs.py` is the cube solver; old files kept), the missing
+figures of T13, the almond null, the sphere against the wavenumber, the cube
+floor (which turned out to be the depth ratio, not the vertices of T15), and a
+first draft of the paper (`paper/`).
+
 Open, in the order I would take them:
 
-- [ ] **T12 Read what could not be fetched** (author or a session with
-      publisher access): the list in `LITERATURE.md` section 8. Most urgent:
-      Millar 1983 (torus singularities), Gustafsson 1998 (skeleton analogue),
-      Ye et al. 2023 (regularised MFS for 3D PEC), Kangro 2012, De Smedt and
-      Van Bladel 1986 (compare exponent tables), Kelley et al. 2020
-      (measurement uncertainty to quote).
-- [ ] **T13 Write-up** (author writes; section 6 and `PAPER_OUTLINE.md`).
-      Still missing for it: sketches of the two source layouts (cube
-      cross-section at an edge; almond mid-plane), and a figure of the
-      boundary residual near an edge with and without tail.
-- [ ] **T14 Re-time the sphere and almond cost tables (optional).** They were
-      timed in the first container; the cube table in the second, which is
-      about 20% slower. Each table is consistent in itself. Re-run
-      `fig_cost_sphere.py run` and `fig_cost_almond.py run` if one machine
-      for all tables is wanted.
-- [ ] **T15 Vertex treatment beyond the diagonal (optional).** The vertex
-      tail carries only the radial law; a tail on the three bisector planes
-      near the vertex (with the angular structure of the vertex singularity)
-      might change the rate rather than a constant. Not needed for the paper.
-- [ ] **T16 A compressed or higher-order BEM as competitor (optional).**
-      Bempp was used with dense assembly; item 27 says what that does and
-      does not show.
+- [ ] **T13 Write-up, continued** (the author leads). The draft in `paper/`
+      is complete in structure. To do: the author's pass over every section;
+      decide the title, what goes to supplementary material and the length
+      (section 6); acknowledgements and the AI declaration; then copy to
+      `sap6/mfs-paper` (ask before pushing: it syncs to Overleaf).
+- [ ] **T12 Read what could not be fetched** (the author offered to upload
+      PDFs in chat): the list in `LITERATURE.md` section 8. Most urgent:
+      Millar 1983 (torus singular set; the draft cites it as "not yet read"),
+      Gustafsson 1998 (wording of the remark after the theorem), Kangro 2012,
+      Ye et al. 2023, De Smedt and Van Bladel 1986 (compare the exponent
+      tables), Kelley et al. 2020 (measurement uncertainty; a TODO in the
+      almond section). Karkashadze and Zaridze's MAS review needs a proper
+      bibliographic record (year, publisher).
+- [ ] **T20 Timo to check** `DERIVATIONS.md` B (edge exponents) and the proof
+      of the theorem in the draft (section 5 of the paper).
+- [ ] **T21 Why does one depth per octave stall at 1.3e-4?** (optional)
+      Item 47 shows that two per octave do not. A rate in terms of the depth
+      ratio (as for lightning solvers, where the clustering is tapered) would
+      turn the observation into an argument. Tapered depths were not tried.
+- [ ] **T22 A boundary element code that uses the mirror symmetry**
+      (optional): the one comparison the cube timings cannot answer (item 44).
+- [ ] **T15 Vertex treatment beyond the diagonal (optional).** No longer
+      needed for accuracy (the dense family converges without it).
 - [ ] **T17 Non-convex polyhedra (optional, new work).** The skeleton
       theorem and the layouts cover convex bodies only.
-- [ ] **T18 Rename the solver files (optional)**, e.g. `cube_mfs.py`,
-      `almond_mfs.py`, once nothing else is in flight.
+- [ ] **T23 Tidy the old cube path (optional)**: `SymSources`, `line_kernel.py`
+      and the single-knob `main` of `pec_cube_lightning3d.py` are only kept as
+      a cross-check; `check_tail_exponents.py` and `diag_cube.py` still use
+      them.
 
 ## 5. Experiment log (newest last; one line each)
 
@@ -761,7 +812,55 @@ Open, in the order I would take them:
 - Torus cost: MFS 0.28-10.1 s for 5e-3 to 7e-12; full matrix 25.5 s for 1.1e-4; Bempp 9-334 s for 10% to 0.82%, extrapolated sigma_ext 11.7533 against 11.7526.
 - Torus, oblique wave: MFS residual 2.6e-10 (21120 unknowns, 1.5 s solve); Bempp 4704 dofs 2.0% away.
 
+- Bempp backends, sphere 4824 dofs: Numba double 108 s, Numba single 92 s, OpenCL double 10 s, OpenCL single 8.3 s; error 7.58e-3 in all four.
+- Bempp, one 714-dof assembly: 1.9 s the first time, 0.27 s afterwards; right-hand side closure recompiled at every solve: about 3 s (fixed).
+- PoCL memory cap: 1, 2 or 4 GB per buffer depending on machine and load (one NUMA node counted); with `bem_env.py` 4 GB.
+- Cube line quadrature (`line_tree.py`) against the adaptive rule at twice the nodes: 3.4e-10 worst (J = 4), 4.5e-10 (J = 5); field unchanged to 2e-12.
+- Cube, three mirrors instead of two: fields equal to 2e-12; J = 6 from 81 s to 7.5 s; then images inside the kernel and semi-normal equations: 3.8 s, field equal to 1e-15.
+- Cube, cond of a scaled class matrix: 3.8e4 (J = 6), 7.7e5 (J = 8), 8.2e5 (J = 9); almond classes 5e4 to 3e5.
+- Cube, two collocation nodes per panel instead of three (one depth per octave): 85% error at J = 5, 0.2% at J = 6.
+- Cube, one depth per octave, J = 10, 11, 12: 0.0125%, 0.0145%, 0.018% against dense J = 10 (stalled); variants at J = 10 differ by 6e-5.
+- Cube, two depths per octave at J = 9: residual 2.2e-4 (was 7.6e-4), optical 1.3e-5 (was 4.0e-5); two collocation grids agree to 9.7e-7; three nodes per panel: garbage (optical 0.5).
+- Cube, dense family J = 3..10: change to next 9.0e-3 .. 3.5e-5 (ratio 2.4-2.9); sigma_ext 2.927961 at J = 10; graded Bempp extrapolated 2.927864.
+- Cost tables re-timed on one machine (items 43, 47): sphere, torus, almond, cube standard and oblique.
+- Cube boundary residual at J = 8 by distance to the nearest edge: equal shares of the weighted squared residual per decade (0.1-0.3); rms 0.43 at 1e-5..1e-4, 0.02 at 1e-3..1e-2.
+- Residual near an edge, J = 6: without tail 1.6 below 1e-3; with tail 1.2e-2 (1e-4..1e-3), 0.13 (1e-5..1e-4).
+- Almond null, 10.25 GHz HH: MFS minimum at 35.66 deg, -69.7 dBsm; size +-0.01%: 0.4 dB at 35.5 deg; shift by -0.10 deg: rms difference from the reference 1.45 -> 0.64 dB.
+- Sphere against wavenumber, R = 0.5: N for 1e-6 is 224, 473, 797, 1628 at k = 2, 4, 6, 8 pi (21-28 unknowns per square wavelength from 4 pi).
+- Sphere MFS, QR against SVD solver at N = 1200: 2.35e-14 against 2.14e-14; 3.4 s against 15 s.
+- Almond with the semi-normal equations: fields equal to 1e-15; RCS against Bempp 0.023 / 0.029 dB as before; 43 s per frequency.
+
 ## 6. Write-up session
+
+**State on 2026-11-17: a complete first draft exists in `paper/`** (in this
+repository, not in `sap6/mfs-paper`; nothing was pushed there). `main.pdf` is
+committed. The author asked for it ("make a start on a first draft"), in the
+voice of the thesis and with the academic-humanizer rules (item 50).
+
+- Structure: introduction; formulation; sphere; torus; why an inner copy
+  fails (theorem); cube; almond; discussion and limits; conclusion;
+  appendices A-E (edge exponents, cone exponents, torus argument, line
+  quadrature, Bempp settings). 13 figures and tables in the body.
+- Open in the draft (marked `%% TODO`): title; acknowledgements; AI
+  declaration; measurement uncertainty from Kelley et al.; Millar 1983;
+  comparison of the exponent tables with De Smedt and Van Bladel.
+- Length: 38 pages in the 12 pt preprint format (28 of body). The author's
+  target is 25. Where to cut, in the order I would try: (1) the three cost
+  tables of sphere, torus and almond duplicate their figures: keep the
+  figures, or merge the four cost figures into one four-panel figure;
+  (2) Appendix E (Bempp settings) and the oblique-wave table to
+  supplementary material; (3) the sphere-against-wavenumber paragraph to
+  two sentences. That brings the body to about 24 pages.
+- The comparison with Bempp is now fair to both sides (items 39-41, 43, 47)
+  and is stated with its two qualifications (symmetry; unknowns), item 44.
+- Decisions still open for the authors: title; how much of the Bempp cost
+  comparison stays in the main text; whether the one-depth-per-octave
+  layout is presented as the default with the dense one as the high-accuracy
+  option (as drafted) or the other way round.
+
+The rest of this section is the state before the draft and still applies
+where it is not superseded by items 39-50.
+
 
 - Attach both `sap6/MFS` and `sap6/mfs-paper`. Read this file,
   `PAPER_OUTLINE.md` and the manuscript; do not re-run experiments.
@@ -844,6 +943,23 @@ Open, in the order I would take them:
 
 ## 7. Working environment (read before running anything)
 
+- **Read first (2026-11-17).** (1) Bempp needs `pyopencl` and
+  `pocl-binary-distribution` (in `CLAUDE.md` now); check that a Bempp script
+  prints or uses `opencl`, not `numba`. (2) The laptop is no longer needed
+  for Bempp: with OpenCL the container is faster than the laptop was with
+  Numba, and the largest mesh that fits (16384 dofs) takes under 3 min.
+  (3) All timings of the paper come from one run of `retime_all.sh` plus
+  `fig_cost_cube.py run` and `cube_oblique_table.py run` on one machine
+  (2026-11-17, 02:25-03:25 UTC); if any of them is repeated on another
+  machine, repeat all. (4) The worker was replaced once in this session
+  (02:20 UTC); installed packages and uncommitted files survived, running
+  jobs did not, and PoCL's memory cap changed with the machine (item 40).
+  (5) Memory: the kernel killed one job (eight classes of the dense cube
+  family at J = 8, 11.5 GB); `cube_mfs.run` now splits classes into groups.
+  Keep single matrices below about 6 GB. (6) LaTeX is installed with the
+  apt line in `CLAUDE.md` (2 min); `paper/main.pdf` builds in 20 s.
+  (7) Network: api.crossref.org and export.arxiv.org work over HTTPS with
+  10-60 s between requests (`paper/check_bib.py`, `paper/check_arxiv.py`).
 - **Where to run.** The cloud container (4 cores, 15 GB) is the primary copy
   and is fast enough for everything except large Bempp meshes. Rough times
   (second container): cube J = 6: 95 s, J = 8: 284 s, J = 9: 419 s; cube, any

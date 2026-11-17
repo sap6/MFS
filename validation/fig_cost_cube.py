@@ -134,7 +134,7 @@ def plot(curves, fname="fig_cost_cube"):
     import matplotlib.pyplot as plt
     plt.rcParams.update({"font.size": 9, "axes.edgecolor": MUTED, "axes.labelcolor": INK, "text.color": INK,
                          "xtick.color": MUTED, "ytick.color": MUTED, "axes.linewidth": 0.6})
-    fig, ax = plt.subplots(figsize=(5.2, 3.6))
+    fig, ax = plt.subplots(figsize=(6.0, 4.6))
     for key, (col, mk, ls, label) in STYLE.items():
         if key not in curves:
             continue
@@ -146,11 +146,11 @@ def plot(curves, fname="fig_cost_cube"):
     ax.grid(False, which="minor")
     for sp in ("top", "right"):
         ax.spines[sp].set_visible(False)
-    ax.legend(frameon=False, fontsize=8, loc="lower left")
+    ax.legend(frameon=False, fontsize=8, loc="upper center", bbox_to_anchor=(0.5, -0.16), ncol=2, columnspacing=1.2)
     ax.set_title("Unit cube, side = one wavelength", loc="left", fontsize=9, color=INK)
     fig.tight_layout()
-    fig.savefig(fname + ".pdf")
-    fig.savefig(fname + ".png", dpi=200)
+    fig.savefig(fname + ".pdf", bbox_inches="tight")
+    fig.savefig(fname + ".png", dpi=200, bbox_inches="tight")
     print("wrote", fname + ".pdf/.png")
 
 

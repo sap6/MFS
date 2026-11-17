@@ -1,5 +1,12 @@
 # Paper outline and critique (task T7), 2026-11-16
 
+> **2026-11-17: a first draft now exists in `paper/`** (see `NOTES.md`,
+> section 6 and items 39-50). This outline is kept as the plan it was written
+> against. Three things in it are superseded: every cost figure (both codes
+> were re-timed at their best), the cube accuracy ("0.011%, floor"; now
+> 0.0035% with two source depths per octave, reference good to 2.5e-5,
+> Bempp agreeing to 0.014%), and the almond null (a 0.1 degree shift).
+
 For the author. Bullets and pointers only; the prose is yours. Every number
 below is in `NOTES.md` with the script that prints it. Derivations are in
 `DERIVATIONS.md`, references (with how each was checked) in `LITERATURE.md`.

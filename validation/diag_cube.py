@@ -62,7 +62,7 @@ def run(J, **kw):
     out = "   far-field effect of the residual by zone (relative to |E_sc|): "
     for name, sel in zones.items():
         Ez = 0
-        for R, sig in m.SymSources.GROUP:                       # images of the quarter surface
+        for R, sig in src.GROUP:                       # images of the quarter surface
             G = m.magnetic_pairs(pts[:, None, :] - (x[sel] * R)[None, :, :])
             Ez = Ez + m.K / (4 * np.pi) * np.einsum("pmab,mb->pa", G, sig * M[sel] * R * np.prod(R))
         out += f"{name}: {np.linalg.norm(Ez) / np.linalg.norm(bem['E']):.1e}  "
