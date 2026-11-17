@@ -53,8 +53,8 @@ where we show it".
   3.1 s for 0.095%), the two are level near 0.06%, and the MFS is faster
   below (4.3 s for 0.037% against 5.8 s; 2.5 times at 0.02-0.015%) and
   continues to 0.0015% (measured against J = 11). For the oblique wave
-  Bempp is faster down to 0.04% and the two are level below (not
-  re-checked with g = 1.5: it can only move towards Bempp). Do not write that the MFS is faster on the cube without saying
+  Bempp is faster down to 0.04% and the two are level below (g = 1.5
+  does not change this). Do not write that the MFS is faster on the cube without saying
   which Bempp (with or without symmetry) and at what error.
 - **The cube MFS numbers to use are the FINAL ones at the end of item 56**
   (base grid 6 / 0.15 from J = 6 on, line quadrature 12 / 8 nodes;
@@ -1006,8 +1006,11 @@ towards the MFS field.
       the grading, with a TODO. **Still to do (T27)**: g = 1.5 rows in
       `paper/tables/cube_bem.tex`, `cube_oblique.tex`, `cube_k2.tex` and
       the curve in `fig_cost_cube.py` / `fig_cost_all.py` (`make_tables.py`
-      globs only `_g2` files); the oblique wave at k = 2 pi with g = 1.5;
-      a finer scan of g (1.25, 1.75) with each quadrature. Lesson: the
+      globs only `_g2` files); a finer scan of g (1.25, 1.75) with each
+      quadrature. The oblique wave at k = 2 pi was checked: g = 1.5, 4/6
+      gives 2.65e-3, 1.44e-3, 9.2e-4, 6.4e-4, 4.7e-4 in 0.9, 2.0, 3.9, 6.8,
+      10.9 s, which does not beat the g = 2 envelope (3.3 s for 8.2e-4,
+      5.0 s for 5.2e-4), so that paragraph of the draft stands. Lesson: the
       best Bempp setting depends on the accuracy target; scan grading and
       quadrature together, at every wavenumber.
 
@@ -1130,8 +1133,7 @@ Open, in the order I would take them:
       for ratios 0.5, 0.6, 0.71); tapered depths help in 2D but not in 3D.
 - [ ] **T27 Bempp with grading 1.5 in the tables and figures (item 58).
       Do this first.** The text quotes it; the tables and Figure 6 show
-      only g = 2. Also run the oblique wave at k = 2 pi with g = 1.5 and
-      correct that paragraph if Bempp gains.
+      only g = 2.
 - [ ] **T25 Cube at higher wavenumbers (item 57).** k = 4 pi is done
       (standard and oblique wave) and is in the draft. k = 6 pi converges
       with the base layout scaled with the wavelength but is untuned and
@@ -1268,6 +1270,7 @@ Open, in the order I would take them:
 - Bempp grading at k = 6 pi (symmetric, 6/8): 18432 dofs: g = 1, 1.5, 2: 5.0e-3, 1.05e-3, 1.55e-3; 28800 dofs: 3.6e-3, 6.9e-4, 8.6e-4. g = 1.5 is best there.
 - Bempp with symmetry, k = 2 pi, g = 1.5, 4/6: 2.0e-3, 1.15e-3, 7.5e-4, 5.3e-4, 4.0e-4 in 0.8, 1.5, 2.6, 5.9, 8.5 s (2592..14112 dofs); 6/8 and 8/10 give the same errors. Beats g = 2 down to 7e-4 (item 58).
 - Bempp with symmetry, k = 4 pi, g = 1.5, 4/6: 2.7e-3 in 1.5 s, 1.05e-3 in 4.4 s; oblique: 1.26e-3 in 7.1 s, 6.5e-4 in 24.8 s.
+- Bempp with symmetry, k = 2 pi, oblique wave, g = 1.5, 4/6: 2.65e-3, 1.44e-3, 9.2e-4, 6.4e-4, 4.7e-4 in 0.9 to 10.9 s: no gain over g = 2.
 
 ## 6. Write-up session
 
