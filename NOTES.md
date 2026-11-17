@@ -45,15 +45,28 @@ them stable. Details in items 64-67.
   (`\documentclass[final,3p,times]`), which is 33-37 pages in the 12 pt
   preprint layout. Title, accepted by the author as "fine, if a bit
   basic": "The Method of Fundamental Solutions for Maxwell's Equations".
-- **The cube reference is now J = 12 on the finer interior grid**
-  (`ref_E` in `fig_cost_cube.npz`, item 65). All cube errors are measured
-  against it; the headline is "root-exponential down to 2e-5", no longer
-  1.5e-5.
+- **The cube has one layout and one rule** (item 68, at the author's
+  request for simplicity): two depths per octave, n_base = 8, hmax = 0.1,
+  four nodes per panel, J = 4..12; the reference is J = 12 (`ref_E` in
+  `fig_cost_cube.npz`). One depth per octave is a remark. The headline
+  is "root-exponential down to 2e-5", no longer 1.5e-5 (item 65).
+- **Final comparison with Bempp** (item 69): on the cube Bempp is faster
+  down to 1.5e-4, level there, the MFS faster below; general wave: Bempp
+  faster throughout; two wavelengths: level at 4e-4; three wavelengths:
+  the MFS layout is not converged below 5e-4 (item 67). The author asked
+  whether the MFS must be optimised again: answered no; the cube claim is
+  the convergence law.
 - **An independent reading of the draft found real errors** (item 64):
   the tail has its own coefficients; the lines lie at the distance d from
   the edge, not at depth d below the faces; the almond's magnetic tail
   exponent is 1.975, not 1.056; torus and almond "errors" are
   self-convergence. All corrected in the text; the code was right.
+- **Second message of the evening**: "keep it clear, not tons of
+  optimisations"; "make the paper stronger where you can, while still
+  simple and appropriate for a first-year PhD student publishing their
+  master's thesis"; "don't stop unless I explicitly say"; and whether a
+  famous shape could show the MFS off (answer in item 69; a near-surface
+  comparison on the sphere was added).
 - **Timings**: the laptop was never used for timing; every session gets a
   different cloud machine. Errors never depend on the machine. One
   command, `validation/time_paper.sh`, measures every time of the paper
@@ -1522,6 +1535,61 @@ towards the MFS field.
       final numbers below; the paper's claim on the cube is the
       convergence law, not the seconds.
 
+69. **Final numbers of the third draft** (one machine, 17 Nov evening,
+    Intel Xeon 2.1 GHz, four cores; `time_paper.sh` run in two parts;
+    competing runs alternated, two repetitions, smaller time kept).
+    - **Cube, k = 2 pi, standard wave** (`cube_duel.py`): MFS J = 4..11:
+      5.5, 8.3, 13.6, 22.0, 32.3, 46.5, 67.5, 129 s for 5.10e-3, 2.02e-3,
+      8.31e-4, 3.44e-4, 1.40e-4, 5.59e-5, 2.08e-5, 6.18e-6; J = 12
+      (reference) 193 s. One depth per octave J = 4..9: 2.3, 3.1, 4.6, 6.5,
+      9.1, 13.5 s for 5.29e-3, 2.22e-3, 9.38e-4, 4.06e-4, 2.07e-4, 1.35e-4.
+      Bempp, best settings with symmetry: 0.8 s 1.4e-3; 1.7 s 7.9e-4;
+      2.6 s 5.4e-4; 5.2 s 4.3e-4; 5.3 s 3.7e-4; 10.1 s 2.6e-4; 16.3 s
+      2.1e-4; 26.6 s 1.5e-4; 42.0 s 1.15e-4; 91.3 s 8.1e-5. **Reading:
+      Bempp is faster down to 1.5e-4 (eight times at 1e-3, four times at
+      3.5e-4), level there, and the MFS is faster below and reaches 2e-5
+      in less time than Bempp needs for 8e-5. The one-depth variant is
+      level with Bempp at 4e-4 and two to three times faster at 2e-4 to
+      1.4e-4.** Without tails (two depths, J = 4, 6, 8): 4.9e-2, 2.2e-2,
+      9.5e-3 (factor 70 at J = 8, decay d_J^0.6).
+    - **General wave, k = 2 pi** (`cube_cases.py k1o`, eight classes):
+      MFS J = 4..8: 10.5, 16.3, 28.6, 63.8, 94.5 s for 5.72e-3, 2.38e-3,
+      9.80e-4, 3.92e-4, 1.44e-4 (two to three times the standard wave).
+      Bempp: 2.3 s 1.06e-3; 6.4 s 4.9e-4; 13 s 3.5e-4; 19 s 2.7e-4; 30 s
+      1.9e-4; 57 s 1.44e-4; 131 s 1.02e-4. **Bempp is faster at every
+      accuracy it reaches (ten times at 1e-3, 1.7 times at 1.4e-4).**
+    - **Two wavelengths, standard wave** (`cube_cases.py k2`): MFS J =
+      4..8: 8.0, 11.8, 17.5, 27.2, 39.1 s for 6.34e-3, 2.23e-3, 9.17e-4,
+      3.80e-4, 1.48e-4. Bempp: 5.1 s 9.2e-4; 9.2 s 6.5e-4; 16 s 5.0e-4;
+      27 s 3.8e-4; 64 s 2.3e-4; 93 s 1.9e-4. **Level at 4e-4; below, the
+      MFS is more than twice as fast.** (With g = 2 only, item 57 had the
+      crossover at 1e-3: the scan moved it.)
+    - Sphere: MFS 1200 unknowns 0.51 s (2.0e-9), Bempp 9750 dofs 28 s
+      (3.7e-3). Torus: MFS 21120 unknowns 8.1 s (7.3e-12), Bempp 29 s
+      (8.2e-3). Almond 1.19 GHz: MFS 5:2 / 6:3 3.2 / 5.4 s (2.8e-4 /
+      5.6e-5), Bempp 28 s (3.0e-3).
+    - **Near the surface of the sphere** (`sphere_nearfield.py`, new,
+      the author asked for a case that shows the MFS off against an exact
+      solution): error against Mie on shells at distance delta. MFS N =
+      400: 2.6e-7 at delta = 1e-4, falling to 2e-9 at delta = 1; N = 1200:
+      6e-14 at every distance. Bempp (9750 dofs, h = 0.07, default
+      quadrature): 3.7e-3 for delta >= 0.03, 1.7e-2 at 0.018, 8.3e-2 at
+      0.01, 0.52 at 3e-3, 1.4 at 1e-3, 3.6 at 1e-4. In the paper as a
+      paragraph and a figure in Section 7.1, with the remark that special
+      quadrature for nearly singular integrals would repair the boundary
+      element side.
+    - **Opinion given to the author on "a famous shape where BEM
+      struggles"**: the meshing weakness of a low-order BEM shows on
+      smooth curved bodies at high accuracy, which the sphere, torus and
+      almond already show (nine to twelve digits against three); the
+      almond is the famous benchmark and the paper now states its unknown
+      counts (four systems of 4193 against 397,674). A shape that is hard
+      to *mesh* is also hard for the MFS, which needs a source layout
+      built by hand, so that is not a place to look. Other benchmark
+      targets of Woo et al. (ogive, cone-sphere) would each need their own
+      singular set and layout: new research, not a showcase.
+    - Length: 37 pages in the preprint layout, 22 in the journal layout.
+
 ## 3. Current best commands
 
 ```
@@ -1532,12 +1600,14 @@ python3 bem_torus.py 12,20,28,40 0.5                                            
 python3 fig_cost_cube.py ; python3 fig_cost_almond.py ; python3 fig_cost_sphere.py   # tables and figures from saved data (add `run` to recompute)
 python3 fig_almond_rcs.py ; python3 fig_almond_benchmark.py                         # almond RCS against Bempp / against the Austin benchmark
 python3 cube_mfs.py 4,5,6,7,8 [60 25 35]          # cube, the solver: standard wave, or any plane wave (from theta, phi; polarisation angle); eight parity classes
-python3 cube_oblique_table.py                     # cube, oblique wave: both MFS families and graded Bempp against the dense reference (add `run`, 12 min)
-python3 fig_cost_cube.py extend                  # adds missing levels of the two-depth family up to J_REF without re-timing the rest
-python3 cube_wavenumber.py 2 [bem|explore]       # cube at k = 4 pi (item 57): MFS table (6 min); `bem`: Bempp with symmetry against it (4 min)
-python3 bem_grading_scan.py k1 | retime k1 | report   # Bempp with symmetry: scan of grading x quadrature x mesh (35 min), re-timing of the best runs, envelopes (item 60)
-python3 cube_duel.py 2                           # final cube timing: MFS levels and Bempp's best runs alternately, twice (40 min)
-sh retime_rest.sh                                # every other table re-timed in the same session (70 min); run nothing else meanwhile
+python3 fig_cost_cube.py run                     # cube: all levels of the layout up to the reference J = 12, the one-depth variant, no tails, plain MFS (15 min, 5 GB)
+python3 cube_cases.py k1o ref ; python3 cube_cases.py k2 ref   # reference fields of the general wave and of two wavelengths (J = 10; 5 and 2 min)
+python3 bem_grading_scan.py k1|k1o|k2 ; python3 bem_grading_scan.py report   # Bempp with symmetry: scan of grading x quadrature x mesh (50-60 min each), envelopes (items 60, 67)
+sh time_paper.sh                                 # EVERY timing of the paper in one go, competing runs alternately (2.5 h); run nothing else meanwhile (items 66, 69)
+python3 fig_cost_all.py ; python3 fig_cube_cases.py   # cost figures from the saved data
+python3 sphere_nearfield.py [run]                # sphere: error against Mie as a function of the distance from the surface, MFS and Bempp
+python3 cube_k3_tune.py ref 9 | try fam,J,base,hmax[,dn[,colp[,pm-ng]]] | diff   # three wavelengths: variants and their mutual differences (item 67)
+python3 cube_oblique_table.py ; python3 cube_wavenumber.py 2   # superseded by cube_cases.py (old families, g = 2 only)
 python3 fig_cube_convergence.py                  # cube: error against sqrt(N), root-exponential fit, Bempp's best per mesh (item 61)
 python3 cube_floor.py J10 dense_p4 dense_colq     # what limits the one-depth-per-octave family (item 47)
 python3 test_line_tree.py 5                       # accuracy of the fast line quadrature against the adaptive rule
@@ -1545,7 +1615,7 @@ python3 fig_layouts.py ; python3 fig_edge_residual.py 6 ; python3 fig_sphere.py 
 python3 almond_null.py 6:3 fit                    # the HH null at 10.25 GHz: position, depth, best-fitting shift
 python3 sphere_scaling.py                         # sphere: sources needed against the wavenumber
 python3 bem_backend.py 0.14,0.1 ; python3 bem_overhead.py   # Bempp: Numba against OpenCL, single against double; fixed cost per assembly
-./retime_all.sh                                   # every cost table on this machine, one job after another (20 min); then cd ../paper && python3 make_tables.py
+cd ../paper && python3 make_tables.py && latexmk -pdf main.tex   # tables and paper
 python3 check_tail_exponents.py 5                 # edge and vertex tail variants at one depth
 python3 cone_exponents.py ; python3 cone_exponents.py cube   # tip exponents of the almond cone; vertex exponents of the cube
 python3 bem_optical.py 0.1,0.07,0.05,0.04         # Bempp, quasi-uniform cube meshes: field, cross-sections, time
@@ -1559,12 +1629,12 @@ python3 proto2d_square.py TE ; python3 proto2d_ellipse.py ; python3 proto2d_squa
 python3 proto2d_tapered.py TE                     # 2D: geometric against tapered depths; the ratio sets the attainable accuracy (items 53-54)
 ```
 
-Costs: section 2, items 43 and 47 (everything before them is obsolete). Almond:
-43 s per frequency at 1.19 GHz for all look angles and both polarisations
-(6:3 layout).
+Costs: item 69 (everything before it is obsolete: other machines, other
+families). An index of the scripts is in `validation/README.md`.
 
-Files: `mie.py` (reference); `cube_mfs.py` (the cube solver: `Cube`, `run`,
-families `balanced` and `dense`); `line_tree.py` (fast line integrals and
+Files: `mie.py` (reference); `cube_mfs.py` (the cube solver: `Cube`, `run`;
+`dense` is the layout of the paper, two depths per octave, and `balanced`
+the variant with one, both with n_base = 8 and hmax = 0.1); `line_tree.py` (fast line integrals and
 point dipoles, mirror images summed inside); `lsq.py` (QR without Q,
 semi-normal equations, `factor`); `pec_cube_lightning3d.py` + `line_kernel.py`
 (source classes `Sources`, `TailLine`, `VertexTail`, collocation grids, and
@@ -1625,12 +1695,13 @@ cube (**T22**), and the cube at two and three wavelengths (item 57).
 
 Open, in the order I would take them:
 
-- [ ] **T13 Write-up, continued** (the author leads). The short paper
-      (`paper/main.tex`, 25 pages) and its supplement are complete in
-      structure (item 63). To do: the author's pass over every section;
-      the title; the abstract and highlights; acknowledgements and the AI
-      declaration; then copy to `sap6/mfs-paper` (ask before pushing: it
-      syncs to Overleaf).
+- [ ] **T13 Write-up, continued** (the author leads). The paper is one
+      document (`paper/main.tex`, 37 preprint pages, 22 in the journal
+      layout; items 64-69). To do: the author's pass over every section;
+      abstract and highlights; the TODO on Khavinson and Lundberg in
+      Section 4.2; acknowledgements and the AI declaration; a final
+      `time_paper.sh` on a fixed machine; then copy to `sap6/mfs-paper`
+      (ask before pushing: it syncs to Overleaf).
 - [x] **T12 Read what could not be fetched**: the author uploaded twelve
       of the fourteen; read and used (item 59, `LITERATURE.md` section 10).
       Still missing: Shifman et al. 1997 (no longer cited), Hafner and
@@ -1641,29 +1712,23 @@ Open, in the order I would take them:
       fixed ratio has a fixed attainable accuracy (2D model: 8e-5, 6e-6, 1e-9
       for ratios 0.5, 0.6, 0.71); tapered depths help in 2D but not in 3D.
 - [x] **T27 Bempp's grading scanned and in the tables and figures** for
-      the standard wave at k = 2 pi (item 60). Optional remainder: the
-      same scan for the oblique wave and k = 4 pi
-      (`bem_grading_scan.py k1o|k2|k2o`, then `retime`), if the supplement
-      is to quote their cost precisely.
-- [ ] **T28 Make J = 12 with the finer interior grid the reference
-      (optional, item 62).** It works (6.2e-6 between J = 11 and 12) and
-      would turn "the two finest layouts differ by 1.5e-5" into 6e-6 and
-      lengthen the root-exponential fit; it needs `cube_mfs.dense` to
-      switch to (8, 0.1) at J = 12, one run of `fig_cost_cube.py extend`
-      (about 4 min, 4.5 GB per class) and new tables.
-- [ ] **T29 A second polyhedron (optional, new work).** A brick or a
-      tetrahedron with the same layout would show that the construction
-      is not specific to the cube; the solver is currently written for the
-      cube's three mirror planes.
-- [ ] **T25 Cube at higher wavenumbers (item 57).** k = 4 pi is done
-      (standard and oblique wave) and is in the draft. k = 6 pi converges
-      with the base layout scaled with the wavelength but is untuned and
-      expensive (0.09% in 32 s, 0.03% in 80 s): tune it, decide whether it
-      goes into the paper (Bempp with grading 1.5 is level or ahead
-      there; at k = 4 pi g = 2 is confirmed as its best). Also open: re-run the
-      k = 4 pi table with the single scaling rule of item 57 (tested, works)
-      if the paper is to state one rule for all wavenumbers; the two-depth
-      rows at k = 4 pi can use the coarser interior panels (25% faster).
+      the standard wave at k = 2 pi (item 60), and on 17 Nov evening for
+      the oblique wave and k = 4 pi (item 67). Not scanned: k = 4 pi with
+      the oblique wave (no longer in the paper) and k = 6 pi.
+- [x] **T28 J = 12 is the reference** (items 65, 68): it is the last
+      level of the one family, no special grid.
+- [ ] **T29 A second polyhedron (optional, new work).** The author
+      decided against it for this paper (too long).
+- [x] **T25 Cube at higher wavenumbers**: k = 4 pi is in the paper with
+      the single rule; k = 6 pi was tuned and found not converged below
+      about 5e-4 (item 67); the paper states it as a limit.
+- [ ] **T30 A line parametrisation for long edges (new work, item 67).**
+      At three wavelengths the stretched Legendre modes do not resolve the
+      middle of an edge and more modes destabilise the fit. Try a variable
+      that is linear in the middle and logarithmic only within about a
+      wavelength of each vertex, or plain polynomials in t added to the
+      stretched ones. Prototype along one edge first. Needed before any
+      claim beyond two wavelengths.
 - [ ] **T26 Use all 48 symmetries of the cube in the assembly (optional).**
       The line integrals are 70% of the time at the coarse levels (2.7 of
       3.8 s at J = 6). The three faces of an octant are images of one
@@ -1804,6 +1869,15 @@ Open, in the order I would take them:
 - Corner and tip exponents against De Smedt and Van Bladel 1986: cube nu 0.45417 / 0.45410, tau 0.840 / 0.84108; almond tip nu 0.29959 / 0.298, tau 0.87905 / 0.885 and 0.96803 / 0.967 (their tables interpolated).
 - All tables re-timed on the machine of 17 November (`retime_rest.sh`): sphere MFS 0.48 s (1200 unknowns), Bempp 33 s; torus MFS 10 s, Bempp 35 s; almond MFS 6.1 s (6:3), Bempp 32.5 s; RCS sweep 105 s per frequency.
 - Cube, two depths per octave with base 8 / 0.1: J = 11: optical 2.3e-6, 3.5e-6 from the stored J = 11; J = 12: 222 s, optical 9.3e-7; J = 11 against J = 12: 6.2e-6; stored reference against this J = 12: 6.7e-6.
+
+- Bempp grading scans, oblique wave and k = 4 pi (140 runs each): best gradings 1.6-1.9 with 4/6 at low accuracy, 1.75-1.9 with 6/8 and 8/10 at high; at k = 4 pi 1.5-2 times faster than g = 2 down to 5e-4.
+- Cube k = 6 pi tuned: base 16 / panels 0.065 give the same errors 30% faster; fields with 8, 12, 16 more modes differ by 1.7e-4 to 5.9e-4, 20 or more blow up; Bempp 6.7e-4 to 9.4e-4 from all: layout established to about 5e-4 only.
+- Cube k = 4 pi, two depths: interior panels 0.15 instead of 0.075 from J = 6: same errors, 1.5 times faster; at J = 5: 3.8e-3 instead of 2.2e-3.
+- Cube reference J = 12 (8 / 0.1): J = 4..11 differ from it by 5.10e-3, 2.02e-3, 8.31e-4, 3.44e-4, 1.40e-4, 5.6e-5, 2.0e-5, 6.7e-6 (old family) and 6.2e-6 at J = 11 (single rule); fit 0.46 exp(-0.047 sqrt N_u) within 4%.
+- Cube with one grid (8, 0.1) at all levels: errors unchanged at J = 4..8 (two depths), times 5.6..34.8 s instead of 3.0..26.7 s; one depth J = 4..9: 5.29e-3 .. 1.35e-4. Adopted (simplicity).
+- Final timings, one machine (item 69): cube MFS 5.5..129 s (J = 4..11), Bempp best 0.8..91 s; level at 1.5e-4. General wave: Bempp faster throughout. Two wavelengths: level at 4e-4.
+- Cube without tails, two depths, J = 4, 6, 8: 4.9e-2, 2.2e-2, 9.5e-3.
+- Sphere, error against Mie near the surface: MFS (N = 400) 2.6e-7 at distance 1e-4; Bempp (9750 dofs) 3.7e-3 beyond 0.03, 8% at 0.01, 140% at 1e-3.
 
 ## 6. Write-up session
 
