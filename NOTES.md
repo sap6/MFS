@@ -1208,7 +1208,10 @@ voice of the thesis and with the academic-humanizer rules (item 50).
   quadrature, Bempp settings). 13 figures and tables in the body.
 - Open in the draft (marked `%% TODO`): title; acknowledgements; AI
   declaration; measurement uncertainty from Kelley et al.; Millar 1983;
-  comparison of the exponent tables with De Smedt and Van Bladel.
+  comparison of the exponent tables with De Smedt and Van Bladel; the
+  sentences on Ye et al. and Kangro; the final abstract (it does not yet
+  mention the two-wavelength cube); whether the three-wavelength runs get
+  a table.
 - Length: 42 pages in the 12 pt preprint format (`main.pdf`), **26 pages in
   the journal's own layout** (`main_3p.pdf`, rebuilt after item 57; float
   placement relaxed in the preamble so that figures share pages with text).
