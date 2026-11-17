@@ -18,7 +18,7 @@ which approach the focal curve geometrically from the inside, and we write $n_{\
   \label{fig:almondlayout}
 \end{figure}
 
-The focal curve reaches the surface at the tip, which is the vertex of an elliptic cone with half-angles $34.09^\circ$ and $12.71^\circ$. The field of a conducting cone behaves like $r^{\nu-1}$ at distance $r$ from the vertex \cite{desmedt1986}. For this cone we computed the smallest exponent $\nu = 0.2996$ (\supp{2}; interpolation in the tables of \cite{desmedt1986} gives $0.298$), so the electric field grows like $r^{-0.70}$. The free source rows stop $1$\,mm from the tip. For the class that is even under both mirrors, to which the singular term belongs, this cut-off leaves a boundary residual of $19\%$, and the cross-section at oblique angles is wrong by up to $1.2$\,dB. Adding sources does not help. The remedy is the tail of \autoref{sec:cube}: each row is continued to within $10^{-4}$\,mm of the tip, and the continued dipoles of a row are tied together with the weights $(r/r_{\mathrm{cut}})^{\nu+2}$ for electric and $(r/r_{\mathrm{cut}})^{\tau+2}$ for magnetic dipoles. With the tail the residual of this class falls to $0.034\%$.
+The focal curve reaches the surface at the tip, which is the vertex of an elliptic cone with half-angles $34.09^\circ$ and $12.71^\circ$. The field of a conducting cone behaves like $r^{\nu-1}$ at distance $r$ from the vertex \cite{desmedt1986}. For this cone we computed the smallest exponent $\nu = 0.2996$ (\supp{2}; interpolation in the tables of \cite{desmedt1986} gives $0.298$), so the electric field grows like $r^{-0.70}$. The free source rows stop $1$\,mm from the tip. For the class that is even under both mirrors, to which the singular term belongs, this cut-off leaves a boundary residual of $19\%$, and the cross-section at oblique angles is wrong by up to $1.2$\,dB. Adding sources does not help. The remedy is the tail of \autoref{sec:cube}: each row is continued to within $10^{-4}$\,mm of the tip, and the continued dipoles of a row are tied together with the weights $(r/r_{\mathrm{cut}})^{\nu+2}$ for electric and $(r/r_{\mathrm{cut}})^{\tau+2}$ for magnetic dipoles, where $\nu$ and $\tau$ are the exponents of the parity class ($\tau = 1.056$ for this class). With the tail the residual of this class falls to $0.034\%$.
 
 \subsection{Results}
 
@@ -42,7 +42,7 @@ The quantity of practical interest is the monostatic radar cross-section as a fu
 
 \begin{figure}[htbp]
   \centering
-  \includegraphics[width=0.96\textwidth]{fig_almond_benchmark.pdf}
+  \includegraphics[width=0.9\textwidth]{fig_almond_benchmark.pdf}
   \caption{NASA almond: monostatic radar cross-section against azimuth ($0^\circ$ is nose-on) at four frequencies, HH and VV. MFS, reference simulation and measurements of the Austin benchmark \cite{kelley2020}.}
   \label{fig:almondbench}
 \end{figure}

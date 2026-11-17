@@ -1197,8 +1197,15 @@ towards the MFS field.
     (1.46e-5). So J = 11 stays the reference and is the deepest usable
     level of this family; the cause is probably the interior grid
     (n_base, hmax) = (6, 0.15), as for the one-depth family beyond J = 9
-    (item 56, caution 1). Not investigated. Do not go deeper without
-    refining it.
+    (item 56, caution 1). **Confirmed afterwards**: with (n_base, hmax) =
+    (8, 0.1) the family continues: J = 11: optical 2.3e-6; J = 12: 222 s,
+    optical 9.3e-7, sigma_ext 2.927980; J = 11 and J = 12 differ by 6.2e-6
+    (ratio 2.4 to the step before). Against that J = 12 the stored
+    reference (J = 11 with 6 / 0.15) is 6.7e-6 away and J = 10 is 2.0e-5
+    away, so the estimate "1e-5 for the reference" was right. The paper
+    quotes this run as the confirmation of the reference; the tables still
+    use J = 11 with 6 / 0.15 as reference (not re-run). Rule: from J = 12
+    on use (8, 0.1).
 
 63. **Second draft: the short paper** (`paper/main.tex`, 25 pages in the
     12 pt preprint layout; `paper/supplement.tex`, 11 pages; the first
@@ -1240,6 +1247,23 @@ towards the MFS field.
       al. 2013: 22), which is about 35 to 40 preprint pages, so this is on
       the short side but carried by the supplement. The short references
       the author noticed are IEEE, EABE and AIP papers in two columns.
+    - **Independent check of the short paper** (a reviewer agent that saw
+      only the files): about thirty findings, all acted on. The ones that
+      mattered: the method is not "integration-free" on the cube (line
+      integrals; now said); the base points are off the skeleton (now
+      explained as standing for its inner part); "0.14 dB" is a mean over
+      angles (now "on average"); "about the same time at 1%" held for the
+      almond only (removed); the cost section did not say that the
+      crossover is for the standard wave (the general wave is now stated);
+      the proof quoted rho^(-1/3) for a general polyhedron (now "slower
+      than rho^(-1/2)") and did not mention the interior junctions of the
+      skeleton (one clause added); orders "2.3 to 6.3" were from unrounded
+      data (now "about 2.5 to 6"); several undefined terms. **Not
+      changed**: the reviewer called "highly sought after", "daunting
+      tasks", "truly meshless", "significant challenges", "deliberately
+      challenging" and "as a final challenge" promotional. These are the
+      thesis's own phrases, which the author asked to keep; a JCP referee
+      may say the same, so the author should decide.
     - To build: `python3 make_tables.py && pdflatex main && bibtex main &&
       pdflatex main && pdflatex main`; the same for `supplement`. The long
       version builds in `paper/long/` with `TEXINPUTS=..:`.
@@ -1367,9 +1391,12 @@ Open, in the order I would take them:
       same scan for the oblique wave and k = 4 pi
       (`bem_grading_scan.py k1o|k2|k2o`, then `retime`), if the supplement
       is to quote their cost precisely.
-- [ ] **T28 The two-depth family beyond J = 11 (optional, item 62).** It
-      breaks down at J = 12. Find the limiting parameter (interior grid
-      first) if an error below 1e-5 is wanted; in 2D first.
+- [ ] **T28 Make J = 12 with the finer interior grid the reference
+      (optional, item 62).** It works (6.2e-6 between J = 11 and 12) and
+      would turn "the two finest layouts differ by 1.5e-5" into 6e-6 and
+      lengthen the root-exponential fit; it needs `cube_mfs.dense` to
+      switch to (8, 0.1) at J = 12, one run of `fig_cost_cube.py extend`
+      (about 4 min, 4.5 GB per class) and new tables.
 - [ ] **T29 A second polyhedron (optional, new work).** A brick or a
       tetrahedron with the same layout would show that the construction
       is not specific to the cube; the solver is currently written for the
@@ -1522,6 +1549,7 @@ Open, in the order I would take them:
 - Cube, two depths per octave, J = 12: 164 s, optical 9.8e-6, differs from J = 11 by 2.2e-5 (J = 10 from J = 11: 1.46e-5): breakdown.
 - Corner and tip exponents against De Smedt and Van Bladel 1986: cube nu 0.45417 / 0.45410, tau 0.840 / 0.84108; almond tip nu 0.29959 / 0.298, tau 0.87905 / 0.885 and 0.96803 / 0.967 (their tables interpolated).
 - All tables re-timed on the machine of 17 November (`retime_rest.sh`): sphere MFS 0.48 s (1200 unknowns), Bempp 33 s; torus MFS 10 s, Bempp 35 s; almond MFS 6.1 s (6:3), Bempp 32.5 s; RCS sweep 105 s per frequency.
+- Cube, two depths per octave with base 8 / 0.1: J = 11: optical 2.3e-6, 3.5e-6 from the stored J = 11; J = 12: 222 s, optical 9.3e-7; J = 11 against J = 12: 6.2e-6; stored reference against this J = 12: 6.7e-6.
 
 ## 6. Write-up session
 
