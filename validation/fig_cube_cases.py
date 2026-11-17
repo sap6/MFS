@@ -1,5 +1,5 @@
 """Cube beyond the standard case: error against wall time for a general
-incident wave and for a side of two and three wavelengths, from the data of
+incident wave and for a side of two wavelengths, from the data of
 cube_cases.py (MFS and the best Bempp runs with the mirror symmetry, timed
 alternately).
 
@@ -16,12 +16,12 @@ import numpy as np
 
 from fig_cost_all import BLUE, NAVY, INK, MUTED, curve
 
-PANELS = (("k1o", "(a) one wavelength, general wave"), ("k2", "(b) two wavelengths"), ("k3", "(c) three wavelengths"))
+PANELS = (("k1o", "(a) side one wavelength, general wave"), ("k2", "(b) side two wavelengths, standard wave"))
 
 if __name__ == "__main__":
     plt.rcParams.update({"font.size": 8.5, "axes.edgecolor": MUTED, "axes.labelcolor": INK, "text.color": INK,
                          "xtick.color": MUTED, "ytick.color": MUTED, "axes.linewidth": 0.6})
-    fig, axs = plt.subplots(1, 3, figsize=(7.4, 2.9), sharey=True)
+    fig, axs = plt.subplots(1, 2, figsize=(7.4, 3.0), sharey=True)
     for ax, (case, title) in zip(axs, PANELS):
         if os.path.exists(f"cube_cases_{case}.npz"):
             d = np.load(f"cube_cases_{case}.npz")

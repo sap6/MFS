@@ -36,14 +36,19 @@ LEVELS = {                                                  # (levels with one d
 
 def layout(c, S, J, family):
     """How the layout of cube_mfs.py follows the wavenumber (NOTES.md items 57, 64).
-    S = 1: the family as it is. S = 2: interior collocation panels scaled with
-    the wavelength, 4 more modes per line. S = 3: in addition the first depth
-    is 0.2 / S and the base grid has 16 points per face."""
+    S = 1: the family as it is. S = 2: 4 more modes per line; interior
+    collocation panels scaled with the wavelength, except for two depths per
+    octave from J = 6 on, where the S = 1 panels give the same errors 1.5
+    times faster. S = 3 (not in the paper: the layout is only established to
+    about 5e-4 there, item 67): in addition the first depth is 0.2 / S, the
+    base grid has 16 points per face and the interior panels are 0.065."""
     if S == 1:
         return {}
     kw = c.dense(J) if family == "dense" else dict(zip(("kw", "hmax"), c.balanced(J)))
     kw = dict(kw)
     n_base, hmax = (4, 0.25 / S) if J <= 5 else (6, 0.15 / S)
+    if family == "dense" and J >= 6:
+        hmax = 0.15
     depth0 = 0.2
     if S > 2:
         n_base, hmax, depth0 = BASE3, HMAX3, 0.2 / S
@@ -52,7 +57,7 @@ def layout(c, S, J, family):
     return kw
 
 
-BASE3, HMAX3 = 18, 0.05                                     # three wavelengths: base points per face, interior panel length
+BASE3, HMAX3 = 16, 0.065                                    # three wavelengths: base points per face, interior panel length
 
 
 def report():
@@ -86,6 +91,9 @@ if __name__ == "__main__":
     pts = np.load("bem_cube_h0.05.npz")["pts"]
     dp = c.wave(*OBLIQUE) if wave is not None else (m.D, m.P)
     runs = [("balanced", J) for J in LEVELS[case][0]] + [("dense", J) for J in LEVELS[case][1]]
+    test = "CUBE_CASES_TEST" in os.environ                 # smoke test: two runs of each code
+    if test:
+        runs = runs[:2]
     for fam in ("balanced", "dense"):                       # compilation
         c.run(2, dp[0], dp[1], pts, family=fam, **layout(c, S, 2, fam))
     cand = []
@@ -96,6 +104,8 @@ if __name__ == "__main__":
         rows = [tuple(r) for r in np.load(f"bem_grading_scan_{case}.npz")["rows"]]
         cand = [r for r in rows if not any(q[5] <= 0.75 * r[5] and q[6] <= r[6] for q in rows)]
         cand.sort(key=lambda r: (r[1], r[5]))
+        if test:
+            cand = cand[:2]
     print(f"{case}: {len(runs)} MFS runs and {len(cand)} Bempp runs, {reps} repetitions", flush=True)
     t_mfs, t_bem, res = {r: [] for r in runs}, {r: [] for r in cand}, {}
     args = (pts,) if wave is None else (pts, dp[0], dp[1])
@@ -121,7 +131,7 @@ if __name__ == "__main__":
         if cand:
             bem = [(r[0], r[1], r[2], r[3], r[4], min(t_bem[r]), r[6]) for r in cand]
             out.update(bem=np.array(bem), env=np.array(scan.envelope(bem)))
-        np.savez(f"cube_cases_{case}{'_mfs' if mfs_only else ''}.npz", **out)
+        np.savez(f"cube_cases_{case}{'_mfs' if mfs_only else ''}{'_t_test' if test else ''}.npz", **out)
         print(f"repetition {rep + 1} done", flush=True)
-    if not mfs_only:
+    if not mfs_only and not test:
         report()

@@ -2,7 +2,7 @@
 
     python3 cube_k3_tune.py size                 # matrix sizes of the candidate references
     python3 cube_k3_tune.py ref J                # two depths per octave at level J -> cube_k3_ref_J<J>.npz
-    python3 cube_k3_tune.py try fam J base hmax [dn] [colp]   # one variant, error against the best reference on disk
+    python3 cube_k3_tune.py try fam,J,base,hmax[,dn[,colp[,pm-ng]]] ...   # variants, errors against the best reference on disk
 """
 import glob
 import sys
@@ -14,6 +14,9 @@ import pec_cube_lightning3d as m
 S = 3
 m.K = 2 * np.pi * S
 import cube_mfs as c  # noqa: E402
+import line_tree as lt  # noqa: E402
+
+NODES = lt.nodes
 
 
 def kwargs(J, fam, base, hmax, dn=8, colp=None):
@@ -51,13 +54,29 @@ if __name__ == "__main__":
             print(f"  against {f}: {np.linalg.norm(E - np.load(f)['E']) / np.linalg.norm(E):.2e}")
     else:
         fref, ref = best_ref()
+        import os
+        store = dict(np.load("cube_k3_t_tries.npz")) if os.path.exists("cube_k3_t_tries.npz") else {}
+        if sys.argv[1] == "diff":                                       # mutual differences of the stored fields
+            keys = [k for k in store if not k.startswith("info:")]
+            names = keys + ["ref"]
+            F = [store[k] for k in keys] + [ref]
+            for i, a in enumerate(names):
+                print(f"{a:28s} " + " ".join(f"{np.linalg.norm(F[i] - F[j]) / np.linalg.norm(ref):8.1e}" for j in range(len(F))))
+            sys.exit()
         for spec in sys.argv[2:]:
             a = spec.split(",")
             fam, J, base, hmax = a[0], int(a[1]), int(a[2]), float(a[3])
             dn = int(a[4]) if len(a) > 4 else 8
-            colp = int(a[5]) if len(a) > 5 else None
+            colp = int(a[5]) if len(a) > 5 and a[5] else None
+            if len(a) > 6:                                              # line quadrature nodes, e.g. 20-10
+                pm, ng = (int(v) for v in a[6].split("-"))
+                lt.nodes = lambda k, H, pm=pm, ng=ng: (pm, ng)
+            else:
+                lt.nodes = NODES
             E, t, info = c.run(J, pts=pts, family=fam, **kwargs(J, fam, base, hmax, dn, colp))
-            print(f"{fam:8s} J = {J:2d} base {base} hmax {hmax} dn {dn} colp {colp}: unknowns/class {max(info['per_class'])} rows {info['rows']} "
+            print(f"{fam:8s} J = {J:2d} base {base} hmax {hmax} dn {dn} colp {colp} nodes {a[6] if len(a) > 6 else 'rule'}: unknowns/class {max(info['per_class'])} rows {info['rows']} "
                   f"t = {t:5.1f} s (assembly {info['t_assemble']:.1f}, factor {info['t_factor']:.1f})  error {np.linalg.norm(E - ref) / np.linalg.norm(ref):.2e} "
                   f"optical {info['optical']:.1e} |c| {info['coef_norm']:.1f}", flush=True)
+            store[spec] = E
+            np.savez("cube_k3_t_tries.npz", **store)
         print("reference:", fref)

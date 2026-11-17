@@ -32,7 +32,7 @@ def reference(case):
     if case == "k2":
         return 4 * np.pi, np.load("cube_wavenumber_k2.npz")["dense_E10"], None
     if case == "k3":
-        return 6 * np.pi, np.load("cube_k3_ref.npz")["E"], None      # cube_k3_tune.py ref
+        return 6 * np.pi, np.load("cube_k3_ref_J9.npz")["E"], None   # cube_k3_tune.py ref 9 (only good to about 5e-4)
     d = np.load("cube_wavenumber_k2_obl.npz")
     return 4 * np.pi, d["dense_E9"], (d["d"], d["p"])
 

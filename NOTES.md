@@ -1417,6 +1417,68 @@ towards the MFS field.
     Section 7.2 and 5.5 afterwards); (4) for submission, run it once on a
     fixed machine (the laptop when attached, or the supervisor's).
 
+67. **Bempp scans for the other cases, and the cube at three wavelengths
+    (T25, T27 remainder).**
+    - **Scans** (`bem_grading_scan.py k1o`, `k2`; 140 runs each, 60 and
+      55 min; data `bem_grading_scan_k1o.npz`, `_k2.npz`; times here are
+      from the scan, the final ones are in `cube_cases_*.npz`). Oblique
+      wave, k = 2 pi, lower envelope: 1.9 s 1.06e-3 (g 1.75, 4/6), 3.2 s
+      7.2e-4 (1.75), 6.4 s 4.9e-4 (1.9, 6/8), 11 s 3.6e-4 (1.75, 6/8), 19 s
+      2.7e-4 (2, 8/10), 30 s 2.0e-4, 59 s 1.45e-4 (1.9), 127 s 1.03e-4
+      (1.9, 8/10, 28800 dofs). k = 4 pi, standard wave: 3.0 s 1.43e-3
+      (g 1.6, 4/6), 5.1 s 1.05e-3 (1.5), 9.6 s 6.5e-4 (1.6), 19 s 5.0e-4
+      (1.6), 37 s 4.3e-4 (1.9, 6/8), 84 s 2.3e-4 (1.75, 6/8), 116 s 1.95e-4
+      (1.75, 8/10). **At two wavelengths the scan mattered**: with g = 2
+      Bempp needed 8 s for 1.0e-3 and 20 s for 5.1e-4 (item 57); mild
+      gradings with the default quadrature are 1.5 to 2 times faster down
+      to 5e-4. g = 2 was *not* its best at k = 4 pi (item 57 said it was,
+      from a test with 6/8 and 8/10 only).
+    - The scan for k = 4 pi with the oblique wave was not run: that case
+      is no longer in the paper (the author asked for the others to be
+      scanned "if better"; the combination adds an hour for one sentence).
+    - **Two wavelengths, MFS**: the two-depth family does not need the
+      halved interior panels from J = 6 on: J = 6, 7, 8 give 9.18e-4,
+      3.80e-4, 1.48e-4 with hmax 0.15 as with 0.075, 1.5 to 1.6 times
+      faster; at J = 5 it does (3.8e-3 instead of 2.2e-3). Adopted in
+      `cube_cases.layout`.
+    - **Three wavelengths: tuned, and found not converged** (`cube_k3_tune.py`;
+      reference two depths at J = 9 with base 18, hmax 0.05, 8 more modes:
+      263 s, optical 2.7e-5, `cube_k3_ref_J9.npz`). (a) Cheaper with equal
+      errors: base 16 instead of 18 and interior panels 0.065 instead of
+      0.05 (one depth J = 6, 7: 2.2e-3 in 14 s instead of 21 s, 1.4e-3 in
+      18 s instead of 27 s; at J = 8 base 18 is still needed: 1.07e-3 in
+      26 s); two depths with 16 / 0.075: J = 6, 7: 8.6e-4 in 41 s, 4.6e-4
+      in 58 s (60 and 82 s before); 20 / 10 quadrature nodes instead of
+      28 / 12 give the same fields 10% faster. (b) **The one-depth family
+      gains only a factor 1.5 per level** (2.2e-3, 1.4e-3, 1.0e-3 for J =
+      6, 7, 8; at one wavelength 2.4), so something other than the edge
+      depth limits it. (c) **It is the number of modes per line, and it
+      cannot simply be raised.** With 12 instead of 8 additional modes
+      the one-depth errors are 6.1e-4, 7.8e-4, 6.8e-4 (J = 6, 7, 8) and
+      two depths give 3.6e-4, 4.9e-4 (J = 6, 7): no convergence in J.
+      With 16 the result is erratic (J = 6: 1.2e-3, J = 7: 2.3e-3; |c| 16
+      to 90), with 20 or 24 the coefficients blow up (|c| 600 to 3000,
+      errors 0.1 to 20%) unless four nodes per panel are used. Mutual
+      differences of two-depth fields with 8, 12, 16 more modes at J = 6,
+      7 and the reference: 1.7e-4 to 5.9e-4, no cluster. The solver falls
+      back to QR when ill conditioned, so this is the fit, not the
+      factorisation. Bempp (g = 1.5, 6/8, 28800 dofs, 92 s) is 6.7e-4 to
+      9.4e-4 from every one of these fields. **Conclusion: at three
+      wavelengths the layout is established to about 5e-4 and no better;
+      every "error" below 1e-3 quoted for k = 6 pi in item 57 was a
+      difference from a reference of that quality.** Probable cause (not
+      tested): the stretched variable u puts the Legendre modes at the
+      two vertices; the middle of a three-wavelength edge, where the
+      density oscillates with the incident wave, is left to the low
+      modes, and more modes add nearly dependent functions near the
+      vertices. Remedy to try (T30): a parametrisation that is linear in
+      the middle of the edge and logarithmic only within about a
+      wavelength of each vertex, or plain polynomials in t added to the
+      stretched ones. The paper says this in Section 5.5 and in the
+      limits; the figure of the other cases has two panels (general wave,
+      two wavelengths), not three. No Bempp scan at k = 6 pi (pointless
+      without a reference).
+
 ## 3. Current best commands
 
 ```
