@@ -19,7 +19,7 @@ It lives here, next to the code that produces its numbers, and is not yet in
   the same name there.
 - `elsarticle.cls`, `elsarticle-num.bst`: copies of the journal class.
 
-`main.pdf` is the preprint layout (12 pt, 42 pages). `main_3p.pdf` is the same
+`main.pdf` is the preprint layout (12 pt, 43 pages). `main_3p.pdf` is the same
 text in the journal's layout (26 pages): change the first line of `main.tex`
 to `\documentclass[final,3p,times]{elsarticle}` to rebuild it.
 

@@ -65,8 +65,9 @@ where we show it".
 - **The cube layout also converges at two and three wavelengths** (item
   57; `cube_wavenumber.py`), confirmed by Bempp to 2.4e-4 and 8e-4. At two
   wavelengths the MFS is level with Bempp-with-symmetry at 0.1% and 2 to 5
-  times faster below; this is in the draft (Section 6.6). Three
-  wavelengths is untuned and only mentioned in the limits.
+  times faster below; this is in the draft (Section 6.7). At three
+  wavelengths the MFS is untuned and not ahead of Bempp (which then
+  prefers the grading 1.5); only mentioned in the limits.
 - **The line quadrature must grow with the wavenumber** (item 57 a;
   `line_tree.nodes`). A fixed rule looked like a failure of the layout at
   three wavelengths for two hours. At any new wavenumber, compare two
@@ -927,9 +928,13 @@ towards the MFS field.
       from that MFS reference): 4/6: 1.5, 4.1, 10, 24 s for 2.1e-2, 4.2e-3,
       2.0e-3, 1.5e-3; 6/8: 8.4, 21, 49 s for 4.1e-3, 1.55e-3, 8.6e-4; 8/10:
       14, 35, 74 s for 4.1e-3, 1.5e-3, 8.2e-4 (4608 to 28800 dofs). So the
-      two codes confirm each other to 8e-4 at three wavelengths. Reading:
-      Bempp faster above 1.5e-3 (10 s against 21 s at 2e-3); MFS 32 s
-      against 49 s at 8.6e-4, and 3.0e-4 in 80 s, beyond Bempp's memory.
+      two codes confirm each other to 8e-4 at three wavelengths with
+      g = 2. **But g = 2 is not Bempp's best here**: with g = 1.5 (6/8) it
+      gives 1.05e-3 in 23 s (18432 dofs) and 6.9e-4 in 56 s (28800 dofs);
+      g = 1 gives 5e-3 and 3.6e-3. Reading with g = 1.5: at three
+      wavelengths the untuned MFS is NOT ahead (32 s for 8.6e-4 against
+      23 s for 1.05e-3 and 56 s for 6.9e-4); it only goes further (3.0e-4
+      in 80 s, beyond Bempp's memory). The draft says so in the limits.
     - **2D prototype of (b) and (c)** (`proto2d_wavenumber.py`, unit
       square, TE, free sources with ratio 2^(-1/2) down to 1e-7, side S =
       1, 2, 3, 4, 6 wavelengths; far-field error): the S = 1 layout gives
@@ -955,7 +960,7 @@ towards the MFS field.
       grading of the Bempp mesh was checked at S = 2: g = 1.5, 2, 2.5, 3
       give 5.5e-4, 5.1e-4, 1.1e-3, 2.5e-3 (18432 dofs, 6/8) and g = 1.5,
       2, 2.5 give 3.4e-4, 2.4e-4, 4.6e-3 (28800 dofs, 8/10): g = 2 is
-      still Bempp's best. Not checked at S = 3.
+      still Bempp's best. At S = 3 it is not (see k = 6 pi below).
     - **Oblique wave at k = 4 pi** (`cube_wavenumber.py 2 oblique`; eight
       classes; reference dense J = 9, 265 s, optical 1.0e-5; data
       `cube_wavenumber_k2_obl.npz`, `_obl_bem.npz`): one depth J = 5..8:
@@ -1096,8 +1101,8 @@ Open, in the order I would take them:
       (standard and oblique wave) and is in the draft. k = 6 pi converges
       with the base layout scaled with the wavelength but is untuned and
       expensive (0.09% in 32 s, 0.03% in 80 s): tune it, decide whether it
-      goes into the paper. Also open: the grading of the Bempp mesh at
-      k = 6 pi (at k = 4 pi g = 2 is confirmed as its best); re-run the
+      goes into the paper (Bempp with grading 1.5 is level or ahead
+      there; at k = 4 pi g = 2 is confirmed as its best). Also open: re-run the
       k = 4 pi table with the single scaling rule of item 57 (tested, works)
       if the paper is to state one rule for all wavenumbers; the two-depth
       rows at k = 4 pi can use the coarser interior panels (25% faster).
@@ -1225,6 +1230,7 @@ Open, in the order I would take them:
 - Cube at k = 4 pi with the base at depth 0.1 and 8 / 12 points: one depth J = 5, 6, 7, 8: 1.5e-3, 5.4e-4, 2.7e-4, 3.0e-4 in 4.4, 9.0, 12.0, 17.9 s.
 - Cube at k = 6 pi, base 16 instead of 18: J = 7: 1.3e-3 in 17.6 s (panels 0.065); J = 8: 1.2e-3 to 1.4e-3 (worse than 8.6e-4 with 18).
 - Bempp grading at k = 4 pi (symmetric, 18432 dofs, 6/8): g = 1.5, 2, 2.5, 3: 5.5e-4, 5.1e-4, 1.1e-3, 2.5e-3; 28800 dofs, 8/10: g = 1.5, 2, 2.5: 3.4e-4, 2.4e-4, 4.6e-3.
+- Bempp grading at k = 6 pi (symmetric, 6/8): 18432 dofs: g = 1, 1.5, 2: 5.0e-3, 1.05e-3, 1.55e-3; 28800 dofs: 3.6e-3, 6.9e-4, 8.6e-4. g = 1.5 is best there.
 
 ## 6. Write-up session
 
@@ -1243,7 +1249,7 @@ voice of the thesis and with the academic-humanizer rules (item 50).
   sentences on Ye et al. and Kangro; the final abstract (it does not yet
   mention the two-wavelength cube); whether the three-wavelength runs get
   a table.
-- Length: 42 pages in the 12 pt preprint format (`main.pdf`), **26 pages in
+- Length: 43 pages in the 12 pt preprint format (`main.pdf`), **26 pages in
   the journal's own layout** (`main_3p.pdf`, rebuilt after item 57; float
   placement relaxed in the preamble so that figures share pages with text).
   The two-wavelength subsection (item 57) added about two thirds of a page. The author's target is 25, which the journal layout
