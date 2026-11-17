@@ -110,6 +110,22 @@ def report():
             s1, s2, s3 = (float(b["ext"]) for b in fine[-3:])
             print(f"   extrapolated from the last three (fitted rate n^-{p:.2f}): differs from the MFS reference by "
                   f"{rel(Ex, ref):.2e}; sigma_ext {s3 + (s3 - s2) * n3 ** -p / (n2 ** -p - n3 ** -p):.5f}")
+    # Bempp with the three mirror planes of the cube (bem_cube_sym.py): the comparison on an equal footing
+    best = []
+    for q, tag in (("4/6", ""), ("6/8", "_q6_8"), ("8/10", "_q8_10")):
+        for b in sorted((np.load(f) for f in glob.glob(f"bem_cube_sym_n*_g2{tag}.npz")), key=lambda b: int(b["ndof"])):
+            e = rel(b["E"], ref)
+            best.append((float(b["t_solve"]), e))
+            print(f"{'sym. ' + q:12s} {int(b['n']):5d} {int(b['ndof']):9d} {float(b['t_solve']):9.1f} {e:14.2e} "
+                  f"{'':18s}   (set-up {float(b['t_setup']):.1f}s, assembly {float(b['t_assembly']):.1f}s, fold and LU {float(b['t_lu']):.1f}s)")
+    if best:                                           # lower envelope over the three quadrature settings
+        best.sort()
+        env, emin = [], np.inf
+        for t, e in best:
+            if e < 0.97 * emin:
+                env.append((t, e))
+                emin = e
+        curves["Bempp sym"] = np.array(env)
     sm = d["dense"][-1]
     print(f"MFS reference J = {int(sm[0])}: {int(sm[2])} unknowns, {sm[1]:.0f} s, optical mismatch {sm[4]:.1e}")
     return curves
@@ -124,7 +140,8 @@ STYLE = {"MFS+tail": ("#2a78d6", "o", "-", "MFS with tails, one depth per octave
          "plain MFS": ("#eda100", "^", ":", "plain MFS (inner cube)"),
          "Bempp": ("#eb6834", "D", "-.", "Bempp, quasi-uniform mesh"),
          "Bempp graded": ("#e87ba4", "v", (0, (5, 1, 1, 1)), "Bempp, graded mesh, default quadrature"),
-         "Bempp graded 6/8": ("#8a5cc7", "P", (0, (1, 1)), "Bempp, graded mesh, quadrature 6/8")}
+         "Bempp graded 6/8": ("#8a5cc7", "P", (0, (1, 1)), "Bempp, graded mesh, quadrature 6/8"),
+         "Bempp sym": ("#9c3b12", "X", (0, (3, 1)), "Bempp, graded mesh, using the mirror symmetry")}
 INK, MUTED = "#1f1f1e", "#6b6a64"
 
 

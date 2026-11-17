@@ -59,6 +59,18 @@ if __name__ == "__main__":
     for tag, col, mk, ls, lab in (("", PINK, "v", (0, (5, 1, 1, 1)), "Bempp, graded, quadrature 4/6"), ("_q6_8", PURPLE, "P", (0, (1, 1)), "Bempp, graded, quadrature 6/8")):
         gr = sorted((np.load(f) for f in glob.glob(f"bem_cube_graded_n*_g2{tag}.npz")), key=lambda b: int(b["ndof"]))
         curve(ax, [float(b["t_solve"]) for b in gr], [rel(b["E"], ref) for b in gr], col, mk, ls, lab)
+    best = []
+    for tag in ("", "_q6_8", "_q8_10"):
+        best += [(float(b["t_solve"]), rel(b["E"], ref)) for b in (np.load(g) for g in glob.glob(f"bem_cube_sym_n*_g2{tag}.npz"))]
+    best.sort()
+    env, emin = [], np.inf
+    for t, e in best:                                   # lower envelope over the quadrature settings
+        if e < 0.97 * emin:
+            env.append((t, e))
+            emin = e
+    if env:
+        env = np.array(env)
+        curve(ax, env[:, 0], env[:, 1], "#9c3b12", "X", (0, (3, 1)), "Bempp, graded, with mirror symmetry")
     ax.set_title("(d) cube, side one wavelength", loc="left", fontsize=8.5)
     for ax in axs.ravel():
         ax.grid(True, which="major", color="#e4e3df", lw=0.6)

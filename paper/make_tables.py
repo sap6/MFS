@@ -91,16 +91,21 @@ def cube():
     bem = sorted((np.load(f) for f in glob.glob(os.path.join(V, "bem_cube_h*_q4.npz"))), key=lambda b: int(b["ndof"]))
     for b in bem:
         if int(b["ndof"]) > 1000:
-            rows.append(f"    quasi-uniform & 4/6 & {int(b['ndof'])} & {tm(float(b['t_solve']))} & {sci(rel(b['E'], ref))} \\\\")
-    for q, tag, keep in (("4/6", "", (2592, 4608, 10368)), ("6/8", "_q6_8", (4608, 7200, 10368, 14112)),
-                         ("8/10", "_q8_10", (7200, 10368, 14112))):
+            rows.append(f"    quasi-uniform & 4/6 & {int(b['ndof'])} & {sci(rel(b['E'], ref))} & {tm(float(b['t_solve']))} & -- \\\\")
+    for q, tag, keep in (("4/6", "", (2592, 4608, 10368)), ("6/8", "_q6_8", (4608, 7200, 10368, 14112, 28800)),
+                         ("8/10", "_q8_10", (7200, 10368, 14112, 18432, 28800))):
         rows.append("    \\midrule")
-        gr = sorted((np.load(f) for f in glob.glob(os.path.join(V, f"bem_cube_graded_n*_g2{tag}.npz"))), key=lambda b: int(b["ndof"]))
-        for b in gr:
-            if int(b["ndof"]) in keep:
-                rows.append(f"    graded & {q} & {int(b['ndof'])} & {tm(float(b['t_solve']))} & {sci(rel(b['E'], ref))} \\\\")
-            print(f"    graded {q} n={int(b['n'])} dofs={int(b['ndof'])} t={float(b['t_solve']):.1f} (assembly {float(b['t_assembly']):.1f}, "
-                  f"LU {float(b['t_lu']):.1f}) err={rel(b['E'], ref):.2e} sigma_ext={float(b['ext']):.6f}")
+        full = {int(b["ndof"]): b for b in (np.load(f) for f in glob.glob(os.path.join(V, f"bem_cube_graded_n*_g2{tag}.npz")))}
+        sym = {int(b["ndof"]): b for b in (np.load(f) for f in glob.glob(os.path.join(V, f"bem_cube_sym_n*_g2{tag}.npz")))}
+        for N in sorted(set(full) | set(sym)):
+            tf = tm(float(full[N]["t_solve"])) if N in full else "--"
+            ts = tm(float(sym[N]["t_solve"])) if N in sym else "--"
+            E = sym[N]["E"] if N in sym else full[N]["E"]
+            if N in keep:
+                rows.append(f"    graded & {q} & {N} & {sci(rel(E, ref))} & {tf} & {ts} \\\\")
+            extra = f" (full mesh: {rel(full[N]['E'], ref):.2e})" if N in full and N in sym else ""
+            print(f"    graded {q} dofs={N} err={rel(E, ref):.2e}{extra} t_full={tf} t_sym={ts}"
+                  + (f" sigma_ext={float(full[N]['ext']):.6f}" if N in full else ""))
     write("cube_bem", rows)
     fine = sorted((np.load(f) for f in glob.glob(os.path.join(V, "bem_cube_graded_n*_g2_q8_10.npz"))), key=lambda b: int(b["ndof"]))
     from scipy.optimize import brentq
@@ -129,7 +134,17 @@ def cube_oblique():
         b = np.load(f)
         if np.allclose(b["d"], r["d"]) and np.allclose(b["p"], r["p"]):
             q = os.path.basename(f).split("_q")[1].split("_obl")[0].replace("_", "/") if "_q" in f else "4/6"
-            rows.append(f"    Bempp, quadrature {q} & {int(b['ndof'])} & {tm(float(b['t_solve']))} & {sci(rel(b['E'], ref))} \\\\")
+            if (q, int(b["ndof"])) in (("4/6", 4608), ("6/8", 7200), ("6/8", 10368)):
+                rows.append(f"    Bempp, quadrature {q} & {int(b['ndof'])} & {tm(float(b['t_solve']))} & {sci(rel(b['E'], ref))} \\\\")
+    rows.append("    \\midrule")
+    files = sorted(glob.glob(os.path.join(V, "bem_cube_sym_*_obl.npz")), key=lambda f: (f.split("_g2")[1], int(np.load(f)["ndof"])))
+    for f in files:
+        b = np.load(f)
+        if np.allclose(b["d"], r["d"]) and np.allclose(b["p"], r["p"]):
+            q = os.path.basename(f).split("_q")[1].split("_obl")[0].replace("_", "/") if "_q" in f else "4/6"
+            print(f"    oblique symmetric {q} dofs={int(b['ndof'])} t={float(b['t_solve']):.1f} err={rel(b['E'], ref):.2e}")
+            if (q, int(b["ndof"])) in (("4/6", 2592), ("4/6", 4608), ("6/8", 4608), ("6/8", 7200), ("6/8", 10368), ("8/10", 10368), ("8/10", 14112), ("8/10", 18432), ("8/10", 28800)):
+                rows.append(f"    Bempp with symmetry, quadrature {q} & {int(b['ndof'])} & {tm(float(b['t_solve']))} & {sci(rel(b['E'], ref))} \\\\")
     write("cube_oblique", rows)
 
 

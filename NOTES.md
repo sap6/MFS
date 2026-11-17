@@ -45,6 +45,11 @@ where we show it".
   twice as fast.
 - **All cost tables were re-timed in one container** with both codes in their
   best configuration (item 43; `retime_all.sh`). Use only those numbers.
+- **On the cube Bempp was also given the mirror symmetry** that the MFS uses
+  (item 55). On that equal footing Bempp is faster above 0.05%, the two are
+  level near 0.03%, and the MFS is faster below 0.02% (1.5-2.5 times) and
+  continues to 0.0035%. Do not write that the MFS is faster on the cube
+  without saying which Bempp (with or without symmetry) and at what error.
 - **The cube family with one source depth per octave stalls near 1.3e-4;
   two depths per octave converge** to 3.5e-5 with no stall (item 47). The
   reference for the cube is now the dense family at J = 10
@@ -119,8 +124,8 @@ the cube without that qualification.
 | Unit cube, k = 2pi | uniform dipoles on inner cube | stalls at 25% | Bempp |
 | Unit cube, k = 2pi | lightning-type edge sources, no tail | 0.5% (J = 10); 0.8% at J = 12 (stall) | Bempp h = 0.05 |
 | Unit cube, k = 2pi | edge sources + edge and vertex tails, **one depth per octave** (`cube_mfs.balanced`) | 1.28%, 0.53%, 0.21%, 0.094%, 0.039%, 0.019%, 0.0125% for J = 3..9 (1.2 to 14 s), then stalls | MFS dense J = 10 |
-| Unit cube, k = 2pi | the same with **two depths per octave** (`cube_mfs.dense`) | 1.39%, 0.51%, 0.20%, 0.081%, 0.032%, 0.012%, 0.0035% for J = 3..9 (2.7 to 45 s); optical mismatch down to 5.5e-6 at J = 10; no stall | its own J = 10 (estimated error 2.5e-5); graded Bempp (14112 dofs, quadrature 8/10) is 0.014% away, its extrapolation 0.010%; cross-sections agree to 4e-5 |
-| Unit cube, oblique wave (from theta 60, phi 25, polarisation angle 35 degrees) | the same, eight parity classes | one depth: 0.62% to 0.017% for J = 4..9 (2.2 to 27 s); two depths: 0.014% at J = 8 | MFS dense J = 10 for that wave; graded Bempp 10368 dofs is 0.040% away |
+| Unit cube, k = 2pi | the same with **two depths per octave** (`cube_mfs.dense`) | 1.39%, 0.51%, 0.20%, 0.081%, 0.032%, 0.012%, 0.0035% for J = 3..9 (2.7 to 45 s); optical mismatch down to 5.5e-6 at J = 10; no stall | its own J = 10 (estimated error 2.5e-5); graded Bempp with symmetry (28800 dofs, quadrature 8/10) is 0.010% away; cross-sections agree to 4e-5 |
+| Unit cube, oblique wave (from theta 60, phi 25, polarisation angle 35 degrees) | the same, eight parity classes | one depth: 0.62% to 0.017% for J = 4..9 (2.2 to 27 s); two depths: 0.014% at J = 8 | MFS dense J = 10 for that wave; graded Bempp with symmetry, 28800 dofs, is 0.013% away |
 | Torus R = 1, a = 0.5, k = 2pi (also a = 0.25, 0.8; any wave) | dipoles on the inner torus a_s = 0.5 a, solved mode by mode about the axis | field 5e-7 (8064 unknowns, 3 s), 2e-9 (13824, 7 s), 7e-12 (21120, 10 s) against the finest run; residual 1e-10, optical mismatch 9e-14 | finest MFS (40320 unknowns); Bempp 9600 dofs is 0.82% away and its 1/N extrapolation of the cross-section agrees to 7e-5 |
 | NASA almond, 1.19 GHz, nose-on | confocal / shrunk source surface | unstable or 20%+ | - |
 | NASA almond, 1.19 / 7 / 9.92 GHz, monostatic RCS, HH and VV | skeleton sources + tip tail, four parity classes | within 0.03 / 0.04 / 0.12 dB rms of Bempp; self-converged to 0.001 dB (1.19 GHz) and 0.01 dB rms (9.92 GHz) | Bempp 9558 / 13632 dofs |
@@ -433,7 +438,7 @@ towards the MFS field.
     used tori) and it has no closed-form reference. Do not present the
     focal-ring statement as new before Millar 1983 has been read.
 
-### Fourth session, 2026-11-17, overnight (items 39-54)
+### Fourth session, 2026-11-17, overnight (items 39-55)
 
 39. **Bempp was run with its slow backend.** bempp-cl assembles with OpenCL
     if `pyopencl` and a CPU driver are installed and falls back to Numba
@@ -694,6 +699,41 @@ towards the MFS field.
     uniform two per octave (19 depths, 45 s): 3.5e-5. So the spacing matters
     at all depths, a little more at the shallow ones, and a mixed layout
     saves about 20%: not worth a third family.
+55. **Bempp with the cube's mirror symmetry: the comparison on an equal
+    footing** (`bem_cube_sym.py`, T22 done). The mesh is built invariant
+    under the eight reflections; a reflection is a signed permutation of the
+    RWG coefficients (found numerically from the basis functions, so no
+    orientation convention is assumed); only the rows of the octant's test
+    functions are assembled (Bempp: `support_elements`), folded with the
+    symmetrised basis, and each parity class is solved by a small LU. It
+    reproduces the full Galerkin solution to 2.5e-5 (quadrature 4/6) and
+    1.6e-6 (8/10): Bempp's quadrature is not reflection-invariant. It is 3.5
+    to 8 times faster than the full solve and reaches 28800 dofs (41472
+    failed, probably memory). Errors against the MFS reference:
+    - standard wave, quadrature 4/6: 0.7, 1.3, 3.7 s for 0.152%, 0.107%,
+      0.087% (2592, 4608, 10368 dofs); 6/8: 4.3, 5.8, 9.0, 13, 21, 43 s for
+      0.060%, 0.037%, 0.029%, 0.026%, 0.023%, 0.020% (4608 to 28800);
+      8/10: 9.0, 15, 22, 34, 69 s for 0.031%, 0.020%, 0.0145%, 0.012%,
+      0.0100% (7200 to 28800). The convergence flattens beyond 14112 dofs
+      (thin triangles at the edges, or the quadrature; not investigated).
+    - **Reading, both with symmetry**: Bempp is faster above 0.05% (1.3 s
+      against 3.7 s at 0.1%), level near 0.03% (5.8-9.0 s against 7.1 s),
+      and the MFS is faster below 0.02% (9.9 s against 15 s at 0.019%; 14 s
+      against 34 s at 0.012%); Bempp's best is 0.010% in 69 s, the MFS
+      (two depths) reaches 0.0035% in 45 s.
+    - oblique wave: 4/6: 0.8, 1.7 s for 0.21%, 0.144%; 6/8: 3.3, 5.0, 9.3 s
+      for 0.082%, 0.052%, 0.040%; 8/10: 15, 24, 40, 91 s for 0.027%, 0.020%,
+      0.016%, 0.013%. Against the MFS (6.0 s 0.117%, 13 s 0.052%, 18 s
+      0.026%, 27 s 0.017%): Bempp faster down to 0.03%, level below.
+    - The independent confirmation of the cube field is now 1.0e-4 directly
+      (28800 dofs).
+    - **What this means for the paper**: on the cube the cost advantage of
+      the MFS over a graded low-order BEM is real only below about 2e-4 and
+      is a factor of 1.5-2.5 there; against Bempp as distributed (no
+      symmetry) it is 1.6 to 10 times from 1e-3 down. The draft states
+      both. The cube's selling points are convergence where plain MFS
+      fails, the rate, and reaching 3.5e-5; not speed at 0.1%.
+      Item 44 (a) is superseded by this measurement.
 
 ## 3. Current best commands
 
@@ -717,6 +757,7 @@ python3 check_tail_exponents.py 5                 # edge and vertex tail variant
 python3 cone_exponents.py ; python3 cone_exponents.py cube   # tip exponents of the almond cone; vertex exponents of the cube
 python3 bem_optical.py 0.1,0.07,0.05,0.04         # Bempp, quasi-uniform cube meshes: field, cross-sections, time
 python3 bem_cube_graded.py 8,12,16 2              # Bempp, meshes graded to the edges; add "8 10" for reference quadrature, --wave=60,25,35 for an oblique wave
+python3 bem_cube_sym.py 8,12,16 2 [8 10] [--wave=60,25,35] [--check]   # the same using the three mirror planes (item 55); --check compares with the full solve
 python3 pec_cube_lightning3d.py 4,5,6 tag=NAME kinds=em q=0.5 gamma=2.0 col_p=3 col_q=0.5 beta=0.5 sym=1 tail=9   # single-knob runs (no vertex tail, no balanced refinement)
 python3 diag_cube.py 5 "tail_n=9"                 # residual map by zone, optical theorem
 python3 pec_almond_skeleton.py 1.19 --bem         # nose-on case only (see its header)
@@ -816,8 +857,8 @@ Open, in the order I would take them:
       1.2 times better at J = 5, 6 but 2.5 times worse at J = 8, and 0.9 is
       worse throughout. Not adopted (a third of a level; it would mean
       re-running every cube table and the reference).
-- [ ] **T22 A boundary element code that uses the mirror symmetry**
-      (optional): the one comparison the cube timings cannot answer (item 44).
+- [x] **T22 A boundary element code that uses the mirror symmetry**: done for
+      the cube with Bempp itself (item 55).
 - [ ] **T15 Vertex treatment beyond the diagonal (optional).** No longer
       needed for accuracy (the dense family converges without it).
 - [ ] **T17 Non-convex polyhedra (optional, new work).** The skeleton
@@ -893,6 +934,10 @@ Open, in the order I would take them:
 - Almond null, 10.25 GHz HH: MFS minimum at 35.66 deg, -69.7 dBsm; size +-0.01%: 0.4 dB at 35.5 deg; shift by -0.10 deg: rms difference from the reference 1.45 -> 0.64 dB.
 - Sphere against wavenumber, R = 0.5: N for 1e-6 is 224, 473, 797, 1628 at k = 2, 4, 6, 8 pi (21-28 unknowns per square wavelength from 4 pi).
 - Sphere MFS, QR against SVD solver at N = 1200: 2.35e-14 against 2.14e-14; 3.4 s against 15 s.
+- Bempp with mirror symmetry on the cube: equals the full solve to 2.5e-5 (4/6) and 1.6e-6 (8/10); 14112 dofs in 5.6 s (4/6), 22 s (8/10); 28800 dofs, 8/10: 69 s, 1.00e-4 from the MFS reference.
+- 2D square, free solves to depth 1e-9, TE: ratio 0.5, 0.6, 0.71, 0.8: 8.1e-5, 5.8e-6, 1.4e-9, 1e-11; tapered 30 / 40 depths: 9.5e-8 / 1.0e-9.
+- Cube with tapered depths, J = 9: 10, 13, 16 depths: 4.3e-4, 1.27e-4, 5.3e-5 (uniform: 1.25e-4 with 10, 3.5e-5 with 19).
+- Cube, row-weight exponent 0.5 / 0.7 / 0.9 at J = 8: one depth per octave 1.9e-4 / 4.7e-4 / 2.4e-3; two depths 1.20e-4 / 0.82e-4 / 0.71e-4.
 - Almond with the semi-normal equations: fields equal to 1e-15; RCS against Bempp 0.023 / 0.029 dB as before; 43 s per frequency.
 - Almond against the Austin benchmark, re-run with the new solver: the four frequencies agree with the stored curves to 1e-13 dB; 66 s per frequency (361 angles, HH and VV).
 - Almond 1.19 GHz nose-on, variants of layout 8:5: spacing 0.5: 8.3e-6; finer collocation: 3.3e-6; two rows per octave: 2.7e-6.
@@ -922,8 +967,10 @@ voice of the thesis and with the academic-humanizer rules (item 50).
   (2) Appendix E (Bempp settings) and the oblique-wave table to
   supplementary material; (3) the sphere-against-wavenumber paragraph to
   two sentences.
-- The comparison with Bempp is now fair to both sides (items 39-41, 43, 47)
-  and is stated with its two qualifications (symmetry; unknowns), item 44.
+- The comparison with Bempp is now fair to both sides (items 39-41, 43, 47,
+  55). For the cube the draft reports Bempp both without and with the mirror
+  symmetry and compares on the equal footing first; the remaining
+  qualification is the number of unknowns.
 - Decisions still open for the authors: title; how much of the Bempp cost
   comparison stays in the main text; whether the one-depth-per-octave
   layout is presented as the default with the dense one as the high-accuracy
