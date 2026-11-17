@@ -117,7 +117,7 @@ def cube_oblique():
     r = np.load(os.path.join(V, "cube_oblique.npz"))
     ref = r["Eref"]
     rows = []
-    for fam, Js, label in (("", (4, 5, 6, 7, 8, 9), "one depth per octave"), ("dense", (6, 7, 8), "two depths per octave")):
+    for fam, Js, label in (("", (4, 5, 6, 7, 8, 9), "one depth"), ("dense", (6, 7, 8), "two depths")):
         for J in Js:
             if f"E{fam}{J}" in r:
                 t, unk = r[f"info{fam}{J}"][:2]

@@ -1,0 +1,112 @@
+--- sphere
+        MFS   & 300 & 0.03 & $2.7\times10^{-3}$ \\
+        MFS   & 600 & 0.08 & $2.7\times10^{-6}$ \\
+        MFS   & 1200 & 0.29 & $2.0\times10^{-9}$ \\
+        MFS   & 2400 & 1.7 & $1.7\times10^{-13}$ \\
+        MFS   & 3600 & 4.6 & $2.3\times10^{-14}$ \\
+        \midrule
+        Bempp & 1269 & 0.77 & $3.2\times10^{-2}$ \\
+        Bempp & 2733 & 1.9 & $1.4\times10^{-2}$ \\
+        Bempp & 4824 & 4.4 & $7.6\times10^{-3}$ \\
+        Bempp & 9750 & 19 & $3.7\times10^{-3}$ \\
+--- torus
+        MFS, mode by mode & 1440 & 0.25 & $5.0\times10^{-3}$ \\
+        MFS, mode by mode & 3840 & 0.90 & $1.1\times10^{-4}$ \\
+        MFS, mode by mode & 8064 & 2.4 & $5.0\times10^{-7}$ \\
+        MFS, mode by mode & 13824 & 4.3 & $2.0\times10^{-9}$ \\
+        MFS, mode by mode & 21120 & 6.3 & $7.3\times10^{-12}$ \\
+        \midrule
+        MFS, full matrix  & 1440 & 1.5 & $5.0\times10^{-3}$ \\
+        MFS, full matrix  & 3840 & 19 & $1.1\times10^{-4}$ \\
+        \midrule
+        Bempp & 864 & 0.97 & $1.0\times10^{-1}$ \\
+        Bempp & 2400 & 1.5 & $3.3\times10^{-2}$ \\
+        Bempp & 4704 & 5.2 & $1.7\times10^{-2}$ \\
+        Bempp & 9600 & 21 & $8.2\times10^{-3}$ \\
+    reference: [4.03200000e+04 1.14326781e-10 8.70602030e-14 1.17525747e+01]  Bempp sigma_ext: [11.25533161 11.5846609  11.66788969 11.7114728 ]
+--- almond
+        MFS $3{:}0$ & 795 & 1.1 & $6.7\times10^{-2}$ \\
+        MFS $4{:}1$ & 1377 & 1.5 & $4.0\times10^{-3}$ \\
+        MFS $5{:}2$ & 2103 & 2.1 & $2.8\times10^{-4}$ \\
+        MFS $6{:}3$ & 2937 & 3.2 & $5.6\times10^{-5}$ \\
+        \midrule
+        Bempp & 2106 & 1.0 & $1.3\times10^{-2}$ \\
+        Bempp & 4212 & 3.3 & $6.7\times10^{-3}$ \\
+        Bempp & 9558 & 19 & $3.0\times10^{-3}$ \\
+    finest layout: [1.59700000e+03 4.79100000e+03 8.33533072e+00 1.54587400e-04]
+--- cube_mfs
+        one & 3 & 489 & 3456 & 1.2 & $1.3\times10^{-2}$ & $3.0\times10^{-3}$ \\
+        one & 4 & 618 & 4374 & 1.6 & $5.3\times10^{-3}$ & $1.3\times10^{-3}$ \\
+        one & 5 & 891 & 5400 & 2.4 & $2.1\times10^{-3}$ & $5.6\times10^{-4}$ \\
+        one & 6 & 1248 & 7776 & 3.7 & $9.4\times10^{-4}$ & $2.4\times10^{-4}$ \\
+        one & 7 & 1668 & 12150 & 7.1 & $3.9\times10^{-4}$ & $1.1\times10^{-4}$ \\
+        one & 8 & 2085 & 13824 & 9.9 & $1.9\times10^{-4}$ & $6.4\times10^{-5}$ \\
+        one & 9 & 2541 & 15606 & 14 & $1.3\times10^{-4}$ & $4.0\times10^{-5}$ \\
+        \midrule
+        two & 3 & 768 & 6144 & 2.7 & $1.4\times10^{-2}$ & $3.1\times10^{-3}$ \\
+        two & 4 & 1020 & 7776 & 3.7 & $5.1\times10^{-3}$ & $1.1\times10^{-3}$ \\
+        two & 5 & 1515 & 9600 & 6.0 & $2.0\times10^{-3}$ & $4.2\times10^{-4}$ \\
+        two & 6 & 2139 & 13824 & 11 & $8.1\times10^{-4}$ & $1.7\times10^{-4}$ \\
+        two & 7 & 2880 & 21600 & 22 & $3.2\times10^{-4}$ & $7.2\times10^{-5}$ \\
+        two & 8 & 3663 & 24576 & 31 & $1.2\times10^{-4}$ & $3.1\times10^{-5}$ \\
+        two & 9 & 4539 & 27744 & 45 & $3.5\times10^{-5}$ & $1.3\times10^{-5}$ \\
+        two & 10 & 5520 & 31104 & 64 & reference & $5.5\times10^{-6}$ \\
+    dense family, change to the next level: 8.95e-03 3.11e-03 1.19e-03 4.86e-04 2.04e-04 8.44e-05 3.51e-05  ratios: 2.88 2.61 2.45 2.38 2.42 2.40
+    notail: [(4, 1068, '0.95', '5.39e-02'), (6, 2244, '2.5', '2.54e-02'), (8, 3834, '6.8', '1.10e-02')]
+    plain: [(4, 72, '0.03', '3.02e-01'), (6, 162, '0.16', '2.51e-01'), (8, 288, '0.27', '2.28e-01'), (10, 450, '0.16', '2.12e-01')]
+    graded 4/6 n=8 dofs=1152 t=1.2 (assembly 1.0, LU 0.0) err=4.41e-03 sigma_ext=2.922048
+    graded 4/6 n=12 dofs=2592 t=2.8 (assembly 2.4, LU 0.3) err=1.52e-03 sigma_ext=2.925281
+    graded 4/6 n=16 dofs=4608 t=6.1 (assembly 4.5, LU 1.5) err=1.06e-03 sigma_ext=2.926147
+    graded 4/6 n=20 dofs=7200 t=13.8 (assembly 8.5, LU 5.1) err=9.35e-04 sigma_ext=2.926538
+    graded 4/6 n=24 dofs=10368 t=28.3 (assembly 14.3, LU 13.8) err=8.54e-04 sigma_ext=2.926769
+    graded 4/6 n=28 dofs=14112 t=56.4 (assembly 23.7, LU 32.4) err=7.83e-04 sigma_ext=2.926926
+    graded 6/8 n=8 dofs=1152 t=3.1 (assembly 2.9, LU 0.0) err=4.42e-03 sigma_ext=2.922595
+    graded 6/8 n=12 dofs=2592 t=7.1 (assembly 6.6, LU 0.3) err=1.32e-03 sigma_ext=2.926052
+    graded 6/8 n=16 dofs=4608 t=15.4 (assembly 13.6, LU 1.7) err=6.00e-04 sigma_ext=2.926945
+    graded 6/8 n=20 dofs=7200 t=30.2 (assembly 24.9, LU 5.1) err=3.73e-04 sigma_ext=2.927290
+    graded 6/8 n=24 dofs=10368 t=56.4 (assembly 42.1, LU 14.0) err=2.89e-04 sigma_ext=2.927459
+    graded 6/8 n=28 dofs=14112 t=102.2 (assembly 69.9, LU 31.9) err=2.51e-04 sigma_ext=2.927556
+    graded 8/10 n=12 dofs=2592 t=14.4 (assembly 13.9, LU 0.3) err=1.31e-03 sigma_ext=2.926191
+    graded 8/10 n=16 dofs=4608 t=30.2 (assembly 28.2, LU 1.7) err=5.68e-04 sigma_ext=2.927103
+    graded 8/10 n=20 dofs=7200 t=55.6 (assembly 50.3, LU 5.0) err=3.06e-04 sigma_ext=2.927453
+    graded 8/10 n=24 dofs=10368 t=97.3 (assembly 83.6, LU 13.3) err=1.95e-04 sigma_ext=2.927617
+    graded 8/10 n=28 dofs=14112 t=166.2 (assembly 133.5, LU 32.2) err=1.43e-04 sigma_ext=2.927706
+--- cube_bem
+        quasi-uniform & 4/6 & 2214 & 2.3 & $6.8\times10^{-3}$ \\
+        quasi-uniform & 4/6 & 4884 & 6.8 & $3.9\times10^{-3}$ \\
+        quasi-uniform & 4/6 & 8514 & 19 & $2.6\times10^{-3}$ \\
+        quasi-uniform & 4/6 & 13302 & 49 & $1.9\times10^{-3}$ \\
+        \midrule
+        graded & 4/6 & 2592 & 2.8 & $1.5\times10^{-3}$ \\
+        graded & 4/6 & 4608 & 6.1 & $1.1\times10^{-3}$ \\
+        graded & 4/6 & 10368 & 28 & $8.5\times10^{-4}$ \\
+        \midrule
+        graded & 6/8 & 4608 & 15 & $6.0\times10^{-4}$ \\
+        graded & 6/8 & 7200 & 30 & $3.7\times10^{-4}$ \\
+        graded & 6/8 & 10368 & 56 & $2.9\times10^{-4}$ \\
+        graded & 6/8 & 14112 & 102 & $2.5\times10^{-4}$ \\
+        \midrule
+        graded & 8/10 & 7200 & 56 & $3.1\times10^{-4}$ \\
+        graded & 8/10 & 10368 & 97 & $1.9\times10^{-4}$ \\
+        graded & 8/10 & 14112 & 166 & $1.4\times10^{-4}$ \\
+    graded Bempp 8/10 extrapolated (rate n^-2.88): error 9.76e-05, sigma_ext 2.927864
+    oblique reference: [3.67033154e+02 4.41600000e+04 3.11040000e+04 2.26926599e+02
+ 1.28692320e+02 1.08064599e-05 3.34619442e+00 1.45295838e-04]
+--- cube_oblique
+        MFS, one depth, $J = 4$ & 4944 & 2.2 & $6.2\times10^{-3}$ \\
+        MFS, one depth, $J = 5$ & 7128 & 3.3 & $2.8\times10^{-3}$ \\
+        MFS, one depth, $J = 6$ & 9984 & 6.0 & $1.2\times10^{-3}$ \\
+        MFS, one depth, $J = 7$ & 13344 & 13 & $5.2\times10^{-4}$ \\
+        MFS, one depth, $J = 8$ & 16680 & 18 & $2.6\times10^{-4}$ \\
+        MFS, one depth, $J = 9$ & 20328 & 27 & $1.7\times10^{-4}$ \\
+        \midrule
+        MFS, two depths, $J = 6$ & 17112 & 20 & $9.8\times10^{-4}$ \\
+        MFS, two depths, $J = 7$ & 23040 & 46 & $3.9\times10^{-4}$ \\
+        MFS, two depths, $J = 8$ & 29304 & 105 & $1.4\times10^{-4}$ \\
+        \midrule
+        Bempp, quadrature 4/6 & 2592 & 2.7 & $2.1\times10^{-3}$ \\
+        Bempp, quadrature 4/6 & 4608 & 6.4 & $1.4\times10^{-3}$ \\
+        Bempp, quadrature 4/6 & 7200 & 14 & $1.2\times10^{-3}$ \\
+        Bempp, quadrature 6/8 & 4608 & 15 & $8.2\times10^{-4}$ \\
+        Bempp, quadrature 6/8 & 7200 & 30 & $5.2\times10^{-4}$ \\
+        Bempp, quadrature 6/8 & 10368 & 57 & $3.9\times10^{-4}$ \\

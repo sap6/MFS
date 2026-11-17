@@ -7,7 +7,7 @@
 
 \emph{Symmetry.} The MFS timings for the torus, the almond and the cube use the symmetry of the body, and the Bempp timings do not. The symmetry is a property of the body and not of the incident wave, so the comparison holds for any wave. A boundary element code that used the same symmetry would nevertheless be faster than the timings we report for Bempp. Without symmetry our dense least-squares solve would cost far more: the factorisation of one cube matrix with all eight classes together would take $64$ times as long as the eight separate factorisations.
 
-\emph{The boundary element code.} Bempp is a low-order code, and we ran it with dense matrices. We chose its fastest assembly backend, graded the meshes of the cube and raised the quadrature orders where that helped (\autoref{sec:bempp}). We did not compare with a high-order or a compressed boundary element method. On the smooth bodies a high-order method would narrow the gap considerably.
+\emph{The boundary element code.} Bempp is a low-order code, and we ran it with dense matrices. We chose its fastest assembly backend, graded the meshes of the cube and raised the quadrature orders where that helped (\ref{sec:bempp}). We did not compare with a high-order or a compressed boundary element method. On the smooth bodies a high-order method would narrow the gap considerably.
 
 \emph{Size.} All bodies are at most nine wavelengths long. The cost of the dense factorisation grows with the cube of the number of unknowns, and we make no claim for larger problems.
 
