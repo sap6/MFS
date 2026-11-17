@@ -4,8 +4,10 @@ error, boundary residual and coefficient norm against the source radius, for
 k = 2 pi and 4 pi.
 
     python3 pec_sphere_convergence.py && python3 fig_sphere.py
+    python3 fig_sphere.py short        # k = 2 pi only, both panels in one row (fig_sphere_short.pdf, used by the paper)
 """
 import json
+import sys
 
 import matplotlib
 
@@ -23,7 +25,13 @@ if __name__ == "__main__":
     ks = sorted({r["k"] for r in res})
     plt.rcParams.update({"font.size": 9, "axes.edgecolor": MUTED, "axes.labelcolor": INK, "text.color": INK,
                          "xtick.color": MUTED, "ytick.color": MUTED, "axes.linewidth": 0.6})
-    fig, axs = plt.subplots(2, len(ks), figsize=(7.4, 5.6), squeeze=False)
+    short = "short" in sys.argv
+    if short:
+        ks = ks[:1]
+        fig, axs = plt.subplots(1, 2, figsize=(7.4, 2.9), squeeze=False)
+        axs = axs.T
+    else:
+        fig, axs = plt.subplots(2, len(ks), figsize=(7.4, 5.6), squeeze=False)
     for col, k in enumerate(ks):
         rn = [r for r in res if r["k"] == k and r["sweep"] == "N"]
         rr = sorted((r for r in res if r["k"] == k and r["sweep"] == "R"), key=lambda r: r["R"])
@@ -50,6 +58,7 @@ if __name__ == "__main__":
         for sp in ("top", "right"):
             ax.spines[sp].set_visible(False)
     fig.tight_layout()
-    fig.savefig("fig_sphere.pdf")
-    fig.savefig("fig_sphere.png", dpi=200)
-    print("wrote fig_sphere.pdf/.png")
+    name = "fig_sphere_short" if short else "fig_sphere"
+    fig.savefig(name + ".pdf")
+    fig.savefig(name + ".png", dpi=200)
+    print(f"wrote {name}.pdf/.png")

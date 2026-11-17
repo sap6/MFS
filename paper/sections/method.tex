@@ -1,0 +1,71 @@
+\section{The MFS for Maxwell's equations}
+\label{sec:method}
+
+\subsection{The scattering problem}
+
+We consider the electromagnetic field in the unbounded region exterior to a perfect electric conductor (PEC). The conductor occupies a bounded domain $\Omega\subset\mathbb{R}^3$ with surface $\Gamma$, and we work in the frequency domain with time dependence $\rme^{-\rmi\omega t}$ and wavenumber $k$. The incident field is the plane wave
+\begin{equation}
+  \Einc(\bx) = \bp\,\rme^{\rmi k\,\bd\cdot\bx},
+  \label{eq:planewave}
+\end{equation}
+where the polarisation vector $\bp$ and the propagation direction $\bd$ are orthogonal unit vectors. The scattered field $\bE$ satisfies \cite{kirsch2015,colton2013}
+\begin{equation}
+  \nabla\times\nabla\times\bE - k^2\,\bE = 0 \quad\text{in } \mathbb{R}^3\setminus\overline{\Omega},
+  \label{eq:maxwell}
+\end{equation}
+together with the Silver--M\"uller radiation condition. The physical requirement on a perfect conductor is that the tangential component of the total electric field vanishes on $\Gamma$,
+\begin{equation}
+  \bt\cdot\bigl(\bE + \Einc\bigr) = 0 \quad\text{on } \Gamma
+  \label{eq:pec}
+\end{equation}
+for every tangent vector $\bt$. Far from the body the scattered field is an outgoing spherical wave, $\bE(\bx) = \rme^{\rmi kr}\,\bF(\hat\bx)/r + O(r^{-2})$ with $r = |\bx|$, and the radar cross-section in the direction $\hat\bx$ is $4\pi|\bF(\hat\bx)|^2$.
+
+\subsection{The fundamental solution}
+
+Let $\Phi(r) = \rme^{\rmi kr}/(4\pi r)$ with $r = \|\bx-\by\|$ be the fundamental solution of the scalar Helmholtz equation. To lift this scalar solution to a vector solution of \eqref{eq:maxwell}, we follow \cite{osipov2017} and apply the operator $I + k^{-2}\nabla\nabla$, where $I$ is the unit dyadic and $\nabla\nabla\Phi$ the Hessian of $\Phi$. With $\rhat = (\bx-\by)/r$ this gives
+\begin{equation}
+  \bG(\bx,\by) = \Bigl(I + \frac{1}{k^2}\nabla\nabla\Bigr)\Phi(r)
+  = \frac{\rme^{\rmi kr}}{4\pi r}\Biggl(\Bigl(1+\frac{\rmi}{kr}-\frac{1}{(kr)^2}\Bigr)I-\Bigl(1+\frac{3\rmi}{kr}-\frac{3}{(kr)^2}\Bigr)\rhat\rhat^{\top}\Biggr).
+  \label{eq:dyadic}
+\end{equation}
+Because this Green's function is a $3\times3$ matrix that connects vector sources to vector fields, it is referred to as the \emph{dyadic Green's function}. For a vector $\balpha\in\mathbb{C}^3$ the field $\bG(\bx,\by)\,\balpha$ is that of an electric dipole at $\by$ with moment $\balpha$. It satisfies \eqref{eq:maxwell} away from $\by$ and the radiation condition. Taking the curl gives a second family of solutions, the fields of magnetic dipoles,
+\begin{equation}
+  \frac{1}{k}\,\nabla_{\bx}\Phi(r)\times\bbeta
+  = \Bigl(\rmi-\frac{1}{kr}\Bigr)\Phi(r)\;\rhat\times\bbeta .
+  \label{eq:magnetic}
+\end{equation}
+For a smooth body the electric dipoles are sufficient. We shall see in \autoref{sec:skeleton} why bodies with edges need both.
+
+\subsection{Formulation}
+
+We choose $N$ source points $\by_1,\dots,\by_N$ inside the conductor and approximate the scattered field by
+\begin{equation}
+  \bE_N(\bx) = \sum_{j=1}^{N}\Bigl[\bG(\bx,\by_j)\,\balpha_j + \frac{1}{k}\nabla_{\bx}\Phi(\bx,\by_j)\times\bbeta_j\Bigr].
+  \label{eq:mfs}
+\end{equation}
+Each coefficient $\balpha_j$ or $\bbeta_j$ is a 3-component vector. The approximation satisfies \eqref{eq:maxwell} and the radiation condition for any choice of the coefficients, so only the boundary condition \eqref{eq:pec} has to be enforced. We do this at $M$ boundary points $\bx_1,\dots,\bx_M$ on $\Gamma$. At each boundary point a local tangent basis $\bt_i^{1},\bt_i^{2}$ is computed, and the coefficients minimise
+\begin{equation}
+  \sum_{i=1}^{M} w_i \sum_{s=1}^{2}\bigl|\bt_i^{s}\cdot\bigl(\bE_N(\bx_i)+\Einc(\bx_i)\bigr)\bigr|^2,
+  \label{eq:leastsquares}
+\end{equation}
+where the weight $w_i$ is the surface area that the point represents. After projection onto the tangent plane each $3\times3$ block of the system is reduced to a $2\times3$ block, so for electric dipoles this is a linear least-squares problem $A\balpha = \mathbf{b}$ with $2M$ equations and $3N$ unknowns. We always take $M > N$.
+
+A well-documented disadvantage of the MFS is that this system is often ill-conditioned. For the sphere and the torus we therefore solve it with orthogonal factorisations \cite{golub2013}, QR for the sphere and the singular value decomposition for the small systems of the torus. For the layouts of the cube and the almond the matrices are well conditioned once their columns are scaled to unit norm, with condition numbers below $10^{6}$, and we use the corrected semi-normal equations \cite{bjorck1987}, which cost about half as much as QR. In all cases the cost is $O(MN^2)$ operations, and the systems have at most a few thousand unknowns once the symmetry of the body has been used.
+
+\subsection{Measuring the error}
+\label{sec:errors}
+
+For the sphere the Mie series \cite{mie1908,bohren1998} gives the exact scattered field, and we report the relative error
+\begin{equation}
+  \varepsilon = \Bigl(\sum\nolimits_{l}|\bE_N(\mathbf{z}_l)-\bE(\mathbf{z}_l)|^2\Bigr)^{1/2}\Big/\Bigl(\sum\nolimits_{l}|\bE(\mathbf{z}_l)|^2\Bigr)^{1/2}
+  \label{eq:fielderror}
+\end{equation}
+at $400$ points $\mathbf{z}_l$ on a sphere that encloses the body. For the other shapes no exact solution exists, and we use \eqref{eq:fielderror} with a reference field in place of $\bE$, always stating which. We use two further checks. The first is the optical theorem. A perfect conductor absorbs no energy, so the extinction and scattering cross-sections
+\begin{equation}
+  \sext = \frac{4\pi}{k}\,\operatorname{Im}\bigl(\bar\bp\cdot\bF(\bd)\bigr), \qquad
+  \ssca = \int_{S^2}|\bF(\hat\bx)|^2\,\mathrm{d}s(\hat\bx)
+  \label{eq:optical}
+\end{equation}
+are equal for the exact solution, and the mismatch $|\sext-\ssca|/\ssca$ is an error indicator that needs no reference. It is an indicator and not a bound: it exposed fits that were under-sampled at the edges of the cube, but it missed three that were under-sampled in the interior of the faces.
+
+The second check is an independent solver. We use the boundary element library Bempp-cl \cite{betcke2021,scroggs2017}, which solves the electric field integral equation with Rao--Wilton--Glisson elements \cite{rao1982} on a triangular mesh. It serves both as a reference and as a yardstick for the computing time (\supp{5}). All timings were measured on one machine with four cores and include assembly, solution and the evaluation of the field.

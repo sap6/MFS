@@ -1045,6 +1045,42 @@ towards the MFS field.
       best Bempp setting depends on the accuracy target; scan grading and
       quadrature together, at every wavenumber.
 
+### Fifth session, 2026-11-17, daytime (items 59-63)
+
+59. **The twelve uploaded papers** (`LITERATURE.md` section 10 has each one
+    with page numbers). What changed in the paper because of them:
+    - *Torus*: Millar 1983 does **not** cover the torus (his meridian curve
+      must meet the axis). Aberra 2002: for tori in four and six dimensions
+      the Schwarz potential is singular on the **centre circle** only. So
+      the focal-ring bound is a 3D statement with no proof in the
+      literature; the paper says so and no longer hopes Millar settles it.
+    - *Introduction*: "the usual layout cannot converge" was too strong.
+      By density (Doicu et al.; Kangro 2012, Theorem 1) sources on an inner
+      surface can approximate, but only with unbounded coefficients. Now
+      "can approximate the field only with coefficients that grow without
+      bound, and in practice the error stalls".
+    - *Sphere*: the rate exp(-c sqrt N) is a theorem of Kangro 2012 for
+      analytic surfaces (under a continuation assumption); cited.
+    - *Theorem*: Gustafsson 1998, Theorem 3.1 is the potential-theory
+      analogue with the same construction (minimum over faces of half-space
+      solutions; support on the "ridge"); the remark says exactly that.
+    - *Exponents*: De Smedt and Van Bladel 1986 give nu = 0.45410 and tau =
+      0.84108 for the cube corner (ours 0.45417, 0.840) and, interpolated,
+      0.298 / 0.885 / 0.967 for the almond tip (ours 0.29959 / 0.87905 /
+      0.96803). Costabel and Dauge 2000 (Section 6.6) confirm the two types
+      of corner singularity. Both cited; the TODO is gone.
+    - *Almond*: Kelley et al. 2020 state the measurements as "generally
+      within +-1 dB" (HH) and "+-2 dB" (VV) of simulation, and that the two
+      finest reference meshes differ by 0.07 / 0.02 dB on average and up to
+      0.5 dB near nulls. Quoted; the TODO is gone.
+    - *Bibliography*: the Tbilisi "review" without a record is replaced by
+      the 2004 MMET conference paper of the same title (it has no torus, so
+      the sentence "the MAS has been applied to tori" was dropped). Young
+      and Ruan 2005 confirmed (vol. 7, no. 2). New entries: Aberra 2002,
+      Osipov and Tretyakov 2017 (the thesis's source for the dyadic).
+    - Not obtained: Shifman et al. 1997 (publisher page 404; not cited in
+      the short paper), Hafner and Bomholt (book).
+
 ## 3. Current best commands
 
 ```

@@ -14,3 +14,10 @@ paper/*.spl
 paper/check_arxiv_report.txt
 paper/main_3p.tex
 paper/main_3p.bbl
+paper/long/*.aux
+paper/long/*.log
+paper/long/*.out
+paper/long/*.blg
+paper/long/*.spl
+paper/long/*.bbl
+paper/supplement.bbl

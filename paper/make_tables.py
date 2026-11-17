@@ -81,6 +81,7 @@ def cube():
             err = "reference" if (name == "dense" and J == jref) else sci(rel(d[f"{name}_E{J}"], ref))
             rows.append(f"    {label} & {J} & {int(unk) // 2} & {int(nrow)} & {tm(t)} & {err} & {sci(opt)} \\\\")
     write("cube_mfs", rows)
+    write("cube_mfs_short", [r for r in rows if "& 3 &" not in r])        # the short paper starts at J = 4
     dn = d["dense"]
     ch = [rel(d[f"dense_E{int(dn[i][0])}"], d[f"dense_E{int(dn[i + 1][0])}"]) for i in range(len(dn) - 1)]
     print("    dense family, change to the next level:", " ".join(f"{c:.2e}" for c in ch), " ratios:",
@@ -137,7 +138,7 @@ def cube_oblique():
             if (q, int(b["ndof"])) in (("4/6", 4608), ("6/8", 7200), ("6/8", 10368)):
                 rows.append(f"    Bempp, quadrature {q} & {int(b['ndof'])} & {tm(float(b['t_solve']))} & {sci(rel(b['E'], ref))} \\\\")
     rows.append("    \\midrule")
-    files = sorted(glob.glob(os.path.join(V, "bem_cube_sym_*_obl.npz")), key=lambda f: (f.split("_g2")[1], int(np.load(f)["ndof"])))
+    files = sorted(glob.glob(os.path.join(V, "bem_cube_sym_n*_g2*_obl.npz")), key=lambda f: (f.split("_g2")[1], int(np.load(f)["ndof"])))
     for f in files:
         b = np.load(f)
         if np.allclose(b["d"], r["d"]) and np.allclose(b["p"], r["p"]):
@@ -169,6 +170,72 @@ def cube_k2():
     write("cube_k2", rows)
 
 
+def cube_bem_env():
+    """Bempp with symmetry at its best: the re-timed lower envelope of the scan over grading,
+    quadrature and mesh size (../validation/bem_grading_scan.py)."""
+    f = os.path.join(V, "bem_grading_scan_k1_final.npz")
+    if not os.path.exists(f):
+        print("--- cube_bem_env: no final scan data")
+        return []
+    env = [r for r in np.load(f)["rows"] if r[6] < 3e-3]
+    write("cube_bem_env", [f"    {r[0]:g} & {int(r[1])}/{int(r[2])} & {int(r[4])} & {tm(r[5])} & {sci(r[6])} \\\\" for r in env])
+    return env
+
+
+def summary(env):
+    """The table of selected runs in the cost section of the short paper."""
+    rows = []
+    d = np.load(os.path.join(V, "fig_cost_sphere.npz"))
+    first = "Sphere"
+    for u, t, e in d["mfs"]:
+        if int(u) in (1200,):
+            rows.append(f"    {first} & MFS & {int(u)} & {tm(t)} & {sci(e)} \\\\")
+            first = ""
+    u, t, e = d["bem"][-1][:3]
+    rows.append(f"     & Bempp & {int(u)} & {tm(t)} & {sci(e)} \\\\")
+    rows.append("    \\midrule")
+    d = np.load(os.path.join(V, "fig_cost_torus.npz"))
+    first = "Torus"
+    for r in d["mfs"]:
+        if int(r[0]) in (21120,):
+            rows.append(f"    {first} & MFS & {int(r[0])} & {tm(r[1])} & {sci(r[2])} \\\\")
+            first = ""
+    r = d["bem"][-1]
+    rows.append(f"     & Bempp & {int(r[0])} & {tm(r[1])} & {sci(r[2])} \\\\")
+    rows.append("    \\midrule")
+    d = np.load(os.path.join(V, "fig_cost_almond.npz"))
+    ref = d[f"mfs_E{len(d['mfs']) - 1}"]
+    names = ("3{:}0", "4{:}1", "5{:}2", "6{:}3")
+    first = "Almond"
+    for i in (3,):
+        r = d["mfs"][i]
+        rows.append(f"    {first} & MFS ${names[i]}$ & {int(r[1])} & {tm(r[2])} & {sci(rel(d[f'mfs_E{i}'], ref))} \\\\")
+        first = ""
+    i = len(d["bem"]) - 1
+    r = d["bem"][i]
+    rows.append(f"     & Bempp & {int(r[0])} & {tm(r[1])} & {sci(rel(d[f'bem_E{i}'], ref))} \\\\")
+    rows.append("    \\midrule")
+    d = np.load(os.path.join(V, "fig_cost_cube.npz"))
+    jref = int(d["dense"][-1][0])
+    ref = d[f"dense_E{jref}"]
+    first = "Cube"
+    for name, label, Js in (("tail", "one depth", (6, 8)), ("dense", "two depths", (9, jref - 1))):
+        for J, t, unk, nrow, opt in d[name]:
+            if int(J) in Js:
+                rows.append(f"    {first} & MFS, {label}, $J = {int(J)}$ & {int(unk) // 2} & {tm(t)} & {sci(rel(d[f'{name}_E{int(J)}'], ref))} \\\\")
+                first = ""
+    pick, last = [], np.inf                              # Bempp: envelope points more than a factor 2.2 apart in error
+    for r in env:
+        if r[6] < 1.3e-3 and r[6] < last / 2.2:
+            pick.append(r)
+            last = r[6]
+    if len(env) and (not pick or pick[-1][6] != env[-1][6]):
+        pick.append(env[-1])
+    for r in pick:
+        rows.append(f"     & Bempp, $g = {r[0]:g}$, quadrature {int(r[1])}/{int(r[2])} & {int(r[4])} & {tm(r[5])} & {sci(r[6])} \\\\")
+    write("summary", rows)
+
+
 if __name__ == "__main__":
     sphere()
     torus()
@@ -176,3 +243,4 @@ if __name__ == "__main__":
     cube()
     cube_oblique()
     cube_k2()
+    summary(cube_bem_env())

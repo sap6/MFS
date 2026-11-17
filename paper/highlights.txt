@@ -1,0 +1,7 @@
+Highlights (Elsevier: three to five, at most 85 characters each). Wording to be decided by the authors.
+
+- The MFS for 3D Maxwell scattering is made to converge on bodies with edges and tips
+- A convex conducting polyhedron scatters like currents on its medial surface
+- Singular tails with computed edge, vertex and tip exponents add few unknowns
+- On the cube the error decays root-exponentially, down to 1.5e-5
+- NASA almond radar cross-section within 0.14 dB of a published reference

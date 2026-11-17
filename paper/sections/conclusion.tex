@@ -1,0 +1,13 @@
+\section{Discussion and conclusion}
+\label{sec:conclusion}
+
+The rule that the sources must enclose the singularities of the continued field organises all four layouts: any inner sphere for the sphere, a large enough inner torus for the torus, and the mid-plane and the skeleton, with sources clustered towards the singular set, for the almond and the cube. Where the singular set touches the surface, clustering alone converges slowly, and the tail with the exponents of the local field restores the accuracy with a few unknowns. We close with the limits of what we have shown.
+
+\emph{Generality.} Each layout was built by hand from the skeleton of its shape, and we have no automatic construction for a general body. \autoref{thm:skeleton} covers convex polyhedra only, and the bound \eqref{eq:torusradius} for the torus and the focal curve of the almond are supported by numerical evidence and not by proofs.
+
+\emph{Accuracy on the cube.} The independent boundary element reference confirms the field to $8\times10^{-5}$. Below that level the evidence is the convergence of the MFS itself, from which we estimate an error of $10^{-5}$ for the finest run.
+
+\emph{Size and comparison.} All bodies are at most nine wavelengths long, the cost of the dense factorisation grows with the cube of the number of unknowns, and we compared with a low-order boundary element code only. For the cube we have results at one and two wavelengths. At three wavelengths the layout still converges when the base grid follows the wavelength as well, and Bempp confirms the field to $7\times10^{-4}$, but we have not tuned this case and the MFS is not faster there.
+%% TODO (authors): the three-wavelength runs are in the Supplementary Material (S6); decide how much of them to keep.
+
+In conclusion, the MFS can be made to converge for Maxwell scattering by bodies with edges and tips when three conditions are met: the sources lie on the skeleton of the body, they cluster towards the singular set, and they are continued below their cut-off by tails with the exponents of the local field. For a convex polyhedron the skeleton is the exact support of the equivalent currents. With these layouts the method retains the rapid convergence that makes it attractive for smooth bodies: root-exponential convergence to $1.5\times10^{-5}$ on the cube, and a radar cross-section of the NASA almond within $0.14$\,dB of a published reference. An automatic construction of the layouts for general shapes is the natural next step.
