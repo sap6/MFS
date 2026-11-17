@@ -17,35 +17,18 @@ import time
 
 import numpy as np
 
-import pec_cube_lightning3d as m
+import cube_mfs
+from cube_mfs import COL, balanced  # noqa: F401  (re-exported: other scripts import them from here)
 
-COL = dict(col_p=3, col_q=0.5, beta=0.5)
 J_REF = 9
 
 
-def balanced(J):
-    """All resolution parameters grow with the depth J: modes per line
-    (n0 + 2 log(1/d)), base grid, and the collocation that samples it. The
-    tail exponents are the solver defaults (derived, DERIVATIONS.md B); the
-    vertex tail (one exponent, DERIVATIONS.md D) is on."""
-    n0 = max(4, 2 * J - 4)
-    n_base, hmax = (4, 0.25) if J <= 5 else (6, 0.15) if J == 6 else (8, 0.1)
-    return dict(q=0.5, gamma=2.0, kinds="em", n0=n0, n_base=n_base, vtail_n=9), hmax
-
-
 def run_mfs(J, pts, tail=9, n_base=None):
-    t0 = time.time()
-    kw, hmax = balanced(J) if n_base is None else (dict(q=0.5, gamma=2.0, kinds="em", n_base=n_base), 0.1)
-    if not tail:
-        kw.pop("vtail_n", None)                        # "no tail" means neither the edge nor the vertex tail
-    src = m.SymSources(J, tail_n=tail, **kw)
-    d_min = src.depths[-1] if J >= 0 else 0.2
-    lv = max(2, int(np.ceil(np.log(d_min / (2 * m.H)) / np.log(COL["col_q"]))) + 1)
-    c, info = m.solve(src, lv, COL["col_p"], COL["col_q"], COL["beta"], hmax=hmax)
-    E = (src.matrix(pts) @ c).reshape(-1, 3)
-    t = time.time() - t0
-    ext, sca = m.cross_sections(src, c)
-    return E, t, info["unknowns"], info["rows"], abs(ext - sca) / sca
+    """Standard wave with the three-mirror solver (cube_mfs.py). Time covers
+    set-up, assembly, the factorisations and the field at the test points."""
+    kw = {} if n_base is None else dict(kw=dict(q=0.5, gamma=2.0, kinds="em", n_base=n_base), hmax=0.1)
+    E, t, info = cube_mfs.run(J, pts=pts, tail=tail, **kw)
+    return E, t, info["unknowns"], info["rows"], info["optical"]
 
 
 def run():
@@ -107,12 +90,14 @@ def report():
               f"evaluation {float(b['t_eval']):.0f}s)")
     if pts_:
         curves["Bempp graded"] = np.array(pts_)
-    # the same meshes with higher quadrature orders: the independent reference
+    # the same meshes with higher quadrature orders: a second cost curve (6/8) and the independent reference (8/10)
     for q in ("6_8", "8_10"):
         fine = sorted((np.load(f) for f in glob.glob(f"bem_cube_graded_n*_g2_q{q}.npz")), key=lambda b: int(b["ndof"]))
         for b in fine:
-            print(f"reference check: graded Bempp n={int(b['n'])} ({int(b['ndof'])} dofs, quadrature {q.replace('_', '/')}) differs "
-                  f"from the MFS reference by {rel(b['E'], ref):.2e}; sigma_ext {float(b['ext']):.5f}")
+            print(f"{'graded ' + q.replace('_', '/'):12s} {int(b['n']):5d} {int(b['ndof']):9d} {float(b['t_solve']):9.1f} {rel(b['E'], ref):14.2e} "
+                  f"{'':18s}   (assembly {float(b['t_assembly']):.0f}s, LU {float(b['t_lu']):.0f}s); sigma_ext {float(b['ext']):.5f}")
+        if q == "6_8" and fine:
+            curves["Bempp graded 6/8"] = np.array([(float(b["t_solve"]), rel(b["E"], ref)) for b in fine])
         if len(fine) >= 3:                              # three-level extrapolation, E_n = E + C n^(-p)
             from scipy.optimize import brentq
             (n1, E1), (n2, E2), (n3, E3) = ((float(b["n"]), b["E"]) for b in fine[-3:])
@@ -134,7 +119,8 @@ STYLE = {"MFS+tail": ("#2a78d6", "o", "-", "MFS, edge sources + tails"),
          "MFS no tail": ("#1baf7a", "s", "--", "MFS, edge sources, no tail"),
          "plain MFS": ("#eda100", "^", ":", "plain MFS (inner cube)"),
          "Bempp": ("#eb6834", "D", "-.", "Bempp, quasi-uniform mesh"),
-         "Bempp graded": ("#e87ba4", "v", (0, (5, 1, 1, 1)), "Bempp, mesh graded to the edges")}
+         "Bempp graded": ("#e87ba4", "v", (0, (5, 1, 1, 1)), "Bempp, graded mesh, default quadrature"),
+         "Bempp graded 6/8": ("#8a5cc7", "P", (0, (1, 1)), "Bempp, graded mesh, quadrature 6/8")}
 INK, MUTED = "#1f1f1e", "#6b6a64"
 
 

@@ -1,0 +1,5 @@
+2310.01665 | Lightning Helmholtz Solver | Henry Ginn; Lloyd N. Trefethen | 2023-10-02
+2610.26540 attempt 0 failed: HTTP Error 503: Service Unavailable
+2610.26540 | Lightning Algorithm for Inhomogeneous Modified Helmholtz Equations on Cornered Domains and Their Applications | Desong Kong; Jie Shen | 2026-10-19
+2605.15527 | Method of Fundamental Solutions for Maxwell's Equations in Bi-Periodic Multilayered Media | Jared Weed; Bowei Wu; Jingfang Huang; Min Hyung Cho | 2026-05-15
+2603.19113 | A stable and fast method for solving multibody scattering problems via the method of fundamental solutions | Yunhui Cai; Joar Bagge; Per-Gunnar Martinsson | 2026-03-19

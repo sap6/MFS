@@ -1,0 +1,24 @@
+\section{Discussion and limits}
+\label{sec:discussion}
+
+\emph{What the four shapes show together.} The rule that the sources must enclose the singularities of the continued field organises all four layouts. For the sphere any inner sphere will do. For the torus the inner torus must be large enough to enclose the focal ring. For the almond the singular curve is so close to the rim that the sources have to lie on the mid-plane and cluster towards it. For the cube the singular set reaches the surface along every edge, and the sources cluster towards the edges on the skeleton. Where the singular set touches the surface, at the edges and vertices of the cube and at the tip of the almond, clustering alone converges slowly, and the tail with the exponents of the local expansion restores the accuracy with a few unknowns.
+
+\emph{Where the MFS is ahead of the boundary element code, and where it is not.} On the sphere, the torus and the almond the MFS reaches errors between $10^{-4}$ and $10^{-12}$ in seconds, which the low-order boundary element method does not approach (Tables~\ref{tab:sphere}, \ref{tab:torus} and \ref{tab:almond}). On the cube the picture is closer (\autoref{sec:cubecost}). %% CUBESUMMARY
+
+\emph{Symmetry.} The MFS timings for the torus, the almond and the cube use the symmetry of the body, and the Bempp timings do not. The symmetry is a property of the body and not of the incident wave, so the comparison holds for any wave, but a boundary element code that used the same symmetry would be faster than the timings we report for Bempp. Without symmetry our dense least-squares solve would cost far more: the factorisation of one cube matrix with all eight classes together would take $64$ times as long as the eight separate factorisations.
+
+\emph{The boundary element code.} Bempp is a low-order code, and we ran it with dense matrices. We chose its fastest assembly backend, graded the meshes of the cube and raised the quadrature orders where that helped (\autoref{sec:bempp}). We did not compare with a high-order or a compressed boundary element method. On the smooth bodies a high-order method would narrow the gap considerably.
+
+\emph{Size.} All bodies are at most nine wavelengths long. The cost of the dense factorisation grows with the cube of the number of unknowns, and we make no claim for larger problems.
+
+\emph{Generality.} Each layout was built by hand from the skeleton of its shape. We have no automatic construction for a general body. \autoref{thm:skeleton} covers convex polyhedra only.
+
+\emph{Accuracy on the cube.} The refinement family for the cube has a floor near $5\times10^{-5}$, and the independent boundary element reference confirms the field to $2\times10^{-4}$. We do not know the true error of the finest runs more precisely than that.
+
+\emph{The torus.} The bound \eqref{eq:torusradius} is supported by an image argument and by two numerical tests, and it is not proved.
+
+\emph{Nulls of the almond.} In one deep null the MFS and the published reference simulation differ by $4.3$\,dB while the MFS is converged to $0.02$\,dB. We cannot say which value is correct without a third computation.
+
+\section{Conclusion}
+
+The method of fundamental solutions converges for Maxwell scattering by bodies with edges and tips if the sources are placed on the skeleton of the body, cluster towards the singular set, and are continued below their cut-off by tails with the exponents of the local field. For a convex polyhedron the skeleton is the exact support of the equivalent currents. On the cube the method reaches an error of about $10^{-4}$, confirmed to $2\times10^{-4}$ by a graded boundary element computation, and on the NASA almond it reproduces a published reference cross-section to within $0.14$\,dB on average up to $10.25$\,GHz. Vertices are the least well resolved part of the cube layout, and an automatic construction of the layouts for general shapes is open.

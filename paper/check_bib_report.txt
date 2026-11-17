@@ -1,0 +1,50 @@
+barnett2008        OK    2008 Barnett; Betcke | Stability and convergence of the method of fundamental solutions for Helmholtz problems on analytic domains
+barnett2010        OK    2010 Barnett; Betcke | An Exponentially Convergent Nonpolynomial Finite Element Method for Time-Harmonic Scattering from Polygons
+gopal2019siam      OK    2019 Gopal; Trefethen | Solving Laplace Problems with Corner Singularities via Rational Functions
+gopal2019pnas      OK    2019 Gopal; Trefethen | New Laplace and Helmholtz solvers
+brubeck2022        OK    2022 Brubeck; Trefethen | Lightning Stokes Solver
+ginn2023           no DOI in the entry
+kong2026           no DOI in the entry
+weed2026           no DOI in the entry
+cai2026            no DOI in the entry
+hochman2013        OK    2013 Hochman; Leviatan; White | On the use of rational-function fitting methods for the solution of 2D Laplace boundary-value problems
+kupradze1964       OK    1964 Kupradze; Aleksidze | The method of functional equations for the approximate solution of certain boundary value problems
+fairweather1998    OK    1998 Fairweather; Karageorghis | The method of fundamental solutions for elliptic boundary value problems
+fairweather2003    OK    2003 Fairweather; Karageorghis; Martin | The method of fundamental solutions for scattering and radiation problems
+liu2016            OK    2016 Liu; Barnett | Efficient numerical solution of acoustic scattering from doubly-periodic arrays of axisymmetric objects
+kangro2012         OK    2012 Kangro | Solution of three-dimensional electromagnetic scattering problems by interior source methods
+ye2023             lookup failed: HTTP Error 429: Too Many Requests
+young2005          no DOI in the entry
+kaklamani2002      OK    2002 Kaklamani; Anastassiu | Aspects of the Method of Auxiliary Sources (MAS) in computational electromagnetics
+fikioris2006       OK    2006 Fikioris | On two types of convergence in the method of auxiliary sources
+tsitsas2018        OK    2018 Tsitsas; Zouros; Fikioris; Leviatan | On Methods Employing Auxiliary Sources for 2-D Electromagnetic Scattering by Noncircular Shapes
+leviatan1990       OK    1990 Leviatan | Analytic continuation considerations when using generalized formulations for scattering problems
+zaridze2002        OK    2002 Zaridze; Bit-Babik; Tavzarashvili; Economou; Uzunoglu | Wave field singularity aspects in large-size scatterers and inverse problems
+bogdanov1999       OK    1999 Bogdanov; Karkashadze; Zaridze | The Method of Auxiliary Sources in Electromagnetic Scattering Problems
+doicu2000          no DOI in the entry
+eisler1989         OK    1989 Eisler; Leviatan | Analysis of electromagnetic scattering from metallic and penetrable cylinders with edges using a multifilament current model
+shifman1997        OK    1997 Shifman; Friedmann; Leviatan | Analysis of electromagnetic scattering by cylinders with edges using a hybrid moment method
+tabatadze2025      DIFF  2025 Tabatadze; İşcan; Karaçuha | On electromagnetic scattering from perfectly conducting parallel square plates and their resonance characteristics using method of auxiliary sources
+antunes2010        OK    2010 Antunes; Valtchev | A meshfree numerical method for acoustic wave propagation problems in planar domains with corners and cracks
+kyurkchan1996      OK    1996 Kyurkchan; Sternin; Shatalov | Singularities of continuation of wave fields
+millar1971         OK    1971 Millar | Singularities of two-dimensional exterior solutions of the Helmholtz equation
+millar1983         DIFF  1983 Millar | The analytic continuation of solutions of the generalized axially symmetric Helmholtz equation
+gustafsson1998     OK    1998 Gustafsson | On Mother Bodies of Convex Polyhedra
+meixner1972        OK    1972 Meixner | The behavior of electromagnetic fields at edges
+costabel2000       OK    2000 Costabel; Dauge | Singularities of Electromagnetic Fields¶in Polyhedral Domains
+desmedt1986        OK    1986 De Smedt; Van Bladel | Field singularities at the tip of a metallic cone of arbitrary cross section
+vanbladel1996      OK    1996 Bladel | Singular Electromagnetic Fields and Sources
+fichera1975        OK    1975 Fichera | ASYMPTOTIC BEHAVIOUR OF THE ELECTRIC FIELD AND DENSITY OF THE ELECTRIC CHARGE IN THE NEIGHBOURHOOD OF SINGULAR POINTS OF A CONDUCTING SURFACE
+betcke2005         OK    2005 Betcke; Trefethen | Reviving the Method of Particular Solutions
+woo1993            DIFF  1993 Woo; Wang; Schuh; Sanders | EM programmer's notebook-benchmark radar targets for the validation of computational electromagnetics programs
+kelley2020         DIFF  2020 Kelley; Chamulak; Courtney; Yilmaz | Rye Canyon Radar Cross-Section Measurements of Benchmark Almond Targets [EM Programmer's Notebook]
+betcke2021         OK    2021 Betcke; Scroggs | Bempp-cl: A fast Python based just-in-time compiling boundary element library.
+scroggs2017        DIFF  2017 Scroggs; Betcke; Burman; Śmigaj; van ’t Wout | Software frameworks for integral equations in electromagnetic scattering based on Calderón identities
+rao1982            OK    1982 Rao; Wilton; Glisson | Electromagnetic scattering by surfaces of arbitrary shape
+bespalov2010       OK    2010 Bespalov; Heuer; Hiptmair | Convergence of the Natural $hp$-BEM for the Electric Field Integral Equation on Polyhedral Surfaces
+mie1908            DIFF  1908 Mie | Beiträge zur Optik trüber Medien, speziell kolloidaler Metallösungen
+bohren1998         OK    1998 Bohren; Huffman | Absorption and Scattering of Light by Small Particles
+kirsch2015         no DOI in the entry
+colton2013         no DOI in the entry
+golub2013          no DOI in the entry
+thesis2025         no DOI in the entry
