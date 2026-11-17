@@ -1021,6 +1021,17 @@ towards the MFS field.
       finest mesh was not run, so the "13 s against 74 s at 2.3e-4" of the
       draft is against g = 2 only. The discussion now says "a factor of two
       at 5e-4 and more at smaller errors".
+    - **With the default quadrature the error is not monotone in g**
+      (k = 2 pi, 7200 dofs, 4/6): g = 1.25, 1.5, 1.6, 1.75, 1.9, 2 give
+      1.46e-3, 7.5e-4, 6.6e-4, 5.4e-4, 1.0e-3, 9.5e-4 (4608 dofs: 2.1e-3,
+      1.15e-3, 9.7e-4, -, 1.2e-3, 1.07e-3). With 6/8 it is smooth (g = 1.75
+      and 2 give 4.2e-4 and 3.8e-4 on 7200 dofs). So the 4/6 optimum near
+      1.75 is a sweet spot, probably the quadrature error and the mesh
+      error partly cancelling. It is a legitimate "Bempp at its best"
+      point, but a fragile one. T27 must decide which curve is the fair
+      comparator and say so in the paper: the tuned sweet spot (Bempp
+      ahead down to 5e-4) or the converged quadrature 6/8 (Bempp ahead
+      down to about 9e-4, as the draft said before this item).
     - The draft text was corrected in all four places (cube cost paragraph,
       two-wavelength subsection twice, discussion) and in the appendix on
       the grading, with a TODO. **Still to do (T27)**: g = 1.5 rows in
@@ -1297,6 +1308,7 @@ Open, in the order I would take them:
 - Bempp with symmetry, k = 2 pi, g = 1.75: 4/6: 5.4e-4, 4.3e-4, 3.7e-4 in 2.6, 5.0, 8.7 s; 6/8: 7.1e-4, 4.2e-4, 2.8e-4, 2.07e-4 in 3.4, 5.2, 9.5, 16.3 s; 8/10: 2.7e-4, 1.9e-4, 1.4e-4 in 16, 26, 42 s (item 58).
 - Bempp with symmetry, k = 4 pi, g = 1.75: 9.6e-4 (10368 dofs, 4/6), 6.1e-4 (18432, 4/6), 3.8e-4 (18432, 6/8).
 - Bempp with symmetry, k = 2 pi, oblique wave, g = 1.75: 4/6: 7.2e-4, 5.6e-4, 4.8e-4 in 4.0, 7.2, 13 s; 6/8: 5.5e-4, 3.6e-4, 2.6e-4 in 6.3, 11.3, 19.5 s: small gains over g = 2, the reading of the oblique paragraph (Bempp faster down to 4e-4, level below) stands.
+- Bempp with symmetry, k = 2 pi, 4/6, 7200 dofs, g = 1.25, 1.6, 1.9: 1.46e-3, 6.6e-4, 1.0e-3 (4608 dofs: 2.1e-3, 9.7e-4, 1.2e-3): not monotone in g.
 
 ## 6. Write-up session
 
