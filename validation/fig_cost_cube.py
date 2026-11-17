@@ -1,7 +1,8 @@
 """Error against wall time for the unit cube (k = 2 pi): MFS with edge sources
 and singular tail, the same without tail, plain MFS (uniform sources on an
 inner cube), and Bempp (EFIE, RWG, dense LU) on quasi-uniform meshes and on meshes graded
-towards the edges.
+towards the edges. Two MFS families: one source depth per octave (fast, stalls
+near 1e-4) and two (converges further; its finest run is the reference).
 
     python3 fig_cost_cube.py run     # solve and time everything except Bempp; writes fig_cost_cube.npz
     python3 fig_cost_cube.py         # table (and figure, if matplotlib is present) from the saved data
@@ -20,23 +21,25 @@ import numpy as np
 import cube_mfs
 from cube_mfs import COL, balanced  # noqa: F401  (re-exported: other scripts import them from here)
 
-J_REF = 9
+J_REF = 10          # reference: the family with two depths per octave at this level
+J_FAST = 9          # deepest level of the family with one depth per octave
 
 
-def run_mfs(J, pts, tail=9, n_base=None):
+def run_mfs(J, pts, tail=9, n_base=None, family="balanced"):
     """Standard wave with the three-mirror solver (cube_mfs.py). Time covers
     set-up, assembly, the factorisations and the field at the test points."""
     kw = {} if n_base is None else dict(kw=dict(q=0.5, gamma=2.0, kinds="em", n_base=n_base), hmax=0.1)
-    E, t, info = cube_mfs.run(J, pts=pts, tail=tail, **kw)
+    E, t, info = cube_mfs.run(J, pts=pts, tail=tail, family=family, **kw)
     return E, t, info["unknowns"], info["rows"], info["optical"]
 
 
 def run():
     pts = np.load("bem_cube_h0.05.npz")["pts"]
     run_mfs(2, pts)                                    # warm-up (compilation, threads)
+    run_mfs(2, pts, family="dense")
     out = {"pts": pts}
-    for name, Js, kw in (("tail", range(3, J_REF + 1), {}), ("notail", (4, 6, 8), dict(tail=0)),
-                         ("plain", (4, 6, 8, 10), None)):
+    for name, Js, kw in (("tail", range(3, J_FAST + 1), {}), ("dense", range(3, J_REF + 1), dict(family="dense")),
+                         ("notail", (4, 6, 8), dict(tail=0)), ("plain", (4, 6, 8, 10), None)):
         rows = []
         for J in Js:
             if kw is None:                             # plain MFS: J plays the role of the grid size
@@ -56,20 +59,20 @@ def rel(a, b):
 
 def report():
     d = np.load("fig_cost_cube.npz")
-    ref = d[f"tail_E{J_REF}"]
+    ref = d[f"dense_E{J_REF}"]
     bem = sorted((np.load(f) for f in glob.glob("bem_cube_h*_q4.npz")), key=lambda b: int(b["ndof"]))
     bem = [b for b in bem if int(b["ndof"]) > 1000]
     # Bempp extrapolated from its two finest meshes, error ~ N^(-2/3) (h^(4/3), the edge-limited rate)
     f1, f2 = (float(b["ndof"]) ** (-2 / 3) for b in bem[-2:])
     ext = bem[-1]["E"] + (bem[-1]["E"] - bem[-2]["E"]) * f2 / (f1 - f2)
-    print(f"reference: MFS with tail, J = {J_REF}. It differs from extrapolated Bempp by {rel(ref, ext):.2e}")
+    print(f"reference: MFS with tails, two depths per octave, J = {J_REF}. It differs from extrapolated quasi-uniform Bempp by {rel(ref, ext):.2e}")
     curves = {}
     print("method        size   unknowns   time[s]   error vs MFS ref   error vs extrap. Bempp   optical")
-    for name, label in (("tail", "MFS+tail"), ("notail", "MFS no tail"), ("plain", "plain MFS")):
+    for name, label in (("tail", "MFS+tail"), ("dense", "MFS dense"), ("notail", "MFS no tail"), ("plain", "plain MFS")):
         pts_ = []
         for J, t, unk, nrow, opt in d[name]:
             E = d[f"{name}_E{int(J)}"]
-            if name == "tail" and int(J) == J_REF:
+            if name == "dense" and int(J) == J_REF:
                 continue
             pts_.append((t, rel(E, ref)))
             print(f"{label:12s} {int(J):5d} {int(unk):9d} {t:9.1f} {rel(E, ref):14.2e} {rel(E, ext):18.2e} {opt:16.1e}")
@@ -107,7 +110,7 @@ def report():
             s1, s2, s3 = (float(b["ext"]) for b in fine[-3:])
             print(f"   extrapolated from the last three (fitted rate n^-{p:.2f}): differs from the MFS reference by "
                   f"{rel(Ex, ref):.2e}; sigma_ext {s3 + (s3 - s2) * n3 ** -p / (n2 ** -p - n3 ** -p):.5f}")
-    sm = d["tail"][-1]
+    sm = d["dense"][-1]
     print(f"MFS reference J = {int(sm[0])}: {int(sm[2])} unknowns, {sm[1]:.0f} s, optical mismatch {sm[4]:.1e}")
     return curves
 
@@ -115,7 +118,8 @@ def report():
 # Fixed colour, marker and dash per method (colour is never the only cue, so
 # the figure survives greyscale printing). Hues checked for colour-blind
 # separation with the dataviz palette validator.
-STYLE = {"MFS+tail": ("#2a78d6", "o", "-", "MFS, edge sources + tails"),
+STYLE = {"MFS+tail": ("#2a78d6", "o", "-", "MFS with tails, one depth per octave"),
+         "MFS dense": ("#184f96", "h", (0, (6, 1.5)), "MFS with tails, two depths per octave"),
          "MFS no tail": ("#1baf7a", "s", "--", "MFS, edge sources, no tail"),
          "plain MFS": ("#eda100", "^", ":", "plain MFS (inner cube)"),
          "Bempp": ("#eb6834", "D", "-.", "Bempp, quasi-uniform mesh"),

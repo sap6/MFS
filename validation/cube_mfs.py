@@ -175,10 +175,14 @@ class Cube:
             i += 2 if pair else 1
         return A
 
-    def solve(self, d, p):
-        """Coefficients per class for the wave (d, p), and the relative boundary residual."""
+    def solve(self, d, p, only=None):
+        """Coefficients per class for the wave (d, p), and the relative
+        boundary residual. `only`: solve just these classes (the others must
+        then be handled by another Cube)."""
         coef, r2, b2, c2 = {}, 0.0, 0.0, 0.0
         for c in classes_of(d, p):
+            if only is not None and c not in only:
+                continue
             if c not in self.fac:
                 raise ValueError(f"the wave excites class {c}, which was not assembled")
             b = -np.einsum("mab,mb->ma", self.T, class_part(self.x, d, p, c)).reshape(-1) * np.repeat(self.rw, 2)
@@ -186,8 +190,14 @@ class Cube:
             r2 += float(res) ** 2
             b2 += np.linalg.norm(b) ** 2
             c2 += np.linalg.norm(coef[c] * self.fac[c].scale) ** 2
-        self.coef_norm = float(np.sqrt(c2))
+        self.coef_norm, self.rhs_norm2 = float(np.sqrt(c2)), float(b2)
         return coef, np.sqrt(r2 / b2)
+
+    def far_pattern(self, coef, d):
+        """Far-field pattern in the direction d and on the quadrature sphere
+        (for the cross-sections; patterns of class groups add)."""
+        F = self.far(coef, np.vstack((d[None, :], _SPHERE_DIRS)))
+        return F[0], F[1:]
 
     def field(self, coef, pts):
         cl = list(coef)
@@ -209,17 +219,89 @@ class Cube:
         return ext, float(np.sum(np.repeat(w, nphi) * 2 * np.pi / nphi * np.sum(np.abs(F[:-1]) ** 2, axis=1)))
 
 
-def run(J, d=m.D, p=m.P, pts=None, **kw):
-    """One wave: field at pts, total time, and a dictionary of diagnostics."""
+def dense(J):
+    """The balanced family with two source depths per octave instead of one
+    (ratio 2^(-1/2), 2 J + 1 depths down to the same deepest depth
+    0.2 * 2^(-J)) and four collocation nodes per panel. The family with one
+    depth per octave stalls near 1e-4 (NOTES.md, item 48); this one does not.
+    Returns the keywords for Cube."""
+    kw, hmax = balanced(J)
+    kw.update(q=2 ** -0.5)
+    return dict(kw=kw, hmax=hmax, col=dict(COL, col_p=4))
+
+
+def run(J, d=m.D, p=m.P, pts=None, family="balanced", max_gb=6.0, **kw):
+    """One wave: field at pts, total time, and a dictionary of diagnostics.
+    family: "balanced" (one depth per octave) or "dense" (two). If the
+    matrices of all classes together would exceed max_gb, the classes are
+    assembled and solved in groups (the kernel work is then repeated)."""
     t0 = time.time()
-    cube = Cube(J, classes=classes_of(d, p), **kw)
-    coef, res = cube.solve(d, p)
-    E = cube.field(coef, pts) if pts is not None else None
-    t = time.time() - t0
-    ext, sca = cube.cross_sections(coef, d, p)
-    return E, t, dict(unknowns=sum(cube.unknowns.values()), per_class=list(cube.unknowns.values()), rows=cube.rows,
-                      t_assemble=cube.t_assemble, t_factor=cube.t_factor, residual=res, ext=ext, sca=sca,
-                      optical=abs(ext - sca) / sca, coef_norm=cube.coef_norm)
+    if family == "dense":
+        kw = dict(dense(J), **kw)
+        J = 2 * J
+    todo = classes_of(d, p)
+    E, info, r2, b2, c2 = None, None, 0.0, 0.0, 0.0
+    ext = sca_F = 0.0
+    t = 0.0
+    while todo:
+        cube = Cube(J, classes=todo[:1], **kw) if len(todo) == 1 else None
+        if cube is None:
+            n1 = _size(J, todo[0], kw)
+            g = max(1, min(len(todo), int(max_gb * 2 ** 30 / (16.0 * n1[0] * n1[1]))))
+            cube = Cube(J, classes=todo[:g], **kw)
+        group, todo = cube.classes, todo[len(cube.classes):]
+        coef, res = cube.solve(d, p, only=group)
+        Eg = cube.field(coef, pts) if pts is not None else None
+        E = Eg if E is None else E + Eg
+        t, t0 = t + time.time() - t0, None             # the cross-sections below are not part of the timing
+        b = cube.rhs_norm2
+        r2, b2, c2 = r2 + res ** 2 * b, b2 + b, c2 + cube.coef_norm ** 2
+        part = dict(unknowns=sum(cube.unknowns.values()), per_class=list(cube.unknowns.values()), rows=cube.rows,
+                    t_assemble=cube.t_assemble, t_factor=cube.t_factor)
+        if info is None:
+            info = part
+        else:
+            for key in ("unknowns", "t_assemble", "t_factor"):
+                info[key] += part[key]
+            info["per_class"] += part["per_class"]
+        F = cube.far_pattern(coef, d)
+        ext, sca_F = ext + F[0], sca_F + F[1]
+        t0 = time.time()
+    info.update(residual=float(np.sqrt(r2 / b2)), coef_norm=float(np.sqrt(c2)))
+    info["ext"] = 4 * np.pi / m.K * float(np.imag(np.conj(p) @ ext))
+    info["sca"] = float(np.sum(_SPHERE_W * np.sum(np.abs(sca_F) ** 2, axis=1)))
+    info["optical"] = abs(info["ext"] - info["sca"]) / info["sca"]
+    return E, t, info
+
+
+def _size(J, cls, kw):
+    """(rows, unknowns) of one class, without assembling anything."""
+    kw = dict(kw)
+    col = kw.pop("col", COL)
+    src_kw, hmax, tail = kw.get("kw"), kw.get("hmax"), kw.get("tail", 9)
+    if src_kw is None:
+        src_kw, hmax = balanced(J)
+    src_kw = dict(src_kw)
+    if not tail:
+        src_kw.pop("vtail_n", None)
+    full = m.Sources(J, tail_n=tail, **src_kw)
+    d_min = full.depths[-1] if J >= 0 else 0.2
+    lv = max(2, int(np.ceil(np.log(d_min / (2 * m.H)) / np.log(col["col_q"]))) + 1)
+    s, _ = m.graded_nodes_capped(lv, col["col_p"], col["col_q"], hmax)
+    rows = 2 * 3 * (len(s) // 2) ** 2
+    return rows, full.n_unknowns // 8 + 1               # an octant of the points, a quarter of the lines, half their modes
+
+
+def _sphere_rule(nt=40, nphi=80):
+    g, w = np.polynomial.legendre.leggauss(nt)
+    ph = (np.arange(nphi) + 0.5) / nphi * 2 * np.pi
+    ct, phh = np.meshgrid(g, ph, indexing="ij")
+    st = np.sqrt(1 - ct ** 2)
+    dirs = np.column_stack(((st * np.cos(phh)).ravel(), (st * np.sin(phh)).ravel(), ct.ravel()))
+    return dirs, np.repeat(w, nphi) * 2 * np.pi / nphi
+
+
+_SPHERE_DIRS, _SPHERE_W = _sphere_rule()
 
 
 if __name__ == "__main__":

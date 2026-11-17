@@ -108,7 +108,7 @@ if __name__ == "__main__":
     bempp.GLOBAL_PARAMETERS.quadrature.regular = reg
     bempp.GLOBAL_PARAMETERS.quadrature.singular = sing
     pts = np.load("bem_cube_h0.05.npz")["pts"]
-    ref = np.load("fig_cost_cube.npz")["tail_E9"] if not wave else None
+    ref = np.load("fig_cost_cube.npz")["dense_E10"] if not wave else None       # the MFS reference field
     solve(cube_grid(4, 1.0), pts)                       # warm-up: compilation
     for n in ns:
         E, far, ndof, (ta, tl, te) = solve(cube_grid(n, g), pts, d, p)
@@ -116,6 +116,6 @@ if __name__ == "__main__":
         err = np.linalg.norm(E - ref) / np.linalg.norm(ref) if ref is not None else np.nan
         tag = f"n{n}_g{g:g}" + ("" if (reg, sing) == (4, 6) else f"_q{reg}_{sing}") + ("_obl" if wave else "")
         print(f"cube graded n={n} g={g:g} quad={reg}/{sing} dofs={ndof} assembly={ta:.0f}s lu={tl:.0f}s eval={te:.0f}s "
-              f"sigma_ext={ext:.6f} sigma_sca={sca:.6f} diff from MFS J=9: {err:.2e}", flush=True)
+              f"sigma_ext={ext:.6f} sigma_sca={sca:.6f} diff from the MFS reference: {err:.2e}", flush=True)
         np.savez(f"bem_cube_graded_{tag}.npz", pts=pts, E=E, F=F, k=K, n=n, g=g, ndof=ndof, ext=ext, sca=sca, d=d, p=p,
                  t_assembly=ta, t_lu=tl, t_eval=te, t_solve=ta + tl + te)

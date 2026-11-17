@@ -45,8 +45,12 @@ where we show it".
   twice as fast.
 - **All cost tables were re-timed in one container** with both codes in their
   best configuration (item 43; `retime_all.sh`). Use only those numbers.
-- **The cube refinement family has a floor near 5e-5** beyond J = 9 (item 42).
-  Say so; do not quote J = 8 against J = 9 as if J = 9 were exact.
+- **The cube family with one source depth per octave stalls near 1.3e-4;
+  two depths per octave converge** to 3.5e-5 with no stall (item 47). The
+  reference for the cube is now the dense family at J = 10
+  (`fig_cost_cube.npz`, key `dense_E10`). Against it the old J = 9 reference
+  was wrong by 1.25e-4 and "0.011% at J = 8" was really 0.019%. All cube
+  errors in items 8-44 are against the old reference: use item 47.
 - **First draft**: `paper/` (LaTeX, compiles with `pdflatex`; `main.pdf` is
   committed). Tables are generated (`paper/make_tables.py`). Item 47.
 - Do not use the old two-mirror path (`SymSources`, `fig_cost_cube.run_mfs`
@@ -483,7 +487,7 @@ are from the first.)
     - Did not help: fewer collocation nodes. Two per panel instead of three
       gives 85% error at J = 5 (optical mismatch 0.35 is the only warning)
       and 0.2% at J = 6.
-42. **The cube family has a floor near 5e-5.** J = 10, 11, 12 differ from
+42. **The cube family has a floor near 5e-5** *(cause found and reference replaced: item 47)*. J = 10, 11, 12 differ from
     J = 9 by 5.0e-5, 7.5e-5, 1.0e-4 (from each other by 3-4e-5); variants at
     J = 10 (modes as at J = 9, four collocation nodes per panel, base grid
     10 with panels 0.08) differ from the family by 6e-5, 7e-5, 1e-5; the
@@ -491,7 +495,7 @@ are from the first.)
     (|c| about 1). So J = 9 is a reference good to about 5e-5, and the
     errors quoted for J = 7 and J = 8 carry that uncertainty. Suspect: the
     vertices (T15), not confirmed.
-43. **Cost tables, final** (`validation/retime_all.sh`, one container, 4
+43. **Cost tables, final** *(cube errors here are against the old J = 9 reference; times stand; item 47 has the cube against the new reference)* (`validation/retime_all.sh`, one container, 4
     cores, 2026-11-17 02:25-02:46 UTC, one job at a time; Bempp with OpenCL,
     double precision, compiled right-hand side; MFS as in item 41; every
     table in `paper/tables/` is generated from these files by
@@ -561,6 +565,51 @@ are from the first.)
     two simulations agree on the null to about 0.1 degree; which position
     is right needs a third computation. The old caveat ("differ by 4.3 dB,
     not investigated") is replaced by this.
+47. **Cube: the floor was the depth ratio.** (`cube_floor.py`,
+    `cube_mfs.dense`, `fig_cost_cube.py`.) With two source depths per octave
+    (ratio 2^(-1/2), same deepest depth 0.2 * 2^-J, four collocation nodes
+    per panel) the stall disappears: at J = 9 the boundary residual falls
+    from 7.6e-4 to 2.2e-4, the optical mismatch from 4.0e-5 to 1.3e-5, and
+    two different collocation grids (4 nodes per panel with ratio 1/2; 3
+    with ratio 2^(-1/2)) agree to 9.7e-7, where variants of the old family
+    differed by 6e-5. Three nodes per panel with the dense depths is
+    garbage (error above 90%, optical mismatch 0.5, |c| 7000-22000): the
+    sampling rule of item 3 again. Dense family J = 3..10, standard wave:
+    change to the next level 9.0e-3, 3.1e-3, 1.2e-3, 4.9e-4, 2.0e-4, 8.4e-5,
+    3.5e-5 (ratio 2.4-2.9, no stall); optical mismatch 3.1e-3 down to
+    5.5e-6; sigma_ext 2.927855, 2.927930, 2.927961 at J = 8, 9, 10 (limit
+    about 2.92798). So the J = 10 reference is good to about 2.5e-5.
+    Against it (times from `fig_cost_cube.py run`, same machine as item 43):
+    - one depth per octave, J = 3..9: 1.2, 1.6, 2.4, 3.7, 7.1, 9.9, 13.6 s
+      for 1.28%, 0.53%, 0.21%, 0.094%, 0.039%, 0.019%, 0.0125%; J = 10 is
+      also 0.0125% (stalled);
+    - two depths per octave, J = 3..9: 2.7, 3.7, 6.0, 10.7, 21.8, 31, 45 s
+      for 1.39%, 0.51%, 0.20%, 0.081%, 0.032%, 0.012%, 0.0035%; J = 10: 64 s;
+    - no tails (one depth), J = 4, 6, 8: 5.4%, 2.5%, 1.1% (so the tails are
+      a factor 60 at J = 8, not 100);
+    - Bempp graded, quadrature 4/6: 0.152%, 0.106%, 0.085% (2592, 4608,
+      10368 dofs); 6/8: 0.060%, 0.037%, 0.029%, 0.025% (4608 to 14112);
+      8/10: 0.031%, 0.0195%, 0.0143% (7200, 10368, 14112 dofs; 56, 97,
+      166 s); extrapolated from these three 0.0098%, sigma_ext 2.927864.
+      So the independent confirmation of the cube field is now 1.4e-4
+      directly and 1.0e-4 by extrapolation, and the cross-sections agree to
+      4e-5.
+    - Reading: level above 0.2%; MFS (one depth) 1.6 times faster at 0.1%,
+      4 times at 0.04%, 10 times at 0.02% (9.9 s against 97 s); Bempp's
+      best (0.014%, 166 s) is passed in 14 s (one depth) or 31 s (two);
+      two depths continue to 0.0035% in 45 s.
+    - Oblique wave (`cube_oblique_table.py`, reference dense J = 10, optical
+      mismatch 1.1e-5): one depth, J = 4..9: 2.2, 3.3, 6.0, 12.6, 18.2,
+      27.1 s for 0.62%, 0.28%, 0.117%, 0.052%, 0.026%, 0.017%; two depths,
+      J = 4..8: 5.3, 9.7, 19.7, 46, 105 s (the last two in class groups) for
+      0.57%, 0.24%, 0.098%, 0.039%, 0.014%; Bempp graded 4/6: 2.7, 6.4,
+      13.7 s for 0.21%, 0.144%, 0.122%; 6/8: 15, 30, 57 s for 0.082%,
+      0.052%, 0.040%. Bempp slightly ahead above 0.2%, level at 0.14%, MFS
+      2.4 times faster at 0.05% and alone below 0.04%.
+    - Memory: eight classes of the dense family do not fit together from
+      J = 8 (11.5 GB); `cube_mfs.run` splits the classes into groups
+      (`max_gb`). One run was killed by the kernel for lack of memory before
+      the size estimate was fixed.
 
 ## 3. Current best commands
 

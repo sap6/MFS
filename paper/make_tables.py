@@ -70,13 +70,21 @@ def almond():
 
 def cube():
     d = np.load(os.path.join(V, "fig_cost_cube.npz"))
-    ref = d["tail_E9"]
+    jref = int(d["dense"][-1][0])
+    ref = d[f"dense_E{jref}"]
     rows = []
-    for J, t, unk, nrow, opt in d["tail"]:
-        J = int(J)
-        err = "reference" if J == 9 else sci(rel(d[f"tail_E{J}"], ref))
-        rows.append(f"    {J} & {int(unk) // 2} & {int(nrow)} & {tm(t)} & {err} & {sci(opt)} \\\\")
+    for name, label in (("tail", "one"), ("dense", "two")):
+        if rows:
+            rows.append("    \\midrule")
+        for J, t, unk, nrow, opt in d[name]:
+            J = int(J)
+            err = "reference" if (name == "dense" and J == jref) else sci(rel(d[f"{name}_E{J}"], ref))
+            rows.append(f"    {label} & {J} & {int(unk) // 2} & {int(nrow)} & {tm(t)} & {err} & {sci(opt)} \\\\")
     write("cube_mfs", rows)
+    dn = d["dense"]
+    ch = [rel(d[f"dense_E{int(dn[i][0])}"], d[f"dense_E{int(dn[i + 1][0])}"]) for i in range(len(dn) - 1)]
+    print("    dense family, change to the next level:", " ".join(f"{c:.2e}" for c in ch), " ratios:",
+          " ".join(f"{a / b:.2f}" for a, b in zip(ch[:-1], ch[1:])))
     for name in ("notail", "plain"):
         print(f"    {name}:", [(int(r[0]), int(r[2]), tm(r[1]), f"{rel(d[f'{name}_E{int(r[0])}'], ref):.2e}") for r in d[name]])
     rows = []
@@ -85,26 +93,37 @@ def cube():
         if int(b["ndof"]) > 1000:
             rows.append(f"    quasi-uniform & 4/6 & {int(b['ndof'])} & {tm(float(b['t_solve']))} & {sci(rel(b['E'], ref))} \\\\")
     for q, tag, keep in (("4/6", "", (2592, 4608, 10368)), ("6/8", "_q6_8", (4608, 7200, 10368, 14112)),
-                         ("8/10", "_q8_10", (10368, 14112))):
+                         ("8/10", "_q8_10", (7200, 10368, 14112))):
         rows.append("    \\midrule")
         gr = sorted((np.load(f) for f in glob.glob(os.path.join(V, f"bem_cube_graded_n*_g2{tag}.npz"))), key=lambda b: int(b["ndof"]))
         for b in gr:
             if int(b["ndof"]) in keep:
                 rows.append(f"    graded & {q} & {int(b['ndof'])} & {tm(float(b['t_solve']))} & {sci(rel(b['E'], ref))} \\\\")
             print(f"    graded {q} n={int(b['n'])} dofs={int(b['ndof'])} t={float(b['t_solve']):.1f} (assembly {float(b['t_assembly']):.1f}, "
-                  f"LU {float(b['t_lu']):.1f}) err={rel(b['E'], ref):.2e} sigma_ext={float(b['ext']):.5f}")
+                  f"LU {float(b['t_lu']):.1f}) err={rel(b['E'], ref):.2e} sigma_ext={float(b['ext']):.6f}")
     write("cube_bem", rows)
+    fine = sorted((np.load(f) for f in glob.glob(os.path.join(V, "bem_cube_graded_n*_g2_q8_10.npz"))), key=lambda b: int(b["ndof"]))
+    from scipy.optimize import brentq
+    (n1, E1), (n2, E2), (n3, E3) = ((float(b["n"]), b["E"]) for b in fine[-3:])
+    q_ = np.linalg.norm(E1 - E2) / np.linalg.norm(E2 - E3)
+    p = brentq(lambda p: (n1 ** -p - n2 ** -p) / (n2 ** -p - n3 ** -p) - q_, 0.2, 12)
+    Ex = E3 + (E3 - E2) * n3 ** -p / (n2 ** -p - n3 ** -p)
+    s2, s3 = (float(b["ext"]) for b in fine[-2:])
+    print(f"    graded Bempp 8/10 extrapolated (rate n^-{p:.2f}): error {rel(Ex, ref):.2e}, sigma_ext "
+          f"{s3 + (s3 - s2) * n3 ** -p / (n2 ** -p - n3 ** -p):.6f}")
 
 
 def cube_oblique():
     r = np.load(os.path.join(V, "cube_oblique.npz"))
-    ref = r["E9"]
+    ref = r["Eref"]
     rows = []
-    for J in (4, 5, 6, 7, 8):
-        t, unk = r[f"info{J}"][:2]
-        rows.append(f"    MFS, $J = {J}$ & {int(unk)} & {tm(t)} & {sci(rel(r[f'E{J}'], ref))} \\\\")
-    print("    oblique reference J=9:", r["info9"])
-    rows.append("    \\midrule")
+    for fam, Js, label in (("", (4, 5, 6, 7, 8, 9), "one depth per octave"), ("dense", (6, 7, 8), "two depths per octave")):
+        for J in Js:
+            if f"E{fam}{J}" in r:
+                t, unk = r[f"info{fam}{J}"][:2]
+                rows.append(f"    MFS, {label}, $J = {J}$ & {int(unk)} & {tm(t)} & {sci(rel(r[f'E{fam}{J}'], ref))} \\\\")
+        rows.append("    \\midrule")
+    print("    oblique reference:", r["inforef"])
     files = sorted(glob.glob(os.path.join(V, "bem_cube_graded_*_obl.npz")), key=lambda f: ("_q" in f, int(np.load(f)["ndof"])))
     for f in files:
         b = np.load(f)

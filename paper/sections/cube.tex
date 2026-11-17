@@ -9,11 +9,12 @@ The layout has four parts (\autoref{fig:cubelayout}).
 
 \emph{Base points.} A grid of $n_b\times n_b$ electric dipoles on each face of the inner cube at depth $0.2$ below the faces represents the smooth part of the field.
 
-\emph{Edge lines.} For each edge we choose the depths
+\emph{Edge lines.} For each edge we choose depths that decrease geometrically from $0.2$ to the deepest depth $d_J$,
 \begin{equation}
-  d_j = 0.2\cdot 2^{-j}, \qquad j = 0,\dots,J,
+  d_j = 0.2\,q^{\,j}, \qquad j = 0,1,\dots, \qquad d_j\ge d_J = 0.2\cdot 2^{-J},
+  \label{eq:depths}
 \end{equation}
-and place at each depth a line parallel to the edge, on the bisector plane, at distance $d_j$ from the edge. In two dimensions a lightning solver would place one point source at each depth \cite{gopal2019siam,ginn2023}. In three dimensions a row of point sources along the line does not work: at depth $d_j$ the points would have to be spaced by about $d_j$, which requires $1/d_j$ of them. We therefore let each line carry a continuous dipole density. With $t\in[-(\tfrac12-d_j),\tfrac12-d_j]$ the coordinate along the line, we introduce the stretched variable
+and place at each depth a line parallel to the edge, on the bisector plane, at distance $d_j$ from the edge. We call $J$ the level of the layout. We use two ratios: $q = 1/2$, which gives one line for each octave of depth, and $q = 2^{-1/2}$, which gives two. In two dimensions a lightning solver would place one point source at each depth \cite{gopal2019siam,ginn2023}. In three dimensions a row of point sources along the line does not work: at depth $d_j$ the points would have to be spaced by about $d_j$, which requires $1/d_j$ of them. We therefore let each line carry a continuous dipole density. With $t\in[-(\tfrac12-d_j),\tfrac12-d_j]$ the coordinate along the line, we introduce the stretched variable
 \begin{equation}
   u(t) = \frac{1}{\lambda_j}\log\frac{\tfrac12+t}{\tfrac12-t}, \qquad \lambda_j = \log\frac{1-d_j}{d_j},
 \end{equation}
@@ -53,7 +54,7 @@ with Legendre polynomials $P_l$ and unknown coefficients $\ba_l\in\mathbb{C}^3$.
 
 \subsection{Collocation and weights}
 
-The collocation points on each face form a tensor grid. In each direction the nodes are Gauss--Legendre points with three nodes per panel, and the panels halve in length towards both edges until they are shorter than the deepest free depth $d_J$. Panels in the interior are no longer than $h_{\max}$. Three nodes per panel are needed. With two, the fit is under-sampled: at $J = 5$ the error of the field is $85\%$ while the residual at the collocation points is small, and only the optical mismatch of $0.35$ reveals the failure.
+The collocation points on each face form a tensor grid. In each direction the nodes are Gauss--Legendre points on panels that halve in length towards both edges until they are shorter than the deepest depth $d_J$. Panels in the interior are no longer than $h_{\max}$. We use three nodes per panel for $q = 1/2$ and four for $q = 2^{-1/2}$. The fit needs enough equations at every scale, and with too few it fails without any sign in the residual at the collocation points. With two nodes per panel and $q = 1/2$ the error of the field at $J = 5$ is $85\%$. With three nodes and $q = 2^{-1/2}$ it exceeds $90\%$ at $J = 6$. In both cases the optical mismatch, $0.35$ and $0.5$, reveals the failure.
 
 The rows are weighted by
 \begin{equation}
@@ -61,46 +62,54 @@ The rows are weighted by
 \end{equation}
 where $A_i$ is the area represented by the point and $\rho_i$ its distance to the nearest edge. Without the factor $\rho_i^{2\beta}$ the fit spends its effort on the edge singularity of the residual, and the far field is worse. Values of $\beta$ between $1/3$ and $3/4$ give similar results.
 
-All resolution parameters must grow together. Refining the depth alone leaves other limits in place, and the error then stalls near $10^{-3}$. We use one family indexed by $J$: $n_0 = \max(4, 2J-4)$, and $(n_b, h_{\max}) = (4, 0.25)$ for $J\le5$, $(6, 0.15)$ for $J = 6$ and $(8, 0.1)$ for $J\ge7$.
+All resolution parameters must grow together. Refining the depth alone leaves other limits in place, and the error then stalls near $10^{-3}$. We use one family indexed by the level $J$ for each ratio $q$: $n_0 = \max(4, 2J-4)$, and $(n_b, h_{\max}) = (4, 0.25)$ for $J\le5$, $(6, 0.15)$ for $J = 6$ and $(8, 0.1)$ for $J\ge7$.
 
 \subsection{Symmetry}
 
-The cube and the layout are symmetric under the three mirrors $x\to-x$, $y\to-y$ and $z\to-z$. Any incident field is the sum of eight parts of definite parity under the three mirrors, and each part is scattered into a field of the same parity. A part needs only the sources of one octant, with the modes of each line restricted to one parity, and collocation points in one octant. The eight matrices are signed sums of the same reflected blocks, so the line integrals are computed once. Each parity class has its own QR factorisation, which then serves every incident wave. Our standard wave excites two classes. A general wave excites all eight.
+The cube and the layout are symmetric under the three mirrors $x\to-x$, $y\to-y$ and $z\to-z$. Any incident field is the sum of eight parts of definite parity under the three mirrors, and each part is scattered into a field of the same parity. A part needs only the sources of one octant, with the modes of each line restricted to one parity, and collocation points in one octant. The eight matrices are signed sums of the same reflected blocks, so the line integrals are computed once. Each parity class has its own factorisation, which then serves every incident wave. Our standard wave excites two classes. A general wave excites all eight.
 
 \subsection{Results}
 
-\autoref{tab:cube} lists the results for the standard wave. The reference is the MFS field with $J = 9$. The error falls from $1.3\times10^{-2}$ at $J = 3$ to $1.1\times10^{-4}$ at $J = 8$, by a factor between $2.3$ and $2.9$ per level, and the optical mismatch falls with it to $4\times10^{-5}$ at $J = 9$. The run with $J = 8$ takes $9.4$\,s.
+\autoref{tab:cube} lists the results for the standard wave and both depth ratios. The reference is the run with two depths per octave at level $J = 10$.
+
+\emph{Two depths per octave.} The difference between successive levels falls from $9.0\times10^{-3}$ between $J = 3$ and $4$ to $3.5\times10^{-5}$ between $J = 9$ and $10$, by a factor of $2.4$ to $2.9$ per level. The optical mismatch falls with it, from $3.1\times10^{-3}$ to $5.5\times10^{-6}$. If the decay continues at the same rate, the error of the reference itself is about $2.5\times10^{-5}$.
+
+\emph{One depth per octave.} This layout has about $60\%$ of the unknowns and takes less than half the time. Down to level $J = 7$ its errors equal those of the denser layout to within $20\%$. Then it stalls: the error is $1.9\times10^{-4}$ at $J = 8$ and $1.3\times10^{-4}$ at $J = 9$, and the levels $10$ to $12$ bring no further gain. The matrices are well conditioned, so this is a limit of approximation and not of rounding: one line per octave cannot represent the current sheet on the bisector plane more accurately. We therefore regard $q = 1/2$ as the economical choice for errors down to $2\times10^{-4}$ and $q = 2^{-1/2}$ as the choice below.
 
 \begin{table}[htbp]
   \centering
-  \caption{Unit cube, $k = 2\pi$, standard wave. MFS with edge sources and tails: unknowns and equations per parity class (two classes are solved), wall time, difference from the run with $J = 9$, and optical mismatch.}
+  \caption{Unit cube, $k = 2\pi$, standard wave. MFS with edge sources and tails, with one and with two source depths per octave: unknowns and equations per parity class (two classes are solved), wall time, difference from the run with two depths per octave at $J = 10$, and optical mismatch.}
   \label{tab:cube}
-  \begin{tabular}{rrrrll}
+  \begin{tabular}{lrrrrll}
     \toprule
-    $J$ & Unknowns & Equations & Time [s] & Error & Optical mismatch \\
+    Depths per octave & $J$ & Unknowns & Equations & Time [s] & Error & Optical mismatch \\
     \midrule
 \tablebody{cube_mfs}
     \bottomrule
   \end{tabular}
 \end{table}
 
-\emph{The tails are essential.} With the same edge lines but without the tails, the error is $5.4\times10^{-2}$, $2.5\times10^{-2}$ and $1.1\times10^{-2}$ for $J = 4$, $6$ and $8$. At $J = 8$ the tails reduce the error by a factor of $100$ and add $9\%$ to the unknowns. The vertex tail alone accounts for a factor of $1.5$ to $1.7$ at every level. Plain MFS with sources on an inner cube stays above $21\%$ (\autoref{fig:costcube}).
+\emph{The tails are essential.} With one depth per octave and the same edge lines but without the tails, the error is $5.4\times10^{-2}$, $2.5\times10^{-2}$ and $1.1\times10^{-2}$ for $J = 4$, $6$ and $8$. At $J = 8$ the tails reduce the error by a factor of $60$ and add $9\%$ to the unknowns. \autoref{fig:edgeresidual} shows where the gain comes from. Without the tail the boundary residual near an edge is of order one at all distances below the deepest depth. With the tail it is smaller by one to two orders of magnitude there. Plain MFS with sources on an inner cube stays above $21\%$ (\autoref{fig:costcube}).
 
-\emph{The family has a floor.} Beyond $J = 9$ the family does not improve. Runs with $J = 10$, $11$ and $12$, and variants of the run with $J = 10$ that use more modes, more collocation points or a finer base grid, differ from one another by $3\times10^{-5}$ to $7\times10^{-5}$, and the optical mismatch no longer decreases (it lies between $4\times10^{-5}$ and $7\times10^{-5}$). The matrices are well conditioned, with coefficient norms of order one, so the floor is one of approximation and not of rounding. A likely cause is the treatment of the vertices, where the tail on the diagonal carries the radial power law but not the angular structure of the singularity; we have not confirmed this. The errors in the last two rows of \autoref{tab:cube} are therefore uncertain by about $5\times10^{-5}$.
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.62\textwidth]{fig_edge_residual.pdf}
+  \caption{Unit cube, $J = 6$, one depth per octave: tangential residual on a face as a function of the distance to an edge, away from the vertices, with and without the tail. The dotted line marks the deepest free depth $d_J$.}
+  \label{fig:edgeresidual}
+\end{figure}
 
-\emph{An independent reference.} Since no exact solution exists, we computed the same field with Bempp on meshes graded towards the edges (\autoref{sec:bempp}). With the quadrature orders $8$ and $10$ and $4608$, $7200$ and $10368$ unknowns, the boundary element field differs from the MFS reference by $5.8\times10^{-4}$, $3.2\times10^{-4}$ and $2.2\times10^{-4}$. Extrapolation of the three fields gives $1.6\times10^{-4}$. The extinction cross-sections of the three meshes are $2.92710$, $2.92745$ and $2.92762$, with the extrapolated value $2.92785$; the MFS gives $2.92801$ at $J = 9$. The two methods thus agree to about $2\times10^{-4}$, and below that level the only reference for the MFS is its own convergence.
+\emph{An independent reference.} Since no exact solution exists, we computed the same field with Bempp on meshes graded towards the edges (\autoref{sec:bempp}). With the quadrature orders $8$ and $10$ and $7200$, $10368$ and $14112$ unknowns, the boundary element field differs from the MFS reference by $3.1\times10^{-4}$, $2.0\times10^{-4}$ and $1.4\times10^{-4}$. Extrapolation of the three fields gives $1.0\times10^{-4}$. The extinction cross-sections of the three meshes are $2.92745$, $2.92762$ and $2.92771$, with the extrapolated value $2.92786$. The MFS gives $2.92786$, $2.92793$ and $2.92796$ at $J = 8$, $9$ and $10$. The two methods thus agree to $1.4\times10^{-4}$ in the field and to $4\times10^{-5}$ in the cross-section. Below that level the only reference for the MFS is its own convergence.
 
 \subsection{Cost}
-
 \label{sec:cubecost}
 
-\autoref{tab:cubebem} lists the boundary element results, and \autoref{fig:costcube} shows the error of all methods against the wall time. All errors are differences from the MFS run with $J = 9$.
+\autoref{tab:cubebem} lists the boundary element results, and \autoref{fig:costcube} shows the error of all methods against the wall time. All errors are differences from the MFS reference.
 
-On quasi-uniform meshes Bempp converges slowly, because the edge singularity limits the rate: $13302$ unknowns give an error of $1.9\times10^{-3}$ in $49$\,s. Grading the mesh towards the edges helps considerably. With the default quadrature the graded meshes stall near $8\times10^{-4}$. With the orders $6$ and $8$ they reach $3.0\times10^{-4}$ with $10368$ unknowns in $56$\,s. The most accurate boundary element run, with the orders $8$ and $10$ and $14112$ unknowns, takes $166$\,s for $1.8\times10^{-4}$. Larger dense matrices did not fit into the memory available to the assembly.
+On quasi-uniform meshes Bempp converges slowly, because the edge singularity limits the rate: $13302$ unknowns give an error of $1.9\times10^{-3}$ in $49$\,s. Grading the mesh towards the edges helps considerably. With the default quadrature the graded meshes stall near $8\times10^{-4}$. With the orders $6$ and $8$ they reach $2.9\times10^{-4}$ with $10368$ unknowns in $56$\,s. The most accurate boundary element run, with the orders $8$ and $10$ and $14112$ unknowns, takes $166$\,s for $1.4\times10^{-4}$. Larger dense matrices did not fit into the memory available to the assembly.
 
 \begin{table}[htbp]
   \centering
-  \caption{Unit cube, standard wave: Bempp on quasi-uniform meshes and on meshes graded towards the edges, for three choices of the quadrature orders (regular/singular). Unknowns, wall time and difference from the MFS run with $J = 9$.}
+  \caption{Unit cube, standard wave: Bempp on quasi-uniform meshes and on meshes graded towards the edges, for three choices of the quadrature orders (regular/singular). Unknowns, wall time and difference from the MFS reference.}
   \label{tab:cubebem}
   \begin{tabular}{llrrl}
     \toprule
@@ -113,26 +122,25 @@ On quasi-uniform meshes Bempp converges slowly, because the edge singularity lim
 
 \begin{figure}[htbp]
   \centering
-  \includegraphics[width=0.72\textwidth]{fig_cost_cube.pdf}
-  \caption{Unit cube, $k = 2\pi$, standard wave: difference from the MFS run with $J = 9$ against wall time on four cores, for the MFS with and without tails, plain MFS, and Bempp on quasi-uniform and graded meshes.}
+  \includegraphics[width=0.78\textwidth]{fig_cost_cube.pdf}
+  \caption{Unit cube, $k = 2\pi$, standard wave: difference from the MFS reference against wall time on four cores, for the MFS with tails (one and two depths per octave), the MFS without tails, plain MFS, and Bempp on quasi-uniform and graded meshes.}
   \label{fig:costcube}
 \end{figure}
 
-We compare the MFS with the best boundary element result at each accuracy. Above an error of $2\times10^{-3}$ the two are level: Bempp needs $2.8$\,s for $1.5\times10^{-3}$ and the MFS $2.4$\,s for $2.0\times10^{-3}$. At $10^{-3}$ the MFS is $1.6$ times faster ($3.9$\,s against $6.1$\,s). At $3\times10^{-4}$ it is between four and eight times faster ($7.1$\,s against $30$\,s for $3.8\times10^{-4}$ and $56$\,s for $3.0\times10^{-4}$). The smallest error that Bempp reached, $1.8\times10^{-4}$ in $166$\,s, the MFS passes in $9.4$\,s.
+We compare the cheaper of the two MFS layouts with the best boundary element result at each accuracy. Above an error of $2\times10^{-3}$ the two methods are level: Bempp needs $2.8$\,s for $1.5\times10^{-3}$ and the MFS $2.4$\,s for $2.1\times10^{-3}$. At $10^{-3}$ the MFS is $1.6$ times faster ($3.7$\,s against $6.1$\,s). At $4\times10^{-4}$ it is four times faster ($7.1$\,s against $30$\,s), and at $2\times10^{-4}$ ten times ($9.9$\,s against $97$\,s). The smallest error that Bempp reached, $1.4\times10^{-4}$ in $166$\,s, the MFS passes in $14$\,s with one depth per octave and in $31$\,s with two. With two depths per octave it continues to $3.5\times10^{-5}$ in $45$\,s.
 
-Three qualifications apply. First, the errors of the MFS are measured against its own finest run, with the uncertainty of $5\times10^{-5}$ described above. Second, the MFS uses the three mirror planes of the cube and Bempp uses none. A boundary element code that used them would need an eighth of the assembly work, which is most of its time at these sizes. Third, the MFS is not economical in unknowns. At $J = 6$ the eight classes together have about $10^4$ unknowns for an error of $9\times10^{-4}$, which the graded boundary element mesh reaches with fewer than $5000$. What the MFS offers on the cube is its rate of convergence: the error falls by a factor of $2.3$ to $2.9$ per level, for $20$ to $45\%$ more unknowns.
+Two qualifications apply. First, the MFS uses the three mirror planes of the cube and Bempp uses none. A boundary element code that used them would need an eighth of the assembly work, which is most of its time at these sizes. Second, the MFS is not economical in unknowns. At $J = 6$ with one depth per octave the eight classes together have about $10^4$ unknowns for an error of $9\times10^{-4}$, which the graded boundary element mesh reaches with fewer than $5000$. What the MFS offers on the cube is its rate of convergence: the error falls by a factor of about $2.5$ per level, for $20$ to $45\%$ more unknowns.
 
 \subsection{A general incident wave}
-
 \label{sec:cubeoblique}
 
-A wave from a general direction excites all eight classes. We tested the wave that arrives from the polar angle $60^\circ$ and the azimuth $25^\circ$, with its polarisation rotated by $35^\circ$ from the plane of incidence. The assembly is shared between the classes, and eight factorisations are needed instead of two. \autoref{tab:cubeoblique} compares the MFS with Bempp on graded meshes, both against the MFS run with $J = 9$ for this wave.
+A wave from a general direction excites all eight classes. We tested the wave that arrives from the polar angle $60^\circ$ and the azimuth $25^\circ$, with its polarisation rotated by $35^\circ$ from the plane of incidence. The assembly is shared between the classes, and eight factorisations are needed instead of two. \autoref{tab:cubeoblique} compares the MFS with Bempp on graded meshes. The reference is again the run with two depths per octave at $J = 10$, for this wave.
 
-The convergence of the MFS is the same as for the standard wave, from $6.1\times10^{-3}$ at $J = 4$ to $1.1\times10^{-4}$ at $J = 8$. The cost is $1.4$ to $1.9$ times that of the standard wave. Above an error of $2\times10^{-3}$ Bempp is slightly ahead ($2.7$\,s for $2.1\times10^{-3}$ against $3.4$\,s for $2.7\times10^{-3}$). At $10^{-3}$ the MFS needs $6.1$\,s, where Bempp needs $14$\,s for $1.2\times10^{-3}$ and $15$\,s for $7.7\times10^{-4}$. At $3.9\times10^{-4}$ the MFS takes $12$\,s against $57$\,s, and it reaches $1.1\times10^{-4}$ in $18$\,s.
+The MFS converges as for the standard wave. With one depth per octave the error falls from $6.2\times10^{-3}$ at $J = 4$ to $1.7\times10^{-4}$ at $J = 9$, and the cost is $1.4$ to $2$ times that of the standard wave. Above an error of $2\times10^{-3}$ Bempp is slightly ahead ($2.7$\,s for $2.1\times10^{-3}$ against $3.3$\,s for $2.8\times10^{-3}$). At $1.2\times10^{-3}$ the MFS needs $6.0$\,s, where Bempp needs $6.4$\,s for $1.4\times10^{-3}$ and $14$\,s for $1.2\times10^{-3}$. At $5\times10^{-4}$ the MFS needs $13$\,s and Bempp $30$\,s. The MFS reaches $2.6\times10^{-4}$ in $18$\,s and $1.7\times10^{-4}$ in $27$\,s, where the best boundary element run gave $4.0\times10^{-4}$ in $57$\,s.
 
 \begin{table}[htbp]
   \centering
-  \caption{Unit cube, oblique wave: MFS with eight parity classes and Bempp on graded meshes. Unknowns (for the MFS, all classes together), wall time and difference from the MFS run with $J = 9$.}
+  \caption{Unit cube, oblique wave: MFS with eight parity classes and Bempp on graded meshes. Unknowns (for the MFS, all classes together), wall time and difference from the MFS run with two depths per octave at $J = 10$. From $J = 7$ on, the runs with two depths per octave solve the classes in groups to save memory, which repeats part of the assembly.}
   \label{tab:cubeoblique}
   \begin{tabular}{lrrl}
     \toprule
