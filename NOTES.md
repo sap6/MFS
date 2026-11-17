@@ -55,7 +55,8 @@ where we show it".
   below. Do not write that the MFS is faster on the cube without saying
   which Bempp (with or without symmetry) and at what error.
 - **The cube MFS numbers to use are the FINAL ones at the end of item 56**
-  (base grid 6 / 0.15 from J = 6 on, line quadrature 12 / 8 nodes; `paper/tables/cube_mfs.tex`, `cube_oblique.tex`). The MFS
+  (base grid 6 / 0.15 from J = 6 on, line quadrature 12 / 8 nodes;
+  `paper/tables/cube_mfs.tex`, `cube_oblique.tex`). The MFS
   times and errors in items 43, 47 and 55 are from the finer base grid and
   are superseded; the Bempp numbers there stand.
 - **The optical theorem is an indicator, not a bound** (items 56, 57):
@@ -70,17 +71,17 @@ where we show it".
   `line_tree.nodes`). A fixed rule looked like a failure of the layout at
   three wavelengths for two hours. At any new wavenumber, compare two
   quadrature settings before interpreting a stall.
-- **The cube family with one source depth per octave stalls near 1.3e-4;
+- **The cube family with one source depth per octave stalls near 1.5e-4;
   two depths per octave converge** with no stall (item 47), down to a
   difference of 1.46e-5 between J = 10 and J = 11 (item 56). The
   reference for the cube (standard wave) is the dense family at J = 11
-  (`fig_cost_cube.npz`, key `dense_E11`; 76 s, optical mismatch 1.7e-6,
+  (`fig_cost_cube.npz`, key `dense_E11`; 68 s, optical mismatch 1.8e-6,
   estimated error 1e-5); for the oblique wave it is still J = 10
   (`cube_oblique.npz`, `Eref`). Against it the old J = 9 reference
   was wrong by 1.25e-4 and "0.011% at J = 8" was really 0.019%. All cube
-  errors in items 8-44 are against the old reference: use item 47.
+  errors in items 8-44 are against the old reference: use item 56.
 - **First draft**: `paper/` (LaTeX, compiles with `pdflatex`; `main.pdf` is
-  committed). Tables are generated (`paper/make_tables.py`). Item 47.
+  committed). Tables are generated (`paper/make_tables.py`). Section 6.
 - Do not use the old two-mirror path (`SymSources`, `fig_cost_cube.run_mfs`
   before this session) for timings; it still works and gives the same field.
 
