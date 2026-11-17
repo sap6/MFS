@@ -11,6 +11,7 @@ pocl-binary-distribution) for the OpenCL rows. Run alone on the machine.
 import sys
 import time
 
+import bem_env  # noqa: F401  (memory for the OpenCL driver; must come before bempp)
 import bempp_cl.api as bempp
 import numpy as np
 from scipy.linalg import lu_factor, lu_solve

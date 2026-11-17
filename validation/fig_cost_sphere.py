@@ -35,6 +35,7 @@ def mfs(N, pts, R=0.5):
 
 
 def run():
+    import bem_env  # noqa: F401  (memory for the OpenCL driver; must come before bempp)
     import bempp_cl.api as bempp
     import bem_reference as br
     pts = 2.0 * fibonacci_sphere(400)

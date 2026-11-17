@@ -139,6 +139,7 @@ def boundary_residual(k, y, alpha, inc=None, h=0.0013, n_s=70):
 
 
 def bem(k, n_t, n_s, pts):
+    import bem_env  # noqa: F401  (memory for the OpenCL driver; must come before bempp)
     import bempp_cl.api as bempp
     from bem_reference import scattered_field
     v, e = mesh(n_t, n_s)

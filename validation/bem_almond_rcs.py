@@ -8,6 +8,7 @@ Writes bem_almond_rcs_FREQGHz_NDOF.npz and prints sigma in m^2.
 import sys
 import time
 
+import bem_env  # noqa: F401  (memory for the OpenCL driver; must come before bempp)
 import bempp_cl.api as bempp
 import numpy as np
 from scipy.linalg import lu_factor, lu_solve

@@ -328,6 +328,7 @@ def boundary_residual(k, y, c, eta_max, s=0.27):
 
 
 def bem_reference(k, pts, sizes=((40, 36), (60, 54))):
+    import bem_env  # noqa: F401  (memory for the OpenCL driver; must come before bempp)
     import bempp_cl.api as bempp
     import bem_reference as br
     from pec_almond import mesh

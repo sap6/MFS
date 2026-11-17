@@ -80,9 +80,9 @@ The entries agree with those of an adaptive rule with twice the number of nodes 
 \section{Boundary element settings}
 \label{sec:bempp}
 
-We used Bempp-cl version 0.4.2. The electric field integral equation is discretised with Rao--Wilton--Glisson functions as trial functions and rotated functions (scaled N\'ed\'elec functions) as test functions, the dense matrix is assembled in double precision, and the system is solved by LU factorisation with LAPACK.
+We used Bempp-cl version 0.4.2. The electric field integral equation is discretised with Rao--Wilton--Glisson functions as trial functions and scaled N\'ed\'elec functions as test functions. The dense matrix is assembled in double precision, and the system is solved by LU factorisation with LAPACK.
 
-Bempp-cl has two assembly backends. The OpenCL backend, run on the processor through the PoCL driver, assembled the matrices of this paper about twenty times faster than the Numba backend (a sphere with $4824$ unknowns: $4.3$\,s against $96$\,s) with identical results. All timings use the OpenCL backend. Single precision changed neither the error nor, by more than $20\%$, the time.
+Bempp-cl has two assembly backends. We ran the OpenCL backend on the processor through the PoCL driver. It assembled the matrices of this paper about twenty times faster than the Numba backend, with identical results. For a sphere with $4824$ unknowns the assembly took $4.3$\,s against $96$\,s. All timings use the OpenCL backend. Single precision changed neither the error nor, by more than $20\%$, the time.
 
 The quadrature orders of the library are $4$ for regular and $6$ for singular integrals by default. On meshes graded towards the edges of the cube these orders limit the accuracy at about $10^{-3}$, and we report results with the orders $6$ and $8$ as well as $8$ and $10$. On quasi-uniform meshes the orders made no difference.
 

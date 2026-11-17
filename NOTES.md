@@ -1,6 +1,6 @@
 # Project notes
 
-Last updated: 2026-11-16 (third session of that day: torus, second literature pass). All scripts are in
+Last updated: 2026-11-17 (overnight session: Bempp and MFS both at their best, cube solver 25 times faster, first draft of the paper). All scripts are in
 `validation/`. Companion files: `DERIVATIONS.md` (proofs and exponent tables),
 `LITERATURE.md` (T6), `PAPER_OUTLINE.md` (T7). Problem throughout:
 exterior scattering of a plane wave by a perfectly conducting (PEC) body,
@@ -28,7 +28,31 @@ tangential E_sc = -tangential E_inc on the surface, least-squares collocation.
 - Nothing was ever pushed to `sap6/mfs-paper`; it is still the thesis text
   (commit 4f8731f).
 
-### Third session of 2026-11-16 (read this first)
+### Fourth session, 2026-11-17, overnight (read this first)
+
+The author asked: is Bempp compared with the MFS when both are at their
+best; clear up open questions; start a first draft. Mid-session instruction:
+"optimise our MFS so it does actually work significantly better than Bempp
+where we show it".
+
+- **Bempp had not been at its best.** It was assembling with its Numba
+  backend. With `pip install pyopencl pocl-binary-distribution` it uses
+  OpenCL and assembles about 20 times faster (items 39-40). Every Bempp time
+  in items 13-36 is therefore obsolete; the *errors* are unchanged.
+- **The cube MFS is 25 times faster** with identical fields (item 41):
+  new line quadrature (`line_tree.py`), three mirror planes instead of two
+  (`cube_mfs.py`), semi-normal equations (`lsq.py`). The almond solver is
+  twice as fast.
+- **All cost tables were re-timed in one container** with both codes in their
+  best configuration (item 43; `retime_all.sh`). Use only those numbers.
+- **The cube refinement family has a floor near 5e-5** beyond J = 9 (item 42).
+  Say so; do not quote J = 8 against J = 9 as if J = 9 were exact.
+- **First draft**: `paper/` (LaTeX, compiles with `pdflatex`; `main.pdf` is
+  committed). Tables are generated (`paper/make_tables.py`). Item 47.
+- Do not use the old two-mirror path (`SymSources`, `fig_cost_cube.run_mfs`
+  before this session) for timings; it still works and gives the same field.
+
+### Third session of 2026-11-16
 
 - New example: the **torus** (section 2, items 33-36; `pec_torus.py`,
   `torus_singularities.py`, `fig_cost_torus.py`, `fig_torus_sources.py`,
@@ -404,6 +428,69 @@ are from the first.)
     checked. It is not novel as an application (MAS and acoustic MFS have
     used tori) and it has no closed-form reference. Do not present the
     focal-ring statement as new before Millar 1983 has been read.
+
+### Fourth session, 2026-11-17, overnight (items 39-50)
+
+39. **Bempp was run with its slow backend.** bempp-cl assembles with OpenCL
+    if `pyopencl` and a CPU driver are installed and falls back to Numba
+    otherwise; the containers had neither. With
+    `pip install pyopencl pocl-binary-distribution` (now in `CLAUDE.md`) the
+    assembly is about 20 times faster with identical results
+    (`bem_backend.py`: sphere, 4824 dofs: assembly 96 s -> 4.3 s, total 108 s
+    -> 10 s; error 7.58e-3 both). Single precision changes neither the error
+    nor, by more than 20%, the time; double is kept. All Bempp times of
+    items 13-36 are obsolete, the errors are not.
+40. **Three more things that held Bempp back** (all fixed, all in
+    `bem_reference.efie_solve`, which every Bempp script now uses):
+    (a) the right-hand side was a Numba closure defined inside the solver
+    and so recompiled at every solve, about 3 s each time (`bem_overhead.py`:
+    a 714-dof assembly takes 0.27 s once compiled). It is now one
+    parameterised callable at module level. (b) PoCL takes its memory from
+    one NUMA node as the kernel lists it (4 GB of 16) and refuses matrices
+    above a quarter of that rounded up to a power of two: 1, 2 or 4 GB
+    depending on the machine and on what else is running. `bem_env.py`
+    (imported before bempp) tells it the real memory; the cap is then 4 GB =
+    16384 dofs in double precision. (c) `bempp.linalg.lu` copies the matrix;
+    the LU is now in place. Quadrature orders: default 4/6 limits graded
+    cube meshes near 8e-4; 6/8 is the best trade; 8/10 for references.
+    Not done: a boundary element code that uses the symmetry of the body,
+    higher-order elements, compression.
+41. **Cube MFS, 25 times faster, same fields** (changes verified against the
+    stored fields to 1e-12 and then 1e-15 at every step):
+    - `line_tree.py`: the line integrals. A binary tree of panels in the
+      stretched variable with precomputed nodes and weights against all
+      modes (moment rule with 20 nodes in t on the four coarsest levels, 10
+      Gauss nodes in u below, deeper levels on the fly); a target accepts a
+      panel when its length is below its distance. Electric and magnetic
+      line share the kernel; the 9 tail lines share nodes and are summed
+      before the modes; the 8 mirror images are summed inside the kernel so
+      each matrix entry is written once. Accuracy 5e-10 against a finer
+      adaptive rule (`test_line_tree.py`); looser settings (2e-6) change the
+      field by 2e-7 and save little.
+    - `cube_mfs.py`: three mirror planes (eight parity classes) instead of
+      two; the standard wave needs two classes with half the unknowns each.
+    - `lsq.py`: Householder QR without forming Q (LAPACK geqrf + unmqr with
+      the optimal workspace); and, for well-conditioned matrices, the
+      corrected semi-normal equations (Cholesky of the Gram matrix, two
+      refinement steps, implicit column scaling, no copy of the matrix).
+      cond(A) of a cube class: 3.8e4 (J = 6), 7.7e5 (J = 8). Falls back to
+      QR by itself when the Cholesky factor looks ill conditioned.
+    - The same factorisation in the almond solvers (2 times faster, RCS
+      against Bempp unchanged: 0.023 / 0.029 dB rms at 1.19 GHz; all angles
+      and both polarisations now take 43 s at 1.19 GHz).
+    - Sphere: QR gives the same error as the SVD solver (2e-14 at N = 1200)
+      and is 4 times faster.
+    - Did not help: fewer collocation nodes. Two per panel instead of three
+      gives 85% error at J = 5 (optical mismatch 0.35 is the only warning)
+      and 0.2% at J = 6.
+42. **The cube family has a floor near 5e-5.** J = 10, 11, 12 differ from
+    J = 9 by 5.0e-5, 7.5e-5, 1.0e-4 (from each other by 3-4e-5); variants at
+    J = 10 (modes as at J = 9, four collocation nodes per panel, base grid
+    10 with panels 0.08) differ from the family by 6e-5, 7e-5, 1e-5; the
+    optical mismatch stops at 4-7e-5. Conditioning is not the cause
+    (|c| about 1). So J = 9 is a reference good to about 5e-5, and the
+    errors quoted for J = 7 and J = 8 carry that uncertainty. Suspect: the
+    vertices (T15), not confirmed.
 
 ## 3. Current best commands
 

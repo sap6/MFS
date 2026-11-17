@@ -11,6 +11,7 @@ import time
 
 os.environ["PATH"] = os.path.join(sys.prefix, "bin") + os.pathsep + os.environ.get("PATH", "")
 
+import bem_env  # noqa: F401  (memory for the OpenCL driver; must come before bempp)
 import bempp_cl.api as bempp  # noqa: E402
 
 import bem_reference as br  # noqa: E402

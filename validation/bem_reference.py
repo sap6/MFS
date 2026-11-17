@@ -8,6 +8,7 @@ Usage:
 import sys
 import time
 
+import bem_env  # noqa: F401  (memory for the OpenCL driver; must come before bempp)
 import bempp_cl.api as bempp
 import numpy as np
 import scipy.linalg as sla
