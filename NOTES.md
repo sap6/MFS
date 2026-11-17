@@ -919,7 +919,9 @@ towards the MFS field.
       give 1.5e-2 / 3.3e-3 / 2.0e-3 / 2.0e-3, so 16 is enough and 14 is
       not (with 14 the error grows with J: 4.3e-3, 6.7e-3 at J = 7, 8);
       interior panels 0.065 instead of 0.05 give the same error with base
-      16 in 13.6 s instead of 20.6 s. The base grid must have an even
+      16 in 13.6 s instead of 20.6 s; at J = 7 the same (1.3e-3 in 17.6 s
+      instead of 24.6 s); at J = 8 base 16 is not enough (1.2e-3 to
+      1.4e-3 against 8.6e-4 with 18). The base grid must have an even
       number of points (a point on a mirror plane is refused).
       Bempp with symmetry (differences
       from that MFS reference): 4/6: 1.5, 4.1, 10, 24 s for 2.1e-2, 4.2e-3,
@@ -940,6 +942,14 @@ towards the MFS field.
       equations, coefficients of order one) does not, which is why in 3D
       the base depth must follow the wavelength from S = 3. Scaling the
       depth is the cheap and clean choice in both.
+    - A single rule for all S? At S = 2 the wavelength-scaled base (depth
+      0.1, 8 / 12 points) works as well as the S = 1 base used for the
+      table: J = 5, 6, 7 give 1.5e-3, 5.4e-4, 2.7e-4 in 4.4, 9.0, 12.0 s
+      (table: J = 6, 7, 8 give 1.1e-3, 4.8e-4, 2.2e-4 in 6.8, 9.3, 12.7 s;
+      the scaled ladder is one octave deeper at equal J). So "first depth
+      0.2 / S, base 4 S / 6 S, panels / S, 4 (S - 1) more modes, quadrature
+      nodes with S" can be the one rule for the paper if the k = 4 pi table
+      is re-run with it (not done).
     - Two or three wavenumbers are not a law: do not write "the advantage
       grows with k". The families at S = 2, 3 were tuned in an hour and the
       grading of the Bempp mesh was not re-tuned.
@@ -1207,6 +1217,8 @@ Open, in the order I would take them:
 - Line quadrature at k = 4 pi, one depth J = 7: 32/14, 16/8, 14/8 nodes against 20/10: 4e-11, 7e-8, 3e-6 (9.3, 8.3, 7.7 s).
 - Cube at k = 6 pi, J = 6, base 12 / 14 / 16 / 18: 1.5e-2 / 3.3e-3 / 2.0e-3 / 2.0e-3; base 16 with interior panels 0.065: 2.0e-3 in 13.6 s.
 - 2D square, side S = 1, 2, 3, 4, 6 wavelengths, TE, ratio 2^(-1/2): S = 1 layout 8.8e-8, 8.5e-7, 1.7e-6, 1.7e-6, 1.9e-6 with |c| about 1e7; base depth / S and panels / S: 8.8e-8, 4e-8, 3.6e-7, 8e-9, 2.5e-7 with |c| 1e3 to 1e4.
+- Cube at k = 4 pi with the base at depth 0.1 and 8 / 12 points: one depth J = 5, 6, 7, 8: 1.5e-3, 5.4e-4, 2.7e-4, 3.0e-4 in 4.4, 9.0, 12.0, 17.9 s.
+- Cube at k = 6 pi, base 16 instead of 18: J = 7: 1.3e-3 in 17.6 s (panels 0.065); J = 8: 1.2e-3 to 1.4e-3 (worse than 8.6e-4 with 18).
 
 ## 6. Write-up session
 
