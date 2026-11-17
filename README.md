@@ -22,6 +22,7 @@ This repository contains the code and notebooks supporting my MSci research proj
 > benchmark data) is in [`validation/`](./validation); start from
 > [`NOTES.md`](./NOTES.md), [`DERIVATIONS.md`](./DERIVATIONS.md),
 > [`LITERATURE.md`](./LITERATURE.md) and [`PAPER_OUTLINE.md`](./PAPER_OUTLINE.md).
+> A first draft of the paper is in [`paper/`](./paper) (`main.pdf`).
 > The notebooks below are the MSci project as submitted.
 
 ## Table of Contents
