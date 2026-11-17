@@ -1296,6 +1296,7 @@ Open, in the order I would take them:
 - Bempp with symmetry, k = 2 pi, oblique wave, g = 1.5, 4/6: 2.65e-3, 1.44e-3, 9.2e-4, 6.4e-4, 4.7e-4 in 0.9 to 10.9 s: no gain over g = 2.
 - Bempp with symmetry, k = 2 pi, g = 1.75: 4/6: 5.4e-4, 4.3e-4, 3.7e-4 in 2.6, 5.0, 8.7 s; 6/8: 7.1e-4, 4.2e-4, 2.8e-4, 2.07e-4 in 3.4, 5.2, 9.5, 16.3 s; 8/10: 2.7e-4, 1.9e-4, 1.4e-4 in 16, 26, 42 s (item 58).
 - Bempp with symmetry, k = 4 pi, g = 1.75: 9.6e-4 (10368 dofs, 4/6), 6.1e-4 (18432, 4/6), 3.8e-4 (18432, 6/8).
+- Bempp with symmetry, k = 2 pi, oblique wave, g = 1.75: 4/6: 7.2e-4, 5.6e-4, 4.8e-4 in 4.0, 7.2, 13 s; 6/8: 5.5e-4, 3.6e-4, 2.6e-4 in 6.3, 11.3, 19.5 s: small gains over g = 2, the reading of the oblique paragraph (Bempp faster down to 4e-4, level below) stands.
 
 ## 6. Write-up session
 
