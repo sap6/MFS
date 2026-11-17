@@ -24,16 +24,16 @@ def rel(a, b):
     return np.linalg.norm(a - b) / np.linalg.norm(b)
 
 
-def params(J, family, n_base, hmax, dn):
+def params(J, family, n_base, hmax, dn, depth0=0.2):
     kw = c.dense(J) if family == "dense" else dict(zip(("kw", "hmax"), c.balanced(J)))
     kw = dict(kw)
-    kw["kw"] = dict(kw["kw"], n_base=n_base, n0=kw["kw"]["n0"] + dn)
+    kw["kw"] = dict(kw["kw"], n_base=n_base, n0=kw["kw"]["n0"] + dn, depth0=depth0)
     kw["hmax"] = hmax
     return kw
 
 
-def run(J, family, n_base, hmax, dn, pts):
-    kw = params(J, family, n_base, hmax, dn)
+def run(J, family, n_base, hmax, dn, pts, depth0=0.2):
+    kw = params(J, family, n_base, hmax, dn, depth0)
     E, t, info = c.run(J, pts=pts, family=family, **kw)
     return E, t, info
 
@@ -56,7 +56,7 @@ if __name__ == "__main__":
         import bempp_cl.api as bempp
         b.K = m.K
         d = np.load(f"cube_wavenumber_k{S:g}.npz")
-        ref = d["dense_E10"] if "dense_E10" in d else d["dense_E9"]
+        ref = d["dense_E10"] if "dense_E10" in d else d["dense_E8"]
         rows = []
         for reg, sing, ns in ((4, 6, (12, 16, 24, 32, 40)), (6, 8, (16, 24, 32, 40)), (8, 10, (16, 24, 32, 40))):
             bempp.GLOBAL_PARAMETERS.quadrature.regular = reg
@@ -71,18 +71,23 @@ if __name__ == "__main__":
     else:
         dn = int(round(4 * (S - 1)))
         base = lambda J: (4, 0.25 / S) if J <= 5 else (6, 0.15 / S)     # interior panels scaled with the wavelength
+        depth0 = 0.2
+        if S > 2:                                          # beyond two wavelengths the whole base layout follows the wavelength
+            base = lambda J: (int(4 * S), 0.25 / S) if J <= 5 else (int(6 * S), 0.15 / S)
+            depth0 = 0.2 / S
         res = {}
-        JREF = 10 if S <= 2 else 9                         # memory: one class of the reference must stay below about 5 GB
+        JREF = 10 if S <= 2 else 8                         # memory: one class of the reference must stay below about 5 GB
         for fam, Js in (("balanced", range(4, 9)), ("dense", range(5, JREF + 1))):
             for J in Js:
-                E, t, info = run(J, fam, *base(J), dn, pts)
+                E, t, info = run(J, fam, *base(J), dn, pts, depth0)
                 res[(fam, J)] = (E, t, info)
                 print(f"{fam:8s} J = {J:2d}: unknowns/class {max(info['per_class'])} rows {info['rows']} t = {t:5.1f} s optical {info['optical']:.1e} "
                       f"sigma_ext {info['ext']:.6f} |c| {info['coef_norm']:.1f}", flush=True)
-        E, t, info = run(8, "dense", 8, 0.15 / S, dn + 4, pts)
         ref = res[("dense", JREF)][0]
-        print(f"check: dense J = 8 with base 8 and {dn + 4} more modes differs from the family's J = 8 by {rel(E, res[('dense', 8)][0]):.2e} "
-              f"(optical {info['optical']:.1e})")
+        if S <= 2:
+            E, t, info = run(8, "dense", 8, 0.15 / S, dn + 4, pts)
+            print(f"check: dense J = 8 with base 8 and {dn + 4} more modes differs from the family's J = 8 by {rel(E, res[('dense', 8)][0]):.2e} "
+                  f"(optical {info['optical']:.1e})")
         print(f"errors against dense J = {JREF}:")
         for (fam, J), (E, t, info) in res.items():
             print(f"  {fam:8s} J = {J:2d}  t = {t:5.1f} s  {rel(E, ref):.2e}")

@@ -28,8 +28,8 @@ import numpy as np
 from numba import njit, prange
 
 LMOM = 4          # levels 0..3 use moments (panel widths 2, 1, 0.5, 0.25 in u)
-PM = 12           # nodes of a moment panel (20 gives the same cube fields to 1e-8)
-NG = 8            # Gauss nodes of a deeper panel (10: the same to 1e-8)
+PM = 12           # nodes of a moment panel for a line of one wavelength (20 gives the same cube fields to 1e-8)
+NG = 8            # Gauss nodes of a deeper panel, likewise (10: the same to 1e-8)
 ALPHA_M = 1.0     # accept a moment panel if its length <= ALPHA_M * distance
 ALPHA_G = 1.0     # the same for Gauss panels
 LHARD = 40        # absolute depth limit of the descent
@@ -50,10 +50,22 @@ def _lagrange(tn, t):
     return L
 
 
-def build_tree(lam, d, n, H, ltab):
+def nodes(k, H):
+    """Nodes per panel (moment panels, Gauss panels) for wavenumber k and
+    lines of length up to 2 H. A panel is accepted when its length is at most
+    its distance from the target, so the kernel phase varies along the coarsest
+    panels in proportion to k H, and the rule must grow with it: 12 / 8 nodes
+    are converged (1e-8 in the cube fields) at one wavelength, but give an
+    error of 5e-3 at three wavelengths, where 20 / 10 are needed."""
+    s = max(0.0, k * 2 * H / (2 * np.pi) - 1.0)
+    return int(np.ceil(PM + 8 * s)), int(np.ceil(NG + 2 * s))
+
+
+def build_tree(lam, d, n, H, ltab, k=2 * np.pi):
     """Node positions t, weights W (nodes, n) and panel table of one line
     parametrisation. Panels are stored level by level (heap order)."""
-    key = (round(lam, 12), round(d, 15), n, ltab)
+    PM, NG = nodes(k, H)
+    key = (round(lam, 12), round(d, 15), n, ltab, PM, NG)
     if key in _TREES:
         return _TREES[key]
     leg = np.polynomial.legendre
@@ -301,7 +313,7 @@ def tree_add(x, T, refl, ax, b, c, pos, lam, d, n, k, H, A, cmap_e, cmap_m, sgn,
     (1, nc, 3) row vectors."""
     pos = np.ascontiguousarray(np.atleast_2d(pos), dtype=float)
     ltab = _ltab(lam, d)
-    tq, W, off, tlo, thi, g, gw = build_tree(lam, d, n, H, ltab)
+    tq, W, off, tlo, thi, g, gw = build_tree(lam, d, n, H, ltab, k)
     do_e, do_m = cmap_e is not None, cmap_m is not None
     one = np.ones((1, pos.shape[0], 3))
     return _tree_kernel(np.ascontiguousarray(x), np.ascontiguousarray(T), refl, ax, b, c, pos,
@@ -318,7 +330,7 @@ def tree_block(x, T, ax, b, c, pos, lam, d, n, k, H, rot=None, we=None, wm=None)
     (M, nc, slots * n, 3) or None."""
     pos = np.ascontiguousarray(np.atleast_2d(pos), dtype=float)
     ltab = _ltab(lam, d)
-    tq, W, off, tlo, thi, g, gw = build_tree(lam, d, n, H, ltab)
+    tq, W, off, tlo, thi, g, gw = build_tree(lam, d, n, H, ltab, k)
     Tm = np.eye(3)[None] if T is None else np.ascontiguousarray(T)
     nc = Tm.shape[1]
     do_e, do_m = we is not None, wm is not None
