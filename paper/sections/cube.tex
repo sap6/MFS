@@ -9,25 +9,25 @@ The layout has four parts (\autoref{fig:cubelayout}).
 
 \emph{Base points.} A grid of $n_b\times n_b$ electric dipoles on each face of the inner cube at depth $0.2$ below the faces represents the smooth part of the field.
 
-\emph{Edge lines.} For each edge we choose depths that decrease geometrically from $0.2$ to the deepest depth $d_J$,
+\emph{Edge lines.} For each edge we choose depths that decrease geometrically,
 \begin{equation}
-  d_j = 0.2\,q^{\,j}, \qquad j = 0,1,\dots, \qquad d_j\ge d_J = 0.2\cdot 2^{-J},
+  d = 0.2\,q^{\,j}, \qquad j = 0,1,\dots, \qquad \text{down to } d_J = 0.2\cdot 2^{-J},
   \label{eq:depths}
 \end{equation}
-and place at each depth a line parallel to the edge, on the bisector plane, at distance $d_j$ from the edge. We call $J$ the level of the layout. We use two ratios: $q = 1/2$, which gives one line for each octave of depth, and $q = 2^{-1/2}$, which gives two. In two dimensions a lightning solver would place one point source at each depth \cite{gopal2019siam,ginn2023}. In three dimensions a row of point sources along the line does not work: at depth $d_j$ the points would have to be spaced by about $d_j$, which requires $1/d_j$ of them. We therefore let each line carry a continuous dipole density. With $t\in[-(\tfrac12-d_j),\tfrac12-d_j]$ the coordinate along the line, we introduce the stretched variable
+and place at each depth a line parallel to the edge, on the bisector plane, at distance $d$ from the edge. We call $J$ the level of the layout and $d_J$ its deepest depth. We use two ratios: $q = 1/2$, which gives one line for each octave of depth, and $q = 2^{-1/2}$, which gives two. In two dimensions a lightning solver would place one point source at each depth \cite{gopal2019siam,ginn2023}. In three dimensions a row of point sources along the line does not work: at depth $d$ the points would have to be spaced by about $d$, which requires $1/d$ of them. We therefore let each line carry a continuous dipole density. With $t\in[-(\tfrac12-d),\tfrac12-d]$ the coordinate along the line at depth $d$, we introduce the stretched variable
 \begin{equation}
-  u(t) = \frac{1}{\lambda_j}\log\frac{\tfrac12+t}{\tfrac12-t}, \qquad \lambda_j = \log\frac{1-d_j}{d_j},
+  u(t) = \frac{1}{\lambda}\log\frac{\tfrac12+t}{\tfrac12-t}, \qquad \lambda = \log\frac{1-d}{d},
 \end{equation}
-which maps the line to $[-1,1]$ and resolves every scale between $d_j$ and the length of the edge near both vertices. The density is a vector polynomial in $u$,
+which maps the line to $[-1,1]$ and resolves every scale between $d$ and the length of the edge near both vertices. The density is a vector polynomial in $u$,
 \begin{equation}
-  \ba(t) = \sum_{l=0}^{n_j-1}\ba_l\,P_l\bigl(u(t)\bigr), \qquad n_j = n_0 + \lceil 2\log(1/d_j)\rceil,
+  \ba(t) = \sum_{l=0}^{n-1}\ba_l\,P_l\bigl(u(t)\bigr), \qquad n = n_0 + \lceil 2\log(1/d)\rceil,
   \label{eq:modes}
 \end{equation}
 with Legendre polynomials $P_l$ and unknown coefficients $\ba_l\in\mathbb{C}^3$. Each line exists twice, once with electric and once with magnetic dipoles. A line at depth $10^{-3}$ thus costs about $20$ modes, where a row of points would need a thousand. The line integrals are evaluated by the quadrature of \ref{app:lines}.
 
-\emph{Vertex points.} On the body diagonal through each vertex we place an electric and a magnetic point dipole at the distances $d_j$ from the vertex.
+\emph{Vertex points.} On the body diagonal through each vertex we place an electric and a magnetic point dipole at each of the same distances $d$ from the vertex.
 
-\emph{Tails.} The deepest free line lies at the depth $d_J$. The current sheet of \autoref{thm:skeleton} continues below this depth, and cutting it off leaves an error that decays only like $d_J^{0.55}$ in our experiments. We therefore continue the lines at the depths $d_J2^{-i}$, $i = 1,\dots,9$. These lines are not free. They carry the modes of the line at $d_J$, multiplied by the fixed weights $2^{-ie}$, and the remainder of the geometric series below the last depth is added to the last line. The exponent $e$ depends on the component of the current. \autoref{tab:edgeexp} lists the four exponents, which follow from the edge expansion of the field (\ref{app:edge}). The tail of an edge adds two components of $n_J$ modes for each kind of dipole, and no unknowns for the component normal to the bisector plane, which vanishes. The vertex points are continued in the same way along the diagonal, with the exponents $e = \nu+2 = 2.454$ for the electric and $e = \tau+2 = 2.840$ for the magnetic dipoles (\ref{app:cone}).
+\emph{Tails.} The deepest free line lies at the depth $d_J$. The current sheet of \autoref{thm:skeleton} continues below this depth, and cutting it off leaves an error that decays only like $d_J^{0.55}$ in our experiments. We therefore continue the lines at the depths $d_J2^{-i}$, $i = 1,\dots,9$. These lines are not free. They carry the modes of the line at $d_J$, multiplied by the fixed weights $2^{-ie}$, and the remainder of the geometric series below the last depth is added to the last line. The exponent $e$ depends on the component of the current. \autoref{tab:edgeexp} lists the four exponents, which follow from the edge expansion of the field (\ref{app:edge}). The tail of an edge adds two components of $n$ modes for each kind of dipole, with $n$ the number of modes of the deepest free line, and no unknowns for the component normal to the bisector plane, which vanishes. The vertex points are continued in the same way along the diagonal, with the exponents $e = \nu+2 = 2.454$ for the electric and $e = \tau+2 = 2.840$ for the magnetic dipoles (\ref{app:cone}).
 
 \begin{table}[htbp]
   \centering
@@ -48,7 +48,7 @@ with Legendre polynomials $P_l$ and unknown coefficients $\ba_l\in\mathbb{C}^3$.
 \begin{figure}[htbp]
   \centering
   \includegraphics[width=0.9\textwidth]{fig_cube_layout.pdf}
-  \caption{Source layout of the cube. (a) Cross-section through the middle of an edge: the lines, seen end on, sit on the bisector plane at the depths $d_j$; base points lie on an inner cube; collocation nodes on the two faces are graded towards the edge. (b) The depths on a logarithmic scale: free lines down to $d_J$, then the tail with fixed weights. (c) The stretched variable $u$ along a line, which clusters the modes towards the two vertices as the depth decreases.}
+  \caption{Source layout of the cube. (a) Cross-section through the middle of an edge: the lines, seen end on, sit on the bisector plane at the depths \eqref{eq:depths}; base points lie on an inner cube; collocation nodes on the two faces are graded towards the edge. (b) The depths on a logarithmic scale: free lines down to $d_J$, then the tail with fixed weights. (c) The stretched variable $u$ along a line, which clusters the modes towards the two vertices as the depth decreases.}
   \label{fig:cubelayout}
 \end{figure}
 

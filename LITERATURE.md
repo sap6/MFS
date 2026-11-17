@@ -413,3 +413,35 @@ Added and verified against Crossref in this pass:
     Kouroublakis, Tsitsas, Leviatan. arXiv:2607.28558 (2026)
     Lundberg. arXiv:1009.5159 (2010)
     Tran. arXiv:1710.06991 (2017)
+
+## 9. Bibliography file of the draft (2026-11-17)
+
+`paper/refs.bib` holds the 52 entries the draft cites. `paper/check_bib.py`
+fetched the Crossref record of every DOI and compared titles; all agree
+after these corrections to what had been typed from memory:
+
+    Tabatadze, İşcan, Karaçuha 2025: "On electromagnetic scattering from perfectly conducting parallel square plates and their resonance characteristics using method of auxiliary sources"
+    Millar 1983: "The analytic continuation of solutions of the generalized axially symmetric Helmholtz equation"   (so it is about exactly the torus question; still not read)
+    Woo et al. 1993: "EM programmer's notebook - benchmark radar targets for the validation of computational electromagnetics programs"
+    Kelley et al. 2020: "Rye Canyon radar cross-section measurements of benchmark almond targets [EM programmer's notebook]"
+    Ye, Hu, Xu, Yan 2023: "A meshless regularized method of fundamental solution for electromagnetic scattering problems of three-dimensional perfect electric conductor targets" (given names Lv, ShengBo, GuangZhao, TingTing)
+
+arXiv records (`paper/check_arxiv.py`): Ginn and Trefethen, "Lightning
+Helmholtz solver" (2310.01665); Kong and Shen, "Lightning algorithm for
+inhomogeneous modified Helmholtz equations on cornered domains and their
+applications" (2610.26540); Weed, Wu, Huang, Cho, "Method of fundamental
+solutions for Maxwell's equations in bi-periodic multilayered media"
+(2605.15527); Cai, Bagge, Martinsson, "A stable and fast method for solving
+multibody scattering problems via the method of fundamental solutions"
+(2603.19113).
+
+New in this session: Björck, "Stability analysis of the method of seminormal
+equations for linear least squares problems", Linear Algebra Appl. 88-89
+(1987) 31-48, 10.1016/0024-3795(87)90101-7 (Crossref record matched), for the
+solver used on the cube and the almond.
+
+Without a verifiable record, and marked so in the file: Young and Ruan 2005
+(not in Crossref); Karkashadze and Zaridze's MAS review (author copy at
+lae.tsu.ge; year and publisher unknown); the books of Doicu, Eremin and
+Wriedt, Kirsch and Hettlich, Colton and Kress, Golub and Van Loan (no DOI
+entered; editions as cited in the thesis).
