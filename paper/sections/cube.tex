@@ -69,7 +69,7 @@ The cube and the layout are symmetric under the three mirrors $x\to-x$, $y\to-y$
 
 \subsection{Results}
 
-\autoref{tab:cube} lists the results for the standard wave. The reference is the MFS field with $J = 9$. The error falls from $1.3\times10^{-2}$ at $J = 3$ to $1.1\times10^{-4}$ at $J = 8$, by a factor between $2.3$ and $2.9$ per level, and the optical mismatch falls with it to $4\times10^{-5}$ at $J = 9$. The run with $J = 8$ takes $22$\,s.
+\autoref{tab:cube} lists the results for the standard wave. The reference is the MFS field with $J = 9$. The error falls from $1.3\times10^{-2}$ at $J = 3$ to $1.1\times10^{-4}$ at $J = 8$, by a factor between $2.3$ and $2.9$ per level, and the optical mismatch falls with it to $4\times10^{-5}$ at $J = 9$. The run with $J = 8$ takes $9.4$\,s.
 
 \begin{table}[htbp]
   \centering
@@ -79,7 +79,7 @@ The cube and the layout are symmetric under the three mirrors $x\to-x$, $y\to-y$
     \toprule
     $J$ & Unknowns & Equations & Time [s] & Error & Optical mismatch \\
     \midrule
-\input{tables/cube_mfs}
+\tablebody{cube_mfs}
     \bottomrule
   \end{tabular}
 \end{table}
@@ -96,7 +96,7 @@ The cube and the layout are symmetric under the three mirrors $x\to-x$, $y\to-y$
 
 \autoref{tab:cubebem} lists the boundary element results, and \autoref{fig:costcube} shows the error of all methods against the wall time. All errors are differences from the MFS run with $J = 9$.
 
-On quasi-uniform meshes Bempp converges slowly, because the edge singularity limits the rate: $13302$ unknowns give an error of $1.9\times10^{-3}$ in $58$\,s. Grading the mesh towards the edges helps considerably. With the default quadrature the graded meshes stall near $8\times10^{-4}$, and with the orders $6$ and $8$ they reach $3.0\times10^{-4}$ with $10368$ unknowns in $63$\,s. The most accurate boundary element run, with the orders $8$ and $10$ and $14112$ unknowns, takes $182$\,s for $1.8\times10^{-4}$; larger dense matrices did not fit into the memory available to the assembly.
+On quasi-uniform meshes Bempp converges slowly, because the edge singularity limits the rate: $13302$ unknowns give an error of $1.9\times10^{-3}$ in $49$\,s. Grading the mesh towards the edges helps considerably. With the default quadrature the graded meshes stall near $8\times10^{-4}$. With the orders $6$ and $8$ they reach $3.0\times10^{-4}$ with $10368$ unknowns in $56$\,s. The most accurate boundary element run, with the orders $8$ and $10$ and $14112$ unknowns, takes $166$\,s for $1.8\times10^{-4}$. Larger dense matrices did not fit into the memory available to the assembly.
 
 \begin{table}[htbp]
   \centering
@@ -106,7 +106,7 @@ On quasi-uniform meshes Bempp converges slowly, because the edge singularity lim
     \toprule
     Mesh & Quadrature & Unknowns & Time [s] & Error \\
     \midrule
-\input{tables/cube_bem}
+\tablebody{cube_bem}
     \bottomrule
   \end{tabular}
 \end{table}
@@ -118,7 +118,9 @@ On quasi-uniform meshes Bempp converges slowly, because the edge singularity lim
   \label{fig:costcube}
 \end{figure}
 
-Compared with the best boundary element result at each accuracy, the MFS is level at $2\times10^{-3}$ ($3.9$\,s against $6$\,s for $1.5\times10^{-3}$), $1.3$ times faster at $10^{-3}$ ($7.6$\,s against $10$\,s), and about four times faster at $3\times10^{-4}$ ($16$\,s against $63$\,s). At $1.8\times10^{-4}$, the smallest error that Bempp reached, the MFS needs at most $22$\,s against $182$\,s. Three qualifications apply. First, the errors of the MFS are measured against its own finest run, with the uncertainty of $5\times10^{-5}$ described above. Second, the MFS uses the three mirror planes of the cube and Bempp uses none; a boundary element code that used them would need an eighth of the assembly work, which is most of its time at these sizes. Third, the MFS is not economical in unknowns. At $J = 6$ the eight classes together have about $10^4$ unknowns for an error of $9\times10^{-4}$, which the graded boundary element mesh reaches with fewer than $5000$. The advantage of the MFS on the cube is its rate of convergence, a factor of $2.3$ to $2.9$ in the error for $20$ to $45\%$ more unknowns per level, and not its cost at moderate accuracy.
+We compare the MFS with the best boundary element result at each accuracy. Above an error of $2\times10^{-3}$ the two are level: Bempp needs $2.8$\,s for $1.5\times10^{-3}$ and the MFS $2.4$\,s for $2.0\times10^{-3}$. At $10^{-3}$ the MFS is $1.6$ times faster ($3.9$\,s against $6.1$\,s). At $3\times10^{-4}$ it is between four and eight times faster ($7.1$\,s against $30$\,s for $3.8\times10^{-4}$ and $56$\,s for $3.0\times10^{-4}$). The smallest error that Bempp reached, $1.8\times10^{-4}$ in $166$\,s, the MFS passes in $9.4$\,s.
+
+Three qualifications apply. First, the errors of the MFS are measured against its own finest run, with the uncertainty of $5\times10^{-5}$ described above. Second, the MFS uses the three mirror planes of the cube and Bempp uses none. A boundary element code that used them would need an eighth of the assembly work, which is most of its time at these sizes. Third, the MFS is not economical in unknowns. At $J = 6$ the eight classes together have about $10^4$ unknowns for an error of $9\times10^{-4}$, which the graded boundary element mesh reaches with fewer than $5000$. What the MFS offers on the cube is its rate of convergence: the error falls by a factor of $2.3$ to $2.9$ per level, for $20$ to $45\%$ more unknowns.
 
 \subsection{A general incident wave}
 
@@ -126,7 +128,7 @@ Compared with the best boundary element result at each accuracy, the MFS is leve
 
 A wave from a general direction excites all eight classes. We tested the wave that arrives from the polar angle $60^\circ$ and the azimuth $25^\circ$, with its polarisation rotated by $35^\circ$ from the plane of incidence. The assembly is shared between the classes, and eight factorisations are needed instead of two. \autoref{tab:cubeoblique} compares the MFS with Bempp on graded meshes, both against the MFS run with $J = 9$ for this wave.
 
-The convergence of the MFS is the same as for the standard wave, from $6.1\times10^{-3}$ at $J = 4$ to $1.1\times10^{-4}$ at $J = 8$. The cost is between two and three times that of the standard wave. For this wave the boundary element method is ahead at moderate accuracy: it reaches $1.4\times10^{-3}$ in $9$\,s and $7.7\times10^{-4}$ in $18$\,s, where the MFS needs $20$\,s for $1.0\times10^{-3}$. The two are level near $4\times10^{-4}$ ($44$\,s against $62$\,s), and the MFS reaches $1.1\times10^{-4}$ in $62$\,s, which Bempp did not reach.
+The convergence of the MFS is the same as for the standard wave, from $6.1\times10^{-3}$ at $J = 4$ to $1.1\times10^{-4}$ at $J = 8$. The cost is $1.4$ to $1.9$ times that of the standard wave. Above an error of $2\times10^{-3}$ Bempp is slightly ahead ($2.7$\,s for $2.1\times10^{-3}$ against $3.4$\,s for $2.7\times10^{-3}$). At $10^{-3}$ the MFS needs $6.1$\,s, where Bempp needs $14$\,s for $1.2\times10^{-3}$ and $15$\,s for $7.7\times10^{-4}$. At $3.9\times10^{-4}$ the MFS takes $12$\,s against $57$\,s, and it reaches $1.1\times10^{-4}$ in $18$\,s.
 
 \begin{table}[htbp]
   \centering
@@ -136,7 +138,7 @@ The convergence of the MFS is the same as for the standard wave, from $6.1\times
     \toprule
     Method & Unknowns & Time [s] & Error \\
     \midrule
-\input{tables/cube_oblique}
+\tablebody{cube_oblique}
     \bottomrule
   \end{tabular}
 \end{table}

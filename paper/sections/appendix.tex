@@ -88,4 +88,4 @@ The quadrature orders of the library are $4$ for regular and $6$ for singular in
 
 The graded meshes of the cube use a tensor grid on each face with the nodes $\pm\tfrac12\bigl(1-(1-|\xi|)^{g}\bigr)$, $\xi$ equally spaced in $[-1,1]$, and each rectangle is cut into two triangles. The grading exponent $g = 2$ was the best of the values $1$, $1.5$, $2$, $2.5$ and $3$ that we tried.
 
-We did not use matrix compression, higher-order elements or a second boundary element code. At the sizes used here, with at most $14112$ unknowns, dense assembly takes between half and nine tenths of the total time and the factorisation the rest. The OpenCL driver limits a single matrix to $4$\,GB on our machine, which is about $16000$ unknowns in double precision.
+We did not use matrix compression, higher-order elements or a second boundary element code. At the sizes used here, with at most $14112$ unknowns, dense assembly takes between $40\%$ and $90\%$ of the total time and the factorisation the rest. The OpenCL driver limits a single matrix to $4$\,GB on our machine, which is $16384$ unknowns in double precision.

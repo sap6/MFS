@@ -31,11 +31,11 @@ We have not proved \eqref{eq:torusradius}, and we present it as a conjecture sup
 
 \subsection{Results}
 
-We take $a_s = 0.5\,a$, which satisfies \eqref{eq:torusradius} for $a/R = 0.5$. \autoref{tab:torus} lists the error of the scattered field against the finest MFS run, which has $40320$ unknowns, a boundary residual of $1.1\times10^{-10}$ and an optical mismatch of $9\times10^{-14}$. The error falls from $5.0\times10^{-3}$ with $1440$ unknowns to $7.3\times10^{-12}$ with $21120$ unknowns, and the finest of these runs takes $7.0$\,s. For a wave arriving obliquely, from the polar angle $60^\circ$ and the azimuth $25^\circ$, the boundary residual with $21120$ unknowns is $2.6\times10^{-10}$.
+We take $a_s = 0.5\,a$, which satisfies \eqref{eq:torusradius} for $a/R = 0.5$. \autoref{tab:torus} lists the error of the scattered field against the finest MFS run, which has $40320$ unknowns, a boundary residual of $1.1\times10^{-10}$ and an optical mismatch of $9\times10^{-14}$. The error falls from $5.0\times10^{-3}$ with $1440$ unknowns to $7.3\times10^{-12}$ with $21120$ unknowns, and the finest of these runs takes $6.3$\,s. For a wave arriving obliquely, from the polar angle $60^\circ$ and the azimuth $25^\circ$, the boundary residual with $21120$ unknowns is $2.6\times10^{-10}$.
 
-There is no exact solution to compare with. Bempp with $9600$ unknowns is $8.2\times10^{-3}$ away from the MFS field after $27$\,s. Its extinction cross-section approaches the MFS value $11.7526$ like the reciprocal of the number of unknowns, and extrapolation gives $11.7533$, a relative difference of $7\times10^{-5}$.
+There is no exact solution to compare with. Bempp with $9600$ unknowns is $8.2\times10^{-3}$ away from the MFS field after $21$\,s. Its extinction cross-section approaches the MFS value $11.7526$ like the reciprocal of the number of unknowns, and extrapolation gives $11.7533$, a relative difference of $7\times10^{-5}$.
 
-The MFS uses the rotational symmetry of the body and Bempp does not. To separate the two effects, \autoref{tab:torus} also lists the MFS with the full matrix. Without the symmetry the MFS needs $22$\,s for an error of $1.1\times10^{-4}$. A boundary element code for bodies of revolution would gain from the symmetry in the same way.
+The MFS uses the rotational symmetry of the body and Bempp does not. To separate the two effects, \autoref{tab:torus} also lists the MFS with the full matrix. Without the symmetry the MFS needs $19$\,s for an error of $1.1\times10^{-4}$. A boundary element code for bodies of revolution would gain from the symmetry in the same way.
 
 \begin{table}[htbp]
   \centering
@@ -45,7 +45,7 @@ The MFS uses the rotational symmetry of the body and Bempp does not. To separate
     \toprule
     Method & Unknowns & Time [s] & Error \\
     \midrule
-\input{tables/torus}
+\tablebody{torus}
     \bottomrule
   \end{tabular}
 \end{table}

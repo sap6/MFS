@@ -27,7 +27,7 @@ We repeated the experiment with $R = 0.5$ for $k = 4\pi$, $6\pi$ and $8\pi$, for
 \subsection{Cost}
 \label{sec:spherecost}
 
-\autoref{tab:sphere} and \autoref{fig:costsphere} compare the MFS with Bempp. With $1200$ unknowns the MFS reaches an error of $2.0\times10^{-9}$ in $0.34$\,s. Bempp reaches $3.7\times10^{-3}$ with $9750$ unknowns in $26$\,s. Its error halves when the number of unknowns doubles, which is the rate of a lowest-order method on a surface approximated by flat triangles. Neither method uses the symmetry of the sphere.
+\autoref{tab:sphere} and \autoref{fig:costsphere} compare the MFS with Bempp. With $1200$ unknowns the MFS reaches an error of $2.0\times10^{-9}$ in $0.29$\,s. Bempp reaches $3.7\times10^{-3}$ with $9750$ unknowns in $19$\,s. Its error halves when the number of unknowns doubles, which is the rate of a lowest-order method on a surface approximated by flat triangles. Neither method uses the symmetry of the sphere.
 
 The comparison is between a spectrally accurate method and a low-order one, and on a smooth body the outcome is not surprising. A boundary element method of high order on curved elements would converge much faster than Bempp does here. We include the sphere because it calibrates both codes against an exact solution.
 
@@ -39,7 +39,7 @@ The comparison is between a spectrally accurate method and a low-order one, and 
     \toprule
     Method & Unknowns & Time [s] & Error \\
     \midrule
-\input{tables/sphere}
+\tablebody{sphere}
     \bottomrule
   \end{tabular}
 \end{table}

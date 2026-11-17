@@ -113,21 +113,20 @@ P.~D. Brubeck, L.~N. Trefethen, Lightning {S}tokes solver, SIAM J. Sci. Comput.
   {\path{doi:10.1137/21M1408579}}.
 
 \bibitem{kong2026}
-D.~Kong, J.~Shen, Lightning method for the modified {H}elmholtz equation,
-  arXiv:2610.26540, title to be checked against the arXiv record (2026).
+D.~Kong, J.~Shen, Lightning algorithm for inhomogeneous modified {H}elmholtz
+  equations on cornered domains and their applications, arXiv:2610.26540
+  (2026).
 
 \bibitem{ye2023}
-X.~Ye, J.~Hu, Y.~Xu, S.~Yan, Regularized method of fundamental solutions for
-  three-dimensional perfectly conducting targets, Eng. Anal. Bound. Elem. 155
-  (2023) 401--406, title and initials to be checked against the publisher's
-  record.
+L.~Ye, S.~Hu, G.~Xu, T.~Yan, A meshless regularized method of fundamental
+  solution for electromagnetic scattering problems of three-dimensional perfect
+  electric conductor targets, Eng. Anal. Bound. Elem. 155 (2023) 401--406.
 \newblock \href {https://doi.org/10.1016/j.enganabound.2023.05.050}
   {\path{doi:10.1016/j.enganabound.2023.05.050}}.
 
 \bibitem{weed2026}
-J.~Weed, B.~Wu, J.~Huang, M.~H. Cho, The method of fundamental solutions for
-  {M}axwell transmission problems in bi-periodic layered media,
-  arXiv:2605.15527, title and initials to be checked against the arXiv record
+J.~Weed, B.~Wu, J.~Huang, M.~H. Cho, Method of fundamental solutions for
+  {M}axwell's equations in bi-periodic multilayered media, arXiv:2605.15527
   (2026).
 
 \bibitem{kangro2012}
@@ -141,9 +140,9 @@ S.~Bandyopadhyay, Using the method of fundamental solutions to solve
   {M}axwell's equations, {MSci} thesis, University College London (2025).
 
 \bibitem{woo1993}
-A.~C. Woo, H.~T.~G. Wang, M.~J. Schuh, M.~L. Sanders, Benchmark radar targets
-  for the validation of computational electromagnetics programs, IEEE Antennas
-  Propag. Mag. 35~(1) (1993) 84--89.
+A.~C. Woo, H.~T.~G. Wang, M.~J. Schuh, M.~L. Sanders, {EM} programmer's
+  notebook: benchmark radar targets for the validation of computational
+  electromagnetics programs, IEEE Antennas Propag. Mag. 35~(1) (1993) 84--89.
 \newblock \href {https://doi.org/10.1109/74.210840}
   {\path{doi:10.1109/74.210840}}.
 
@@ -161,9 +160,9 @@ R.~De~Smedt, J.~G. Van~Bladel, Field singularities at the tip of a metallic
   {\path{doi:10.1109/TAP.1986.1143916}}.
 
 \bibitem{kelley2020}
-J.~T. Kelley, D.~A. Chamulak, C.~C. Courtney, A.~E. Yilmaz, Rye {C}anyon {RCS}
-  measurements of benchmark almond targets, IEEE Antennas Propag. Mag. 62~(1)
-  (2020) 96--106, title to be checked against the publisher's record.
+J.~T. Kelley, D.~A. Chamulak, C.~C. Courtney, A.~E. Yilmaz, {R}ye {C}anyon
+  radar cross-section measurements of benchmark almond targets [{EM}
+  programmer's notebook], IEEE Antennas Propag. Mag. 62~(1) (2020) 96--106.
 \newblock \href {https://doi.org/10.1109/MAP.2019.2955702}
   {\path{doi:10.1109/MAP.2019.2955702}}.
 
@@ -184,6 +183,12 @@ A.~Kirsch, F.~Hettlich, The Mathematical Theory of Time-Harmonic {M}axwell's
 \bibitem{golub2013}
 G.~H. Golub, C.~F. Van~Loan, Matrix Computations, 4th Edition, Johns Hopkins
   University Press, 2013.
+
+\bibitem{bjorck1987}
+{\AA}.~Bj{\"o}rck, Stability analysis of the method of seminormal equations for
+  linear least squares problems, Linear Algebra Appl. 88--89 (1987) 31--48.
+\newblock \href {https://doi.org/10.1016/0024-3795(87)90101-7}
+  {\path{doi:10.1016/0024-3795(87)90101-7}}.
 
 \bibitem{mie1908}
 G.~Mie, Beitr{\"a}ge zur {O}ptik tr{\"u}ber {M}edien, speziell kolloidaler
@@ -211,9 +216,9 @@ S.~M. Rao, D.~R. Wilton, A.~W. Glisson, Electromagnetic scattering by surfaces
   {\path{doi:10.1109/TAP.1982.1142818}}.
 
 \bibitem{cai2026}
-Y.~Cai, J.~Bagge, P.~G. Martinsson, Scattering matrices for multiple scattering
-  by the method of fundamental solutions, arXiv:2603.19113, title and initials
-  to be checked against the arXiv record (2026).
+Y.~Cai, J.~Bagge, P.-G. Martinsson, A stable and fast method for solving
+  multibody scattering problems via the method of fundamental solutions,
+  arXiv:2603.19113 (2026).
 
 \bibitem{karkashadze1990s}
 D.~Karkashadze, R.~Zaridze, The method of auxiliary sources in applied
@@ -264,9 +269,9 @@ G.~Fichera, Asymptotic behaviour of the electric field and density of the
   {\path{doi:10.1070/RM1975v030n03ABEH001413}}.
 
 \bibitem{millar1983}
-R.~F. Millar, The analytic continuation of solutions to elliptic boundary value
-  problems in two independent variables, Arch. Ration. Mech. Anal. 81 (1983)
-  349--372, not yet read; title to be checked.
+R.~F. Millar, The analytic continuation of solutions of the generalized axially
+  symmetric {H}elmholtz equation, Arch. Ration. Mech. Anal. 81 (1983) 349--372,
+  not yet read by us.
 \newblock \href {https://doi.org/10.1007/BF00250860}
   {\path{doi:10.1007/BF00250860}}.
 
