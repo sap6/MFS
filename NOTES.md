@@ -687,6 +687,13 @@ towards the MFS field.
     near the deepest depth matters and the uniform ratios stay. Three
     collocation nodes per panel or four made no difference for the tapered
     layouts.
+    Mixed layouts at J = 9 (two per octave only above, or only below, a
+    depth; error against the reference): dense above 0.2 * 2^-6 (16
+    depths, 35 s): 3.8e-5; above 2^-4 (14 depths, 31 s): 5.6e-5; dense only
+    below 2^-4 (15 depths): 7.7e-5; only below 2^-6 (13 depths): 9.3e-5;
+    uniform two per octave (19 depths, 45 s): 3.5e-5. So the spacing matters
+    at all depths, a little more at the shallow ones, and a mixed layout
+    saves about 20%: not worth a third family.
 
 ## 3. Current best commands
 
