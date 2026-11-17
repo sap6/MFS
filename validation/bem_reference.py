@@ -10,6 +10,7 @@ import time
 
 import bempp_cl.api as bempp
 import numpy as np
+import scipy.linalg as sla
 
 import mie
 
@@ -17,21 +18,39 @@ D = np.array([0.0, 0.0, -1.0])
 P = np.array([0.0, 1.0, 0.0])
 
 
-def scattered_field(grid, k, points):
-    """E_sc at points (P,3) for E_inc = P exp(i k D.x), via the EFIE."""
+def efie_solve(grid, k, d, p):
+    """EFIE with RWG trial and SNC test functions for E_inc = p exp(i k d.x),
+    solved by dense LU in place. Returns the surface current, its space and the
+    times (assembly, LU). Bempp assembles with OpenCL when pyopencl and a CPU
+    driver are installed and with Numba otherwise (about 20 times slower)."""
     div = bempp.function_space(grid, "RWG", 0)
     curl = bempp.function_space(grid, "SNC", 0)
+    t0 = time.time()
     efie = bempp.operators.boundary.maxwell.electric_field(div, div, curl, k)
+    A = np.asarray(efie.weak_form().to_dense())
 
     @bempp.complex_callable
     def tangential_trace(x, n, domain_index, result):
-        inc = P * np.exp(1j * k * (x[0] * D[0] + x[1] * D[1] + x[2] * D[2]))
+        inc = p * np.exp(1j * k * (x[0] * d[0] + x[1] * d[1] + x[2] * d[2]))
         result[:] = np.cross(inc, n)
 
-    rhs = bempp.GridFunction(div, fun=tangential_trace, dual_space=curl)
-    lam = bempp.linalg.lu(efie, rhs)
+    rhs = bempp.GridFunction(div, fun=tangential_trace, dual_space=curl).projections(curl)
+    t1 = time.time()
+    lu = sla.lu_factor(A, overwrite_a=True, check_finite=False)
+    lam = bempp.GridFunction(div, coefficients=sla.lu_solve(lu, rhs, check_finite=False))
+    return lam, div, (t1 - t0, time.time() - t1)
+
+
+def scattered_field(grid, k, points, times=None):
+    """E_sc at points (P,3) for E_inc = P exp(i k D.x), via the EFIE. If a
+    list is passed as `times`, (assembly, LU, evaluation) is appended to it."""
+    lam, div, (ta, tl) = efie_solve(grid, k, D, P)
+    t0 = time.time()
     pot = bempp.operators.potential.maxwell.electric_field(div, points.T, k)
-    return -(pot * lam).T, div.global_dof_count
+    E = -(pot * lam).T
+    if times is not None:
+        times.append((ta, tl, time.time() - t0))
+    return E, div.global_dof_count
 
 
 def test_points(n=400, r=2.0):

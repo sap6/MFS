@@ -37,6 +37,8 @@ import time
 import numpy as np
 from scipy.linalg import lstsq, qr, solve_triangular
 
+from lsq import qr_solve
+
 import mie
 from pec_sphere_convergence import dyadic, fibonacci_sphere
 
@@ -70,6 +72,13 @@ try:
     FAST = True
 except ImportError:                       # fall back to the NumPy implementation
     FAST = False
+try:                                      # shared-node assembly (line_tree.py); MFS_LINES=old selects line_kernel
+    import os
+    from line_tree import tree_block
+    TREE = FAST and os.environ.get("MFS_LINES", "tree") != "old"
+except ImportError:
+    TREE = False
+_W1 = np.ones((1, 1, 3))
 
 
 def dyadic_pairs(dvec):
@@ -197,6 +206,11 @@ class Line:
         """(M, nc, n_modes, 3) field block; nc = 2 with tangents T, else 3.
         Targets are grouped by how close they are to the line, so that only
         nearby targets pay for the deep dyadic refinement."""
+        if TREE:
+            mag = self.kernel is magnetic_pairs
+            Be, Bm = tree_block(x, T, self.ax, self.b, self.c, (self.yb, self.yc), self.lam, self.d, self.n, K, H,
+                                we=None if mag else _W1, wm=_W1 if mag else None)
+            return Bm if mag else Be
         if FAST:
             out = np.empty((len(x), 3 if T is None else 2, self.n, 3), complex)
             line_block(np.ascontiguousarray(x), np.ascontiguousarray(T) if T is not None else np.zeros((1, 2, 3)),
@@ -279,6 +293,11 @@ class TailLine:
 
     def block(self, x, T=None):
         b = self.base
+        if TREE and not self.taper:
+            mag = b.kernel is magnetic_pairs
+            Be, Bm = tree_block(x, T, b.ax, b.b, b.c, np.array(self.pos), b.lam, b.d, b.n, K, H, rot=self.rot,
+                                we=None if mag else self.w, wm=self.w if mag else None)
+            return Bm if mag else Be
         ns = self.n // self.nm
         out = np.zeros((len(x), 3 if T is None else 2, self.n, 3), complex)
         tmp = np.empty((len(x), 3 if T is None else 2, self.nm, 3), complex)
@@ -318,6 +337,27 @@ class VertexTail:
         G = self.kernel(x[:, None, :] - self.pts[None, :, :])            # (m, n_tail, 3, 3)
         B = np.einsum("mtbc,te->mebc", G, self.w)
         return np.einsum("mab,mebc->maec", T, B) if T is not None else B.transpose(0, 2, 1, 3)
+
+
+def same_place(l1, l2):
+    """True if l1 is an electric and l2 a magnetic line (or tail) with the
+    same geometry and modes, so that one pass over the kernel serves both."""
+    if type(l1) is not type(l2) or type(l1) not in (Line, TailLine):
+        return False
+    if isinstance(l1, TailLine):
+        if l1.taper or l2.taper or l1.pos != l2.pos:
+            return False
+        l1, l2 = l1.base, l2.base
+    return (l1.kernel is dyadic_pairs and l2.kernel is magnetic_pairs
+            and (l1.ax, l1.yb, l1.yc, l1.d, l1.n) == (l2.ax, l2.yb, l2.yc, l2.d, l2.n))
+
+
+def pair_block(l1, l2, x, T=None):
+    """Blocks of an electric line (or tail) and of its magnetic twin."""
+    if isinstance(l1, TailLine):
+        b = l1.base
+        return tree_block(x, T, b.ax, b.b, b.c, np.array(l1.pos), b.lam, b.d, b.n, K, H, rot=l1.rot, we=l1.w, wm=l2.w)
+    return tree_block(x, T, l1.ax, l1.b, l1.c, (l1.yb, l1.yc), l1.lam, l1.d, l1.n, K, H, we=_W1, wm=_W1)
 
 
 class Sources:
@@ -374,9 +414,18 @@ class Sources:
                 A[sl, :, lo:lo + len(self.mpoints)] = (np.einsum("mab,mnbc->manc", T[sl], G) if T is not None
                                                        else G.transpose(0, 2, 1, 3))
                 lo += len(self.mpoints)
-            for line in self.lines:
-                A[sl, :, lo:lo + line.n] = line.block(x[sl], None if T is None else T[sl])
-                lo += line.n
+            i, Tsl = 0, None if T is None else T[sl]
+            while i < len(self.lines):
+                line = self.lines[i]
+                mate = self.lines[i + 1] if i + 1 < len(self.lines) else None
+                if TREE and mate is not None and same_place(line, mate):
+                    A[sl, :, lo:lo + line.n], A[sl, :, lo + line.n:lo + line.n + mate.n] = pair_block(line, mate, x[sl], Tsl)
+                    lo += line.n + mate.n
+                    i += 2
+                else:
+                    A[sl, :, lo:lo + line.n] = line.block(x[sl], Tsl)
+                    lo += line.n
+                    i += 1
         return A.reshape(len(x) * nc, self.n_unknowns)
 
 
@@ -465,12 +514,7 @@ def solve(src, col_levels, col_p, col_q, beta, cond=1e-12, moments=0, hmax=0.1):
     t1 = time.time()
     # plain QR is about twice as fast as rank-revealing QR; fall back to the
     # latter only if R shows the columns to be numerically dependent
-    Q, R = qr(A, mode="economic", overwrite_a=True)
-    dR = np.abs(np.diag(R))
-    if dR.min() > cond * dR.max():
-        c, rank = solve_triangular(R, Q.conj().T @ b), len(dR)
-    else:
-        c, _, rank, _ = lstsq(Q @ R, b, lapack_driver="gelsy", cond=cond)
+    c, rank = qr_solve(A, b, cond)                      # Householder QR, Q never formed (lsq.py)
     return c / scale, {"rows": len(b), "unknowns": src.n_unknowns, "rank": int(rank),
                        "t_assemble": t1 - t0, "t_solve": time.time() - t1,
                        "coef_norm": float(np.linalg.norm(c))}

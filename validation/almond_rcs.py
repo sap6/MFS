@@ -16,7 +16,7 @@ import sys
 import time
 
 import numpy as np
-from scipy.linalg import qr, solve_triangular
+from lsq import QR
 
 import pec_almond_skeleton as a
 from pec_sphere_convergence import tangent_basis
@@ -58,9 +58,8 @@ def solve_class(k, y, sy, sz, d, p, s_col, ratio=2.5, tail=None, exps=a.TIP_EXPS
     A /= scale
     rhs = -np.einsum("mab,mnb->man", T, class_part(x, k, d, p, sig)) * sw[:, None, None]
     rhs = rhs.reshape(-1, len(d))
-    Q, R = qr(A, mode="economic", overwrite_a=True)
-    c = solve_triangular(R, Q.conj().T @ rhs)
-    res = np.array([np.linalg.norm(Q @ (R @ c) - rhs, axis=0), np.linalg.norm(rhs, axis=0)])   # absolute, per wave
+    c, _, res = QR(A).solve(rhs, residual=True)
+    res = np.array([res, np.linalg.norm(rhs, axis=0)])                                       # absolute, per wave
     c = c / scale[:, None]
     rfar = 1.0e5
     Ffar = a.matrix(-rfar * d, y, k, None, comps, sig)                                       # (3 n_wave, unknowns)

@@ -16,6 +16,8 @@ import time
 os.environ["PATH"] = os.path.join(sys.prefix, "bin") + os.pathsep + os.environ.get("PATH", "")
 
 import bempp_cl.api as bempp  # noqa: E402
+
+import bem_reference as br  # noqa: E402
 import numpy as np  # noqa: E402
 
 D = np.array([0.0, 0.0, -1.0])
@@ -45,16 +47,7 @@ def optical(far_fun):
 
 def solve(h, points):
     grid = bempp.shapes.cube(length=1, origin=(-0.5, -0.5, -0.5), h=h)
-    div = bempp.function_space(grid, "RWG", 0)
-    curl = bempp.function_space(grid, "SNC", 0)
-    efie = bempp.operators.boundary.maxwell.electric_field(div, div, curl, K)
-
-    @bempp.complex_callable
-    def trace(x, n, domain_index, result):
-        inc = P * np.exp(1j * K * (x[0] * D[0] + x[1] * D[1] + x[2] * D[2]))
-        result[:] = np.cross(inc, n)
-
-    lam = bempp.linalg.lu(efie, bempp.GridFunction(div, fun=trace, dual_space=curl))
+    lam, div, _ = br.efie_solve(grid, K, D, P)
 
     def field(x):
         return -(bempp.operators.potential.maxwell.electric_field(div, x.T, K) * lam).T

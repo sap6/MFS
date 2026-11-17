@@ -86,7 +86,7 @@ def solve(grid, points, D=D, P=P):
         result[:] = np.cross(inc, n)
 
     t0 = time.time()
-    A = np.array(efie.weak_form().to_dense())
+    A = np.asarray(efie.weak_form().to_dense())
     rhs = bempp.GridFunction(div, fun=trace, dual_space=curl).projections(curl)
     t1 = time.time()
     lu = sla.lu_factor(A, overwrite_a=True, check_finite=False)

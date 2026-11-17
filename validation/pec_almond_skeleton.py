@@ -30,6 +30,8 @@ import numpy as np
 from numba import njit, prange
 from scipy.linalg import lstsq, qr, solve_triangular
 
+from lsq import qr_solve
+
 from pec_almond import L, T0, T1, semi_axes
 from pec_sphere_convergence import fibonacci_sphere, tangent_basis
 
@@ -312,12 +314,7 @@ def solve(k, y, s_col=0.35, cond=1e-13, eta_max=None, ratio=2.5):
     scale = np.linalg.norm(A, axis=0)
     A /= scale
     t1 = time.time()
-    Q, R = qr(A, mode="economic", overwrite_a=True)       # plain QR; rank-revealing only if needed
-    dR = np.abs(np.diag(R))
-    if dR.min() > cond * dR.max():
-        c, rank = solve_triangular(R, Q.conj().T @ b), len(dR)
-    else:
-        c, _, rank, _ = lstsq(Q @ R, b, lapack_driver="gelsy", cond=cond)
+    c, rank = qr_solve(A, b, cond)                        # Householder QR, Q never formed (lsq.py)
     return c / scale, {"rows": len(b), "unknowns": len(scale), "rank": int(rank), "N": len(y), "s_col": float(s_col),
                        "t_assemble": t1 - t0, "t_solve": time.time() - t1, "coef_norm": float(np.linalg.norm(c))}
 

@@ -12,6 +12,8 @@ import time
 os.environ["PATH"] = os.path.join(sys.prefix, "bin") + os.pathsep + os.environ.get("PATH", "")
 
 import bempp_cl.api as bempp  # noqa: E402
+
+import bem_reference as br  # noqa: E402
 import numpy as np  # noqa: E402
 
 from pec_torus import sphere_rule, wave  # noqa: E402
@@ -45,16 +47,7 @@ def torus_grid(R, a, n):
 
 
 def solve(grid, d, p, points, dirs):
-    div = bempp.function_space(grid, "RWG", 0)
-    curl = bempp.function_space(grid, "SNC", 0)
-    efie = bempp.operators.boundary.maxwell.electric_field(div, div, curl, K)
-
-    @bempp.complex_callable
-    def trace(x, n, domain_index, result):
-        inc = p * np.exp(1j * K * (x[0] * d[0] + x[1] * d[1] + x[2] * d[2]))
-        result[:] = np.cross(inc, n)
-
-    lam = bempp.linalg.lu(efie, bempp.GridFunction(div, fun=trace, dual_space=curl))
+    lam, div, _ = br.efie_solve(grid, K, d, p)
 
     def field(x):
         return -(bempp.operators.potential.maxwell.electric_field(div, x.T, K) * lam).T

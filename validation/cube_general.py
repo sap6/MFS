@@ -21,7 +21,7 @@ import sys
 import time
 
 import numpy as np
-from scipy.linalg import qr, solve_triangular
+from lsq import QR
 
 import pec_cube_lightning3d as m
 from fig_cost_cube import COL, balanced
@@ -81,8 +81,8 @@ class CubeSolver:
             A[c] *= self.rw[:, None]
             self.scale[c] = np.linalg.norm(A[c], axis=0)
             A[c] /= self.scale[c]
-            self.QR[c] = qr(A[c], mode="economic", overwrite_a=True)
-            dR = np.abs(np.diag(self.QR[c][1]))
+            self.QR[c] = QR(A[c])
+            dR = self.QR[c].dR
             if dR.min() < 1e-12 * dR.max():
                 print(f"warning: class {c} is numerically rank deficient ({dR.min() / dR.max():.1e})")
         self.t_factor = time.time() - t0
@@ -92,13 +92,13 @@ class CubeSolver:
     def solve(self, d, p):
         """Coefficients per class for the wave (d, p), and the relative boundary residual."""
         coef, r2, b2 = {}, 0.0, 0.0
-        for c, (Q, R) in self.QR.items():
+        for c, fac in self.QR.items():
             b = -np.einsum("mab,mb->ma", self.T, class_part(self.x, d, p, c)).reshape(-1) * self.rw
             if np.linalg.norm(b) < 1e-13 * np.linalg.norm(self.rw):
-                coef[c] = np.zeros(Q.shape[1], complex)
+                coef[c] = np.zeros(fac.n, complex)
                 continue
-            y = solve_triangular(R, Q.conj().T @ b)
-            r2 += np.linalg.norm(Q @ (R @ y) - b) ** 2
+            y, _, res = fac.solve(b, residual=True)
+            r2 += res[()] ** 2
             b2 += np.linalg.norm(b) ** 2
             coef[c] = y / self.scale[c]
         return coef, np.sqrt(r2 / b2)
