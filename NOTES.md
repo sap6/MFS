@@ -47,12 +47,14 @@ where we show it".
   best configuration (item 43; `retime_all.sh`). Use only those numbers.
 - **On the cube Bempp was also given the mirror symmetry** that the MFS uses
   (item 55). On that equal footing, with the final MFS timings of item 56,
-  Bempp is faster down to 0.1% (2.4 times there: 1.3 s against 3.1 s), the
-  two are level near 0.09% (Bempp then needs the higher quadrature), and
-  the MFS is faster below (4.3 s for 0.037% against 5.8 s; 2.5 times at
-  0.02-0.015%) and continues to 0.0015% (measured against J = 11). For
-  the oblique wave Bempp is faster down to 0.04% and the two are level
-  below. Do not write that the MFS is faster on the cube without saying
+  and Bempp's best grading (item 58: g = 1.5 with the default quadrature
+  on coarse meshes, found in the last quarter of an hour), Bempp is faster
+  down to 0.07% (1.5 s for 0.115%, 2.6 s for 0.075%, against the MFS's
+  3.1 s for 0.095%), the two are level near 0.06%, and the MFS is faster
+  below (4.3 s for 0.037% against 5.8 s; 2.5 times at 0.02-0.015%) and
+  continues to 0.0015% (measured against J = 11). For the oblique wave
+  Bempp is faster down to 0.04% and the two are level below (not
+  re-checked with g = 1.5: it can only move towards Bempp). Do not write that the MFS is faster on the cube without saying
   which Bempp (with or without symmetry) and at what error.
 - **The cube MFS numbers to use are the FINAL ones at the end of item 56**
   (base grid 6 / 0.15 from J = 6 on, line quadrature 12 / 8 nodes;
@@ -64,8 +66,9 @@ where we show it".
   with mismatches of 1e-5, 3e-5 and 4e-4.
 - **The cube layout also converges at two and three wavelengths** (item
   57; `cube_wavenumber.py`), confirmed by Bempp to 2.4e-4 and 8e-4. At two
-  wavelengths the MFS is level with Bempp-with-symmetry at 0.1% and 2 to 5
-  times faster below; this is in the draft (Section 6.7). At three
+  wavelengths Bempp-with-symmetry is faster down to 0.1% (4.4 s against
+  6.8 s, grading 1.5) and the MFS is 2 to 5 times faster below; this is in
+  the draft (Section 6.7). At three
   wavelengths the MFS is untuned and not ahead of Bempp (which then
   prefers the grading 1.5); only mentioned in the limits.
 - **The line quadrature must grow with the wavenumber** (item 57 a;
@@ -980,6 +983,34 @@ towards the MFS field.
       the scaled grid for both families; the two-depth rows could be 25%
       faster (not re-run).
 
+58. **Bempp's grading, re-checked at the very end: g = 2 is NOT its best
+    on coarse meshes. The tables and Figure 6 do not have this yet.**
+    (`bem_cube_sym.py 12,16,20,24,28 1.5`; data `bem_cube_sym_n*_g1.5.npz`.)
+    - k = 2 pi, symmetric, default quadrature 4/6, g = 1.5: 0.8, 1.5-1.8,
+      2.6, 5.9, 8.5-10.9 s for 2.0e-3, 1.15e-3, 7.5e-4, 5.3e-4, 4.0e-4
+      (2592 to 14112 dofs). With g = 2 and 4/6 the same meshes stall at
+      1.07e-3 to 7.9e-4. With 6/8 and 8/10 and g = 1.5: 7.3e-4, 5.1e-4,
+      3.8e-4 (7200, 10368, 14112 dofs): the same errors as 4/6, so for
+      g = 1.5 the error is the mesh, not the quadrature, and g = 2 with
+      6/8 stays better from 7200 dofs on (3.8e-4, 3.0e-4, 2.6e-4).
+    - Consequence at k = 2 pi: the new points 1.5 s / 1.15e-3 and 2.6 s /
+      7.5e-4 beat the old Bempp envelope and the MFS (3.1 s / 9.5e-4). The
+      crossover moves from 9e-4 to about 6e-4. Below 5e-4 nothing changes
+      (MFS 4.3 s for 3.7e-4; Bempp 5.8 s for 3.8e-4 with g = 2, 6/8).
+    - k = 4 pi: g = 1.5, 4/6: 1.5 s 2.7e-3; 4.4 s 1.05e-3 (g = 2: 3.9e-3,
+      1.6e-3). Oblique, g = 1.5: 7.1 s 1.26e-3; 24.8 s 6.5e-4 (4/6); 6/8:
+      10.9 s 1.24e-3; 37.5 s 6.2e-4. Finer meshes: g = 2 better (item 57).
+    - k = 6 pi: g = 1.5 better throughout (item 57).
+    - The draft text was corrected in all four places (cube cost paragraph,
+      two-wavelength subsection twice, discussion) and in the appendix on
+      the grading, with a TODO. **Still to do (T27)**: g = 1.5 rows in
+      `paper/tables/cube_bem.tex`, `cube_oblique.tex`, `cube_k2.tex` and
+      the curve in `fig_cost_cube.py` / `fig_cost_all.py` (`make_tables.py`
+      globs only `_g2` files); the oblique wave at k = 2 pi with g = 1.5;
+      a finer scan of g (1.25, 1.75) with each quadrature. Lesson: the
+      best Bempp setting depends on the accuracy target; scan grading and
+      quadrature together, at every wavenumber.
+
 ## 3. Current best commands
 
 ```
@@ -1097,6 +1128,10 @@ Open, in the order I would take them:
 - [x] **T21 Why does one depth per octave stall?** Answered in items 53-54: a
       fixed ratio has a fixed attainable accuracy (2D model: 8e-5, 6e-6, 1e-9
       for ratios 0.5, 0.6, 0.71); tapered depths help in 2D but not in 3D.
+- [ ] **T27 Bempp with grading 1.5 in the tables and figures (item 58).
+      Do this first.** The text quotes it; the tables and Figure 6 show
+      only g = 2. Also run the oblique wave at k = 2 pi with g = 1.5 and
+      correct that paragraph if Bempp gains.
 - [ ] **T25 Cube at higher wavenumbers (item 57).** k = 4 pi is done
       (standard and oblique wave) and is in the draft. k = 6 pi converges
       with the base layout scaled with the wavelength but is untuned and
@@ -1231,6 +1266,8 @@ Open, in the order I would take them:
 - Cube at k = 6 pi, base 16 instead of 18: J = 7: 1.3e-3 in 17.6 s (panels 0.065); J = 8: 1.2e-3 to 1.4e-3 (worse than 8.6e-4 with 18).
 - Bempp grading at k = 4 pi (symmetric, 18432 dofs, 6/8): g = 1.5, 2, 2.5, 3: 5.5e-4, 5.1e-4, 1.1e-3, 2.5e-3; 28800 dofs, 8/10: g = 1.5, 2, 2.5: 3.4e-4, 2.4e-4, 4.6e-3.
 - Bempp grading at k = 6 pi (symmetric, 6/8): 18432 dofs: g = 1, 1.5, 2: 5.0e-3, 1.05e-3, 1.55e-3; 28800 dofs: 3.6e-3, 6.9e-4, 8.6e-4. g = 1.5 is best there.
+- Bempp with symmetry, k = 2 pi, g = 1.5, 4/6: 2.0e-3, 1.15e-3, 7.5e-4, 5.3e-4, 4.0e-4 in 0.8, 1.5, 2.6, 5.9, 8.5 s (2592..14112 dofs); 6/8 and 8/10 give the same errors. Beats g = 2 down to 7e-4 (item 58).
+- Bempp with symmetry, k = 4 pi, g = 1.5, 4/6: 2.7e-3 in 1.5 s, 1.05e-3 in 4.4 s; oblique: 1.26e-3 in 7.1 s, 6.5e-4 in 24.8 s.
 
 ## 6. Write-up session
 
