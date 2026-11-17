@@ -919,8 +919,16 @@ towards the MFS field.
       against 49 s at 8.6e-4, and 3.0e-4 in 80 s, beyond Bempp's memory.
     - Two or three wavenumbers are not a law: do not write "the advantage
       grows with k". The families at S = 2, 3 were tuned in an hour and the
-      grading of the Bempp mesh was not re-tuned. Not done: oblique wave
-      at k = 4 pi.
+      grading of the Bempp mesh was not re-tuned.
+    - **Oblique wave at k = 4 pi** (`cube_wavenumber.py 2 oblique`; eight
+      classes; reference dense J = 9, 265 s, optical 1.0e-5; data
+      `cube_wavenumber_k2_obl.npz`, `_obl_bem.npz`): one depth J = 5..8:
+      5.2, 11.6, 17.8, 27.5 s for 3.1e-3, 1.5e-3, 6.4e-4, 2.65e-4; two
+      depths J = 7, 8: 87, 165 s for 4.6e-4, 1.4e-4. Bempp with symmetry:
+      4/6: 1.8, 6.6, 21 s for 5.6e-3, 2.05e-3, 1.4e-3; 6/8: 11, 33, 83 s
+      for 1.5e-3, 7.1e-4, 4.6e-4; 8/10: 48, 113 s for 6.2e-4, 3.5e-4.
+      Reading: level down to 1.5e-3; MFS 18 s against 33 s at 7e-4 and
+      28 s against 113 s at 3e-4. In the draft as one paragraph, no table.
     - Is the finer interior collocation needed at S = 2? (re-tested with
       the right quadrature) For one depth per octave, yes: with the S = 1
       grid J = 5 gives 3.6e-2 instead of 2.3e-3 and J = 8 gives 1.0e-3
@@ -1051,7 +1059,7 @@ Open, in the order I would take them:
       the standard wave and is in the draft. k = 6 pi converges with the
       base layout scaled with the wavelength but is untuned and expensive
       (0.09% in 32 s, 0.03% in 80 s): tune it (2D first), decide whether
-      it goes into the paper. Also open: oblique wave at k = 4 pi; re-tune
+      it goes into the paper. Also open: re-tune
       the grading of the Bempp mesh at k = 4 pi before quoting factors as
       a trend; one unified scaling rule for all k (S = 2 currently keeps
       the S = 1 base layout, S = 3 scales it).
@@ -1172,6 +1180,7 @@ Open, in the order I would take them:
 - Cube at k = 6 pi, base 12/18 at depth 0.067, hmax / 3, 8 more modes, 28/12 nodes: one depth J = 6, 7, 8: 2.0e-3, 1.3e-3, 8.6e-4 in 21 to 32 s; two depths J = 6, 7: 8.2e-4, 3.0e-4 in 56, 80 s (against J = 8, optical 8.8e-5).
 - Bempp with symmetry at k = 6 pi against the MFS (two depths, J = 8): 8/10: 4.1e-3, 1.5e-3, 8.2e-4 for 10368, 18432, 28800 dofs (14, 35, 74 s); 6/8, 28800 dofs: 8.6e-4 in 49 s.
 - Cube at k = 4 pi with the k = 2 pi interior collocation (20/10 nodes): one depth J = 5, 8: 3.6e-2, 1.0e-3 (scaled grid: 2.3e-3, 2.2e-4); two depths J = 8, 9: 1.48e-4, 4.7e-5 (scaled: 1.48e-4, 4.5e-5), 25% faster.
+- Cube at k = 4 pi, oblique wave (eight classes): one depth J = 5..8: 3.1e-3, 1.5e-3, 6.4e-4, 2.65e-4 in 5.2 to 27.5 s; Bempp with symmetry: 1.5e-3 in 11 s, 7.1e-4 in 33 s, 3.5e-4 in 113 s.
 
 ## 6. Write-up session
 

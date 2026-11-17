@@ -8,6 +8,7 @@ makes the coefficients grow and is not needed.)
     python3 cube_wavenumber.py 2 explore      # k = 2 * 2 pi: which scaling is needed at J = 6
     python3 cube_wavenumber.py 2              # convergence table with the adopted scaling
     python3 cube_wavenumber.py 2 bem          # Bempp with the mirror symmetry on graded meshes, against the MFS field
+    python3 cube_wavenumber.py 2 oblique      # the oblique wave of cube_oblique_table.py (eight classes), MFS and Bempp
 """
 import sys
 
@@ -32,10 +33,11 @@ def params(J, family, n_base, hmax, dn, depth0=0.2):
     return kw
 
 
-def run(J, family, n_base, hmax, dn, pts, depth0=0.2):
+def run(J, family, n_base, hmax, dn, pts, depth0=0.2, wave=None):
     kw = params(J, family, n_base, hmax, dn, depth0)
-    E, t, info = c.run(J, pts=pts, family=family, **kw)
-    return E, t, info
+    if wave is None:
+        return c.run(J, pts=pts, family=family, **kw)
+    return c.run(J, wave[0], wave[1], pts, family=family, **kw)
 
 
 if __name__ == "__main__":
@@ -51,6 +53,37 @@ if __name__ == "__main__":
         keys = list(out)
         for a in keys[:-1]:
             print(f"  {a} against {keys[-1]}: {rel(out[a], out[keys[-1]]):.2e}")
+    elif "oblique" in sys.argv:
+        dvec, pvec = c.wave(60.0, 25.0, 35.0)
+        dn = int(round(4 * (S - 1)))
+        base = lambda J: (4, 0.25 / S) if J <= 5 else (6, 0.15 / S)
+        res = {}
+        for fam, Js in (("balanced", range(5, 9)), ("dense", (7, 8, 9))):
+            for J in Js:
+                E, t, info = run(J, fam, *base(J), dn, pts, wave=(dvec, pvec))
+                res[(fam, J)] = (E, t, info)
+                print(f"oblique {fam:8s} J = {J:2d}: unknowns (all classes) {info['unknowns']} t = {t:5.1f} s optical {info['optical']:.1e} "
+                      f"sigma_ext {info['ext']:.6f}", flush=True)
+        ref = res[("dense", 9)][0]
+        print("errors against dense J = 9:")
+        for (fam, J), (E, t, info) in res.items():
+            print(f"  {fam:8s} J = {J:2d}  t = {t:5.1f} s  {rel(E, ref):.2e}")
+        np.savez(f"cube_wavenumber_k{S:g}_obl.npz", pts=pts, k=m.K, d=dvec, p=pvec, **{f"{fam}_E{J}": v[0] for (fam, J), v in res.items()},
+                 **{f"{fam}_info{J}": np.array([v[1], v[2]["unknowns"], v[2]["rows"], v[2]["optical"], v[2]["ext"]]) for (fam, J), v in res.items()})
+        import bem_cube_sym as b
+        import bempp_cl.api as bempp
+        b.K = m.K
+        rows = []
+        for reg, sing, ns in ((4, 6, (16, 24, 32)), (6, 8, (24, 32, 40)), (8, 10, (32, 40))):
+            bempp.GLOBAL_PARAMETERS.quadrature.regular = reg
+            bempp.GLOBAL_PARAMETERS.quadrature.singular = sing
+            b.solve(4, 1.0, pts, dvec, pvec)
+            for n in ns:
+                E, N, sizes, ts, grid = b.solve(n, 2.0, pts, dvec, pvec)
+                rows.append((reg, sing, n, N, sum(ts), rel(E, ref)))
+                print(f"oblique, Bempp with symmetry, graded n = {n}, quadrature {reg}/{sing}: dofs {N}, {sum(ts):.1f} s, "
+                      f"difference from the MFS reference: {rel(E, ref):.2e}", flush=True)
+                np.savez(f"cube_wavenumber_k{S:g}_obl_bem.npz", rows=np.array(rows))
     elif "bem" in sys.argv:
         import bem_cube_sym as b
         import bempp_cl.api as bempp
