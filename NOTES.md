@@ -880,6 +880,9 @@ towards the MFS field.
       `line_tree.nodes(k, H)` now returns 12 + 8 (S - 1) and 8 + 2 (S - 1):
       20 / 10 at S = 2, 28 / 12 at S = 3. At S = 3, 20 / 10 and 48 / 16
       give the same field to the printed digits. k = 2 pi is unchanged.
+      The rule is conservative: at S = 2, 20 / 10 agrees with 32 / 14 to
+      4e-11; 16 / 8 would be accurate to 7e-8 and 11% faster, 14 / 8 to
+      3e-6 (not adopted, nothing re-timed).
       **Any new wavenumber: compare two node settings before believing a
       stall.**
     - (b) The interior collocation panels: hmax / S. And 4 (S - 1) more
@@ -911,7 +914,14 @@ towards the MFS field.
       8.3, 21, 25, 32 s for 8.6e-3, 9.7e-3, 2.0e-3, 1.3e-3, 8.6e-4; two
       depths J = 5, 6, 7: 22, 56, 80 s for 9.4e-3, 8.2e-4, 3.0e-4. J <= 5
       (base 12) is too coarse. Not tuned; the dense family is expensive
-      here (42336 equations at J = 8). Bempp with symmetry (differences
+      here (42336 equations at J = 8). First hints for tuning (one depth,
+      J = 6, errors against that reference): base 12 / 14 / 16 / 18 points
+      give 1.5e-2 / 3.3e-3 / 2.0e-3 / 2.0e-3, so 16 is enough and 14 is
+      not (with 14 the error grows with J: 4.3e-3, 6.7e-3 at J = 7, 8);
+      interior panels 0.065 instead of 0.05 give the same error with base
+      16 in 13.6 s instead of 20.6 s. The base grid must have an even
+      number of points (a point on a mirror plane is refused).
+      Bempp with symmetry (differences
       from that MFS reference): 4/6: 1.5, 4.1, 10, 24 s for 2.1e-2, 4.2e-3,
       2.0e-3, 1.5e-3; 6/8: 8.4, 21, 49 s for 4.1e-3, 1.55e-3, 8.6e-4; 8/10:
       14, 35, 74 s for 4.1e-3, 1.5e-3, 8.2e-4 (4608 to 28800 dofs). So the
@@ -1182,6 +1192,8 @@ Open, in the order I would take them:
 - Bempp with symmetry at k = 6 pi against the MFS (two depths, J = 8): 8/10: 4.1e-3, 1.5e-3, 8.2e-4 for 10368, 18432, 28800 dofs (14, 35, 74 s); 6/8, 28800 dofs: 8.6e-4 in 49 s.
 - Cube at k = 4 pi with the k = 2 pi interior collocation (20/10 nodes): one depth J = 5, 8: 3.6e-2, 1.0e-3 (scaled grid: 2.3e-3, 2.2e-4); two depths J = 8, 9: 1.48e-4, 4.7e-5 (scaled: 1.48e-4, 4.5e-5), 25% faster.
 - Cube at k = 4 pi, oblique wave (eight classes): one depth J = 5..8: 3.1e-3, 1.5e-3, 6.4e-4, 2.65e-4 in 5.2 to 27.5 s; Bempp with symmetry: 1.5e-3 in 11 s, 7.1e-4 in 33 s, 3.5e-4 in 113 s.
+- Line quadrature at k = 4 pi, one depth J = 7: 32/14, 16/8, 14/8 nodes against 20/10: 4e-11, 7e-8, 3e-6 (9.3, 8.3, 7.7 s).
+- Cube at k = 6 pi, J = 6, base 12 / 14 / 16 / 18: 1.5e-2 / 3.3e-3 / 2.0e-3 / 2.0e-3; base 16 with interior panels 0.065: 2.0e-3 in 13.6 s.
 
 ## 6. Write-up session
 
