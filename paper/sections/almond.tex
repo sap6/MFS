@@ -30,7 +30,7 @@ Before we computed the exponents of the cone we had fitted a set of four exponen
 
 \subsection{Nose-on incidence at 1.19 GHz}
 
-We first consider the wave that travels along $-x$ towards the tip, polarised along $y$, at $1.19$\,GHz, where the almond is one wavelength long. \autoref{tab:almond} and \autoref{fig:costalmond} show the difference from the finest layout, $8{:}5$ with $4791$ unknowns. The layouts $5{:}2$ and $6{:}3$ reach $2.8\times10^{-4}$ and $5.6\times10^{-5}$ in $2.1$ and $3.2$\,s. Bempp reaches $3.0\times10^{-3}$ with $9558$ unknowns in $19$\,s, and its error is inversely proportional to the number of unknowns. At an error of one per cent the two methods take about the same time, one second. The MFS uses the two mirror symmetries of this wave, which Bempp does not.
+We first consider the wave that travels along $-x$ towards the tip, polarised along $y$, at $1.19$\,GHz, where the almond is one wavelength long. \autoref{tab:almond} and \autoref{fig:costalmond} show the difference from the finest layout, $8{:}5$ with $4791$ unknowns. This reference is itself converged: a closer spacing along the rows ($s = 0.5$), a finer collocation grid, and twice as many rows towards the focal curve each change its field by less than $10^{-5}$. The layouts $5{:}2$ and $6{:}3$ reach $2.8\times10^{-4}$ and $5.6\times10^{-5}$ in $2.1$ and $3.2$\,s. Bempp reaches $3.0\times10^{-3}$ with $9558$ unknowns in $19$\,s, and its error is inversely proportional to the number of unknowns. At an error of one per cent the two methods take about the same time, one second. The MFS uses the two mirror symmetries of this wave, which Bempp does not.
 
 \begin{table}[htbp]
   \centering

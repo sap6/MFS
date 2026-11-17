@@ -433,7 +433,7 @@ towards the MFS field.
     used tori) and it has no closed-form reference. Do not present the
     focal-ring statement as new before Millar 1983 has been read.
 
-### Fourth session, 2026-11-17, overnight (items 39-50)
+### Fourth session, 2026-11-17, overnight (items 39-51)
 
 39. **Bempp was run with its slow backend.** bempp-cl assembles with OpenCL
     if `pyopencl` and a CPU driver are installed and falls back to Numba
@@ -637,6 +637,17 @@ towards the MFS field.
     ("show", "reach", "agree to"); hedges only where the result is uncertain
     (torus bound, skeleton statement for smooth bodies); limits stated in
     their own section.
+51. **The almond's self-convergence is real** (`almond_floor.py`, 1.19 GHz
+    nose-on; done because the cube's one-per-octave family had hidden a
+    1.2e-4 error). The reference layout 8:5 changes by 8.3e-6 with row
+    spacing 0.5 instead of 0.7, by 3.3e-6 with a finer collocation grid
+    (s_col 0.25), and by 2.7e-6 with two rows per octave towards the focal
+    curve (8:10, q = 2^-1/2). So 8:5 is good to about 1e-5 and "6:3 is
+    5.6e-5 from it" is a true error. Not a valid member: 10:7 (under-sampled,
+    coefficient norm 4e3, 4e-5 away; it falls back to QR and takes 54 s).
+    The optical mismatch of 8:5 is 1.5e-4 in all variants, larger than the
+    field error: it is an indicator, not a bound. Cases with more than about
+    10000 unknowns per class ran out of memory.
 
 ## 3. Current best commands
 

@@ -2,6 +2,7 @@
 real? Fields of several layouts at 400 points, their mutual differences and
 optical mismatches: more rows towards the focal curve (J), two rows per
 octave (q = 2^-1/2), closer spacing along the rows (s), finer collocation.
+(Larger cases, e.g. 8:10 with q = 2^-1/2 and s = 0.5, need more than 10 GB.)
 
     python3 almond_floor.py
 """
@@ -21,8 +22,6 @@ CASES = {                     # name: (n_mid, J, q, s, s_col)
     "8:5 s0.5": (8, 5, 0.5, 0.5, 0.35),
     "8:5 col0.25": (8, 5, 0.5, 0.7, 0.25),
     "8:10 q.71": (8, 10, S, 0.7, 0.35),
-    "8:10 q.71 s0.5": (8, 10, S, 0.5, 0.35),
-    "10:14 q.71 s0.5": (10, 14, S, 0.5, 0.35),
 }
 
 if __name__ == "__main__":
