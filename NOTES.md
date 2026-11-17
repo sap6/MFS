@@ -491,6 +491,76 @@ are from the first.)
     (|c| about 1). So J = 9 is a reference good to about 5e-5, and the
     errors quoted for J = 7 and J = 8 carry that uncertainty. Suspect: the
     vertices (T15), not confirmed.
+43. **Cost tables, final** (`validation/retime_all.sh`, one container, 4
+    cores, 2026-11-17 02:25-02:46 UTC, one job at a time; Bempp with OpenCL,
+    double precision, compiled right-hand side; MFS as in item 41; every
+    table in `paper/tables/` is generated from these files by
+    `paper/make_tables.py`). Times in seconds include assembly, solve and
+    the field at the test points.
+    - Sphere (against Mie): MFS 300, 600, 1200, 2400, 3600 unknowns: 0.03,
+      0.08, 0.29, 1.7, 4.6 s for 2.7e-3, 2.7e-6, 2.0e-9, 1.7e-13, 2.3e-14.
+      Bempp 1269, 2733, 4824, 9750 dofs: 0.77, 1.9, 4.4, 19 s for 3.2%,
+      1.4%, 0.76%, 0.37%.
+    - Torus (against the finest MFS): MFS 1440 to 21120 unknowns: 0.25,
+      0.90, 2.4, 4.3, 6.3 s for 5.0e-3, 1.1e-4, 5.0e-7, 2.0e-9, 7.3e-12;
+      full matrix 3840 unknowns: 19 s for 1.1e-4. Bempp 864, 2400, 4704,
+      9600 dofs: 0.97, 1.5, 5.2, 21 s for 10%, 3.3%, 1.7%, 0.82%.
+    - Almond, 1.19 GHz nose-on (against layout 8:5): MFS 795, 1377, 2103,
+      2937 unknowns: 1.1, 1.5, 2.1, 3.2 s for 6.7%, 0.40%, 0.028%, 0.0056%.
+      Bempp 2106, 4212, 9558 dofs: 1.0, 3.3, 19 s for 1.3%, 0.67%, 0.30%.
+      At 1% the two are level; below, the MFS is far ahead.
+    - Cube, standard wave (against MFS J = 9, 13 s): MFS J = 3..8: 1.3, 1.7,
+      2.4, 3.9, 7.1, 9.4 s for 1.27%, 0.52%, 0.20%, 0.089%, 0.033%, 0.011%.
+      No tails, J = 4, 6, 8: 0.9, 2.7, 6.9 s for 5.4%, 2.5%, 1.1%; plain MFS
+      21-30%. Bempp quasi-uniform 2214 to 13302 dofs: 2.3, 6.8, 19, 49 s for
+      0.68%, 0.39%, 0.26%, 0.19%. Bempp graded (g = 2), quadrature 4/6,
+      1152 to 14112 dofs: 1.2, 2.8, 6.1, 14, 28, 56 s for 0.44%, 0.15%,
+      0.105%, 0.092%, 0.084%, 0.077%; quadrature 6/8: 3.1, 7.1, 15, 30, 56,
+      102 s for 0.44%, 0.13%, 0.060%, 0.038%, 0.030%, 0.026%; quadrature
+      8/10, 10368 and 14112 dofs: 97 and 166 s for 0.022% and 0.018%.
+    - Reading for the cube: above 0.2% level (Bempp 2.8 s for 0.15%, MFS
+      2.4 s for 0.20%); at 0.1% the MFS is 1.6 times faster (3.9 against
+      6.1 s); at 0.03-0.04% four to eight times (7.1 s against 30 s for
+      0.038% and 56 s for 0.030%); Bempp's best, 0.018% in 166 s, the MFS
+      passes in 9.4 s.
+    - Cube, oblique wave (`cube_oblique_table.py`; against MFS J = 9 for
+      that wave, 29 s, optical mismatch 9.9e-5): MFS, eight classes, J =
+      4..8: 2.4, 3.4, 6.1, 12, 18 s for 0.61%, 0.27%, 0.10%, 0.039%, 0.011%.
+      Bempp graded 4/6, 2592, 4608, 7200 dofs: 2.7, 6.4, 14 s for 0.21%,
+      0.14%, 0.12%; 6/8, 4608, 7200, 10368 dofs: 15, 30, 57 s for 0.077%,
+      0.049%, 0.039%. Same picture as the standard wave: Bempp slightly
+      ahead above 0.2%, the MFS ahead below 0.1%.
+    - Where the session started (item 27, slow Bempp, old MFS): cube MFS
+      J = 6 and 8 took 95 and 284 s; graded Bempp 4608 dofs 161 s.
+44. **What the cube comparison rests on (say it in the paper).** (a) The
+    MFS uses the three mirror planes of the body (valid for any wave);
+    Bempp uses none. A boundary element code that used them would need an
+    eighth of the assembly, which is 40-90% of Bempp's time here. Without
+    symmetry the dense MFS factorisation would cost 64 times as much as the
+    eight class factorisations. (b) The MFS is not economical in unknowns
+    on the cube: about 10^4 (all classes) for 0.09% against 4608 for the
+    graded mesh. Its advantage is the rate (error / 2.3-2.9 per level for
+    20-45% more unknowns) and the price of an unknown. (c) Errors below
+    1e-4 are uncertain by 5e-5 (item 42).
+45. **Sphere and wavenumber** (`sphere_scaling.py`, R = 0.5): sources needed
+    for 1e-6 (interpolated): 224, 473, 797, 1628 for k = 2 pi, 4 pi, 6 pi,
+    8 pi, i.e. 53, 28, 21, 24 unknowns per square wavelength of surface. At
+    8 pi the error stalls near 3e-9 (coefficient growth) and the solver
+    falls back to rank-revealing QR, which is slow (87 s at N = 2400).
+46. **The almond null at 10.25 GHz, 35.5 degrees, is a matter of position**
+    (`almond_null.py`, layout 6:3, HH). On a 0.02 degree grid the MFS null
+    is at 35.66 degrees, -69.7 dBsm; the reference simulation, sampled every
+    0.5 degrees, has -71.1 dBsm at 35.5 and its neighbours are lower on the
+    left and higher on the right than the MFS, i.e. its null lies about
+    0.1-0.15 degrees lower. Shifting the MFS curve by -0.10 degrees brings
+    the rms difference over 33-38 degrees from 1.45 to 0.64 dB and the
+    difference at 35.5 from 4.3 to 1.9 dB. A size (or frequency) change of
+    0.01% moves the null by 0.02 degrees and changes the value at 35.5 by
+    0.4 dB, so the 0.01% difference in length between our almond and the
+    benchmark's explains a tenth of it; -0.05% gives rms 0.96 dB. So the
+    two simulations agree on the null to about 0.1 degree; which position
+    is right needs a third computation. The old caveat ("differ by 4.3 dB,
+    not investigated") is replaced by this.
 
 ## 3. Current best commands
 

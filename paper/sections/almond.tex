@@ -81,6 +81,6 @@ We compare with the Austin RCS Benchmark Suite \cite{kelley2020}, which provides
 \end{figure}
 
 The largest pointwise differences from the reference simulation occur in deep nulls of the HH cross-section. The largest is $4.3$\,dB at $10.25$\,GHz and $35.5^\circ$, in a null at $-66.7$\,dBsm. The MFS is converged there: the layouts $6{:}3$ and $8{:}5$ differ by $0.0006$\,dB on average and by $0.024$\,dB in this null.
-%% ALMONDNULL
+The difference is one of position, not of depth. On a grid of $0.02^\circ$ the MFS places this null at $35.66^\circ$ with a depth of $-69.7$\,dBsm, and the cross-section rises by $10$\,dB within half a degree on either side. The reference data are sampled every $0.5^\circ$. Shifting the MFS curve by $0.1^\circ$ halves its distance from the reference samples around the null. A shift of this size corresponds to a change of $0.05\%$ in the size of the almond or in the frequency. We conclude that the two simulations agree on this null to within a tenth of a degree, and that the $4.3$\,dB is the price of sampling a sharp null.
 
 At $1.19$, $7$ and $9.92$\,GHz we also compared with Bempp on meshes with $9558$ and $13632$ unknowns. The root-mean-square differences are $0.02$, $0.04$ and $0.12$\,dB for HH and $0.03$, $0.03$ and $0.09$\,dB for VV. At $1.19$\,GHz the MFS cross-section changes by $0.001$\,dB when the row spacing is reduced from $0.5$ to $0.4$.
