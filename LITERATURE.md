@@ -445,3 +445,123 @@ Without a verifiable record, and marked so in the file: Young and Ruan 2005
 lae.tsu.ge; year and publisher unknown); the books of Doicu, Eremin and
 Wriedt, Kirsch and Hettlich, Colton and Kress, Golub and Van Loan (no DOI
 entered; editions as cited in the thesis).
+
+## 10. The papers the author uploaded on 2026-11-17, read in full
+
+Twelve PDFs, uploaded in chat (not in the repository). What each one says
+that matters for the paper, with the page of the statement. "Changes" lists
+what was altered in the draft because of it.
+
+- **Millar 1983** (Arch. Ration. Mech. Anal. 81, 349-372). **Does not cover
+  the torus.** The setting is a domain symmetric about the axis whose
+  meridian curve meets the axis (p. 351-352: "D+ is bounded by a segment of
+  the y-axis and an analytic arc C"). Theorems 1-2 give the complex Riemann
+  function of the axially symmetric Helmholtz equation; for the 3D case it
+  has a logarithmic term on the axis (p. 358), absent for integer alpha.
+  Theorem 3 (p. 363) is a continuation formula for the exterior problem.
+  The only worked example is the prolate spheroid (singular on the
+  interfocal segment, p. 366). No statement on a focal ring. *Changes*: the
+  draft no longer suggests that Millar might settle the torus; it says his
+  analysis assumes a curve that meets the axis.
+- **Aberra 2002** (Complex Var. 47, 1-15): Schwarz potential (Cauchy problem
+  for the Laplacian with data zero on the surface) of tori in **even**
+  dimensions; explicit for n = 4 (and n = 6 by computer algebra): singular
+  on the circle traced by the **centre** of the generating disc, with a
+  logarithm and a pole (p. 12, 15). The reduction needs even n (p. 4);
+  nothing on n = 3. So in even dimensions the singular set is the centre
+  circle, not the focal ring. This does not contradict our tests: in 3D the
+  Riemann function has the axial logarithm (Millar), through which the far
+  side of the tube acts; our image argument uses exactly that. But it shows
+  that the focal ring is a 3D statement **without a proof in the
+  literature**. *Changes*: appendix on the torus states this.
+- **Gustafsson 1998** (SIAM J. Math. Anal. 29, 1106-1117), Theorem 3.1
+  (p. 1111): a convex polyhedron with uniform volume or surface mass has a
+  unique "mother body": a positive measure with the same exterior Newtonian
+  potential, supported on the "ridge" (the points with at least two closest
+  points on the boundary), contained in finitely many hyperplanes and
+  reaching the boundary only at edges and corners. The proof takes the
+  minimum over the faces of the half-space solutions, which is the same
+  construction as ours with reflected fields. *Changes*: the remark after
+  our theorem cites Theorem 3.1 with this wording ("ridge").
+- **Kangro 2012** (AIP Conf. Proc. 1479, 2328-2331): magnetic dipoles
+  tangential to an auxiliary surface inside a perfect conductor. Theorem 1:
+  the fields are dense for C^{1,1} surfaces (so the residual can be made
+  arbitrarily small, with no bound on the coefficients). Theorem 3 (ii):
+  if the auxiliary surface is analytic and the scattered field continues
+  to a neighbourhood of it, the least-squares method converges like
+  C q^{sqrt N}. "Reasonably good results for piecewise smooth boundary as
+  well, if one chooses M to be about 2-3 times bigger than N"; no edge
+  treatment, no numbers. *Changes*: cited for the rate exp(-c sqrt N) on the
+  sphere (it is a theorem, under the continuation assumption), and for
+  density. **The draft's "the usual layout cannot converge" was too
+  strong**: by density it can approximate, but only with unbounded
+  coefficients; rewritten as "cannot converge with bounded coefficients".
+- **Ye, Hu, Xu, Yan 2023** (EABE 155, 401-406): sources on the surface
+  itself with a regularised kernel (singular-boundary type), convergence
+  rate 2. Sphere (against Mie and FEKO), a peanut, two spheres, and one CAD
+  body: "for the ice sphere, the sharp part has been smoothed" (p. 405). So
+  no edges. *Changes*: the sentence in the introduction is confirmed and
+  made specific.
+- **De Smedt and Van Bladel 1986** (IEEE TAP 34, 865-870). Same two types
+  as ours (electric, E ~ R^(nu-1); magnetic, H ~ R^(tau-1)), finite
+  elements on the sphere. **Rectangular corner (Table V, last-but-one
+  block): nu = 0.45410, tau = 0.84108 (two degenerate classes); ours
+  0.45417 and 0.840.** Elliptic cone, bilinear interpolation of Tables I,
+  III, IV at half-angle 34.09 deg and axis ratio 1/3: nu = 0.298, tau =
+  0.885 and 0.967; ours 0.29959, 0.87905, 0.96803 (differences 0.6%, 0.7%,
+  0.1%; they state 0.5% for their sector values). Circular cones: 0.377 and
+  0.221 from their table at 34.09 and 12.71 deg; ours 0.377, 0.222.
+  *Changes*: the TODO in the appendix is replaced by this comparison.
+- **Costabel and Dauge 2000** (Arch. Ration. Mech. Anal. 151, 221-276).
+  Section 6.6 and Table 2 (p. 267-268): for the time-harmonic problem only
+  two types of corner singularity occur, electric (E = grad of a Dirichlet
+  Laplace singularity) and magnetic (H = grad of a Neumann one), which is
+  our (nu, tau) description; Lemma 4.4 (p. 249) gives the edge types with
+  exponents k pi / omega. Proved for bounded polyhedra, local analysis,
+  principal parts only; no numerical exponents. *Changes*: cited in both
+  appendices next to Meixner and Van Bladel.
+- **Kelley, Chamulak, Courtney, Yilmaz 2020** (IEEE APM 62(1), 96-106):
+  9.936 in and 19.872 in almonds, HH and VV, reported at 3.5, 5.125, 7,
+  10.25 GHz (the four we use). No error budget; the uncertainty is stated by
+  comparison: "the HH measurement results are generally within +-1 dB of the
+  predicted target RCS values, while the VV results are generally within
+  +-2 dB" (p. 105), after an azimuthal shift of 0.25 to 2.25 deg fitted to
+  the simulation; calibration checks within +-0.5 dB (p. 99). Reference
+  simulation: ARCHIE-AIM, RWG, 0.6 mm edges, 397,674 unknowns (p. 104); its
+  two finest meshes differ by 0.07 dB (HH) and 0.02 dB (VV) on average at
+  7 GHz and by up to +-0.5 dB "near the nulls" (p. 104). Their error measure
+  is the one we use, with values 50 dB below the maximum discarded.
+  *Changes*: the TODO in the almond section is replaced; the null paragraph
+  cites the +-0.5 dB.
+- **Tsitsas, Zouros, Fikioris, Leviatan 2018** (IEEE TAP 66, 5443-5452): 2D,
+  smooth shapes only. The rule is stated as "the usual requirement"
+  (p. 5443). If the auxiliary curve does not enclose the singularities, the
+  currents "diverge and oscillate" but "the electric fields ... are
+  convergent and correct" without roundoff; accuracy is lost through the
+  condition number. Our introduction says the same ("accuracy is lost in
+  floating-point arithmetic"): no change.
+- **Young and Ruan 2005** (CMES 7(2), 223-232; no DOI printed): scalar
+  Helmholtz fundamental solutions for the components, sphere and prolate
+  spheroid, no error numbers, "smooth boundary" only. Record confirmed.
+- **Yurkin and Kahnert 2013** (JQSRT 123, 176-183), "Light scattering by a
+  cube: accuracy limits of the discrete dipole approximation and the
+  T-matrix method": penetrable cubes only. Quotable: "Although a cube is a
+  geometrically simple object, it is unexpectedly complicated in terms of
+  light-scattering simulation" (p. 176); T-matrix and DDA differ by 1e-4 to
+  0.2. Not cited in the draft (no conducting cube); available if the
+  introduction wants a sentence on cubes as a hard benchmark.
+- **Zaridze, Karkashadze, Kakulia, Tavzarashvili, Ghvedashvili 2004**, "The
+  method of auxiliary sources in applied electrodynamics", Proc. 10th Int.
+  Conf. on Mathematical Methods in Electromagnetic Theory (MMET),
+  Dniepropetrovsk, 14-17 Sept. 2004, pp. 69-72, 10.1109/MMET.2004.1396931.
+  This is a four-page conference paper with the same title as the Tbilisi
+  review cited before (which had no record). It states that auxiliary
+  sources belong at the "scattered field singularities"; it has no torus.
+  *Changes*: the unverifiable review is replaced by this record; the remark
+  that the MAS has been applied to tori now rests on the earlier review
+  only and was removed from the draft.
+
+Not obtained: Shifman, Friedmann, Leviatan 1997 (the publisher's page
+returns 404 for the author; seen as an abstract only, so the draft must not
+say more about it than that it is 2D work on cylinders with edges);
+Hafner and Bomholt 1993 (book; the author has it as an e-book).
