@@ -928,6 +928,18 @@ towards the MFS field.
       two codes confirm each other to 8e-4 at three wavelengths. Reading:
       Bempp faster above 1.5e-3 (10 s against 21 s at 2e-3); MFS 32 s
       against 49 s at 8.6e-4, and 3.0e-4 in 80 s, beyond Bempp's memory.
+    - **2D prototype of (b) and (c)** (`proto2d_wavenumber.py`, unit
+      square, TE, free sources with ratio 2^(-1/2) down to 1e-7, side S =
+      1, 2, 3, 4, 6 wavelengths; far-field error): the S = 1 layout gives
+      8.8e-8, 8.5e-7, 1.7e-6, 1.7e-6, 1.9e-6; panels / S gives 5e-8 to
+      7e-7; base sources x S at depth 0.2 changes little; base depth / S
+      gives 4e-8, 3.6e-7, 8e-9, 2.5e-7 and brings the coefficient norm
+      down from 1e7 to 1e3. So in 2D the S = 1 base layout still works at
+      six wavelengths, but only with coefficients of size 1e7, which the
+      truncated QR of the 2D code tolerates. The 3D solver (semi-normal
+      equations, coefficients of order one) does not, which is why in 3D
+      the base depth must follow the wavelength from S = 3. Scaling the
+      depth is the cheap and clean choice in both.
     - Two or three wavenumbers are not a law: do not write "the advantage
       grows with k". The families at S = 2, 3 were tuned in an hour and the
       grading of the Bempp mesh was not re-tuned.
@@ -1194,6 +1206,7 @@ Open, in the order I would take them:
 - Cube at k = 4 pi, oblique wave (eight classes): one depth J = 5..8: 3.1e-3, 1.5e-3, 6.4e-4, 2.65e-4 in 5.2 to 27.5 s; Bempp with symmetry: 1.5e-3 in 11 s, 7.1e-4 in 33 s, 3.5e-4 in 113 s.
 - Line quadrature at k = 4 pi, one depth J = 7: 32/14, 16/8, 14/8 nodes against 20/10: 4e-11, 7e-8, 3e-6 (9.3, 8.3, 7.7 s).
 - Cube at k = 6 pi, J = 6, base 12 / 14 / 16 / 18: 1.5e-2 / 3.3e-3 / 2.0e-3 / 2.0e-3; base 16 with interior panels 0.065: 2.0e-3 in 13.6 s.
+- 2D square, side S = 1, 2, 3, 4, 6 wavelengths, TE, ratio 2^(-1/2): S = 1 layout 8.8e-8, 8.5e-7, 1.7e-6, 1.7e-6, 1.9e-6 with |c| about 1e7; base depth / S and panels / S: 8.8e-8, 4e-8, 3.6e-7, 8e-9, 2.5e-7 with |c| 1e3 to 1e4.
 
 ## 6. Write-up session
 
