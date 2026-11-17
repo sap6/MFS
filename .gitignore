@@ -6,3 +6,9 @@ validation/*_t_*.json
 validation/almond_rcs_*.npz
 validation/*_t_*.npz
 validation/*_t_*.txt
+paper/*.aux
+paper/*.log
+paper/*.out
+paper/*.blg
+paper/*.spl
+paper/check_arxiv_report.txt

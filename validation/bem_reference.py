@@ -18,6 +18,19 @@ D = np.array([0.0, 0.0, -1.0])
 P = np.array([0.0, 1.0, 0.0])
 
 
+@bempp.callable(complex=True, parameterized=True)
+def plane_wave_trace(x, n, domain_index, result, parameters):
+    """E_inc x n for E_inc = p exp(i k d.x); parameters = (k, d, p). Defined
+    once at module level, so that Numba compiles it once per process (a
+    closure defined inside the solver would be recompiled at every call,
+    which costs about 3 s each time)."""
+    ph = np.exp(1j * parameters[0] * (x[0] * parameters[1] + x[1] * parameters[2] + x[2] * parameters[3]))
+    e0, e1, e2 = parameters[4] * ph, parameters[5] * ph, parameters[6] * ph
+    result[0] = e1 * n[2] - e2 * n[1]
+    result[1] = e2 * n[0] - e0 * n[2]
+    result[2] = e0 * n[1] - e1 * n[0]
+
+
 def efie_solve(grid, k, d, p):
     """EFIE with RWG trial and SNC test functions for E_inc = p exp(i k d.x),
     solved by dense LU in place. Returns the surface current, its space and the
@@ -28,13 +41,8 @@ def efie_solve(grid, k, d, p):
     t0 = time.time()
     efie = bempp.operators.boundary.maxwell.electric_field(div, div, curl, k)
     A = np.asarray(efie.weak_form().to_dense())
-
-    @bempp.complex_callable
-    def tangential_trace(x, n, domain_index, result):
-        inc = p * np.exp(1j * k * (x[0] * d[0] + x[1] * d[1] + x[2] * d[2]))
-        result[:] = np.cross(inc, n)
-
-    rhs = bempp.GridFunction(div, fun=tangential_trace, dual_space=curl).projections(curl)
+    par = np.concatenate(([k], np.asarray(d, float), np.asarray(p, float)))
+    rhs = bempp.GridFunction(div, fun=plane_wave_trace, dual_space=curl, function_parameters=par).projections(curl)
     t1 = time.time()
     lu = sla.lu_factor(A, overwrite_a=True, check_finite=False)
     lam = bempp.GridFunction(div, coefficients=sla.lu_solve(lu, rhs, check_finite=False))

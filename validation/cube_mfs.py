@@ -32,7 +32,7 @@ import numpy as np
 
 import line_tree as lt
 import pec_cube_lightning3d as m
-from lsq import QR
+from lsq import factor
 
 COL = dict(col_p=3, col_q=0.5, beta=0.5)
 REFL = [np.array(r, float) for r in itertools.product((1, -1), repeat=3)]
@@ -78,7 +78,7 @@ class Cube:
     """Assembles and factorises the given parity classes once; solve() then
     takes any plane wave whose classes are among them."""
 
-    def __init__(self, J, kw=None, hmax=None, tail=9, classes=CLASSES, col=COL):
+    def __init__(self, J, kw=None, hmax=None, tail=9, classes=CLASSES, col=COL, lsq="auto"):
         if kw is None:
             kw, hmax = balanced(J)
         kw = dict(kw)
@@ -105,15 +105,12 @@ class Cube:
         self.rw = np.sqrt(w[sel]) * m.edge_dist(self.x) ** col["beta"]
         self.rows = 2 * len(self.x)
         t0 = time.time()
-        A, off = self.matrix(self.x, self.T * self.rw[:, None, None], self.classes)
+        A = self.matrix(self.x, self.T * self.rw[:, None, None], self.classes)
         self.t_assemble = time.time() - t0
         t0 = time.time()
-        self.fac, self.scale = {}, {}
+        self.fac = {}
         for i, c in enumerate(self.classes):
-            Ac = np.asfortranarray(A[:, off[i]:off[i + 1]])
-            self.scale[c] = np.linalg.norm(Ac, axis=0)
-            Ac /= self.scale[c]
-            self.fac[c] = QR(Ac)
+            self.fac[c] = factor(np.ascontiguousarray(A[i][:, :self.unknowns[c]]), lsq)
             if self.fac[c].dR.min() < 1e-12 * self.fac[c].dR.max():
                 print(f"warning: class {c} is numerically rank deficient "
                       f"({self.fac[c].dR.min() / self.fac[c].dR.max():.1e})")
@@ -133,72 +130,69 @@ class Cube:
         return np.concatenate(keep).reshape(-1)
 
     def matrix(self, x, T, classes):
-        """Rows: (target, component of T); columns: the unknowns of the given
-        classes, one class after the other. T is (M, nc, 3), or None for the
-        three Cartesian components. Returns the matrix and the column offsets."""
+        """Matrices of the given classes, (classes, rows, columns): rows are
+        (target, component of T), columns the unknowns of the class (padded
+        to the largest class). T is (M, nc, 3), or None for the three
+        Cartesian components. The sum over the eight mirror images is taken
+        inside the compiled kernels."""
         ncls = len(classes)
-        off = np.cumsum([0] + [self.unknowns[c] for c in classes])
+        nmax = max(self.unknowns[c] for c in classes)
         cmap = np.full((ncls, 3 * self.slot0[-1]), -1, np.int64)
         for i, c in enumerate(classes):
-            cmap[i, self.keep[c]] = off[i] + np.arange(self.unknowns[c])
-        nc = 3 if T is None else T.shape[1]
-        A = np.zeros((len(x) * nc, off[-1]), complex)
-        npt = len(self.pe) + len(self.pm)
-        for R in REFL:
-            sgn = np.array([sign(c, R) for c in classes])
-            xr = x * R
-            Tr = np.diag(R)[None] if T is None else T * R
-            Tfull = np.broadcast_to(Tr, (len(x), nc, 3))
-            if npt:                                    # point dipoles: electric, then magnetic
-                G = [m.dyadic(xr, self.pe, m.K)]
-                if len(self.pm):
-                    G.append(m.magnetic_pairs(xr[:, None, :] - self.pm[None, :, :]))
-                B = np.einsum("mab,mnbc->manc", Tfull, np.concatenate(G, axis=1)).reshape(len(x) * nc, -1)
-                for i in range(ncls):
-                    A[:, cmap[i, :3 * npt]] += sgn[i] * B
-            i = 0
-            while i < len(self.lines):
-                ln = self.lines[i]
-                lo = 3 * self.slot0[2 + i]
-                if isinstance(ln, m.VertexTail):
-                    B = ln.block(xr, Tfull).reshape(len(x) * nc, -1)
+            cmap[i, self.keep[c]] = np.arange(self.unknowns[c])
+        Tk = np.eye(3)[None] if T is None else np.ascontiguousarray(T)
+        nc = Tk.shape[1]
+        A = np.zeros((ncls, len(x) * nc, nmax), complex)
+        sgn = np.array([[sign(c, R) for R in REFL] for c in classes])
+        refl = np.array(REFL)
+        x = np.ascontiguousarray(x)
+        if len(self.pe) + len(self.pm):                # point dipoles: electric, then magnetic (all components kept)
+            lt.points_add(x, Tk, refl, self.pe, self.pm if len(self.pm) else np.zeros((0, 3)), m.K, A,
+                          np.ascontiguousarray(cmap[:, 0]), sgn)
+        i = 0
+        while i < len(self.lines):
+            ln = self.lines[i]
+            lo = 3 * self.slot0[2 + i]
+            if isinstance(ln, m.VertexTail):           # a few tied point dipoles; all components kept
+                for r, R in enumerate(REFL):
+                    B = ln.block(x * R, np.broadcast_to(Tk * R, (len(x), nc, 3))).reshape(len(x) * nc, -1)
                     for j in range(ncls):
-                        A[:, cmap[j, lo:lo + 3 * ln.n]] += sgn[j] * B
-                    i += 1
-                    continue
-                mate = self.lines[i + 1] if i + 1 < len(self.lines) else None
-                pair = mate is not None and m.same_place(ln, mate)
-                tail = isinstance(ln, m.TailLine)
-                b = ln.base if tail else ln
-                mag = b.kernel is m.magnetic_pairs
-                cm_first = np.ascontiguousarray(cmap[:, lo:lo + 3 * ln.n])
-                cm_mate = np.ascontiguousarray(cmap[:, lo + 3 * ln.n:lo + 3 * (ln.n + mate.n)]) if pair else None
-                lt.tree_add(xr, Tr, b.ax, b.b, b.c, np.array(ln.pos) if tail else (b.yb, b.yc), b.lam, b.d, b.n, m.K, m.H,
-                            A, None if mag else cm_first, cm_first if mag else cm_mate, sgn,
-                            rot=ln.rot if tail else None,
-                            we=ln.w if tail and not mag else None,
-                            wm=(mate.w if pair else ln.w) if tail and (pair or mag) else None)
-                i += 2 if pair else 1
-        return A, off
+                        A[j][:, cmap[j, lo]:cmap[j, lo] + 3 * ln.n] += sgn[j, r] * B
+                i += 1
+                continue
+            mate = self.lines[i + 1] if i + 1 < len(self.lines) else None
+            pair = mate is not None and m.same_place(ln, mate)
+            tail = isinstance(ln, m.TailLine)
+            b = ln.base if tail else ln
+            mag = b.kernel is m.magnetic_pairs
+            cm_first = np.ascontiguousarray(cmap[:, lo:lo + 3 * ln.n])
+            cm_mate = np.ascontiguousarray(cmap[:, lo + 3 * ln.n:lo + 3 * (ln.n + mate.n)]) if pair else None
+            lt.tree_add(x, Tk, refl, b.ax, b.b, b.c, np.array(ln.pos) if tail else (b.yb, b.yc), b.lam, b.d, b.n, m.K, m.H,
+                        A, None if mag else cm_first, cm_first if mag else cm_mate, sgn,
+                        rot=ln.rot if tail else None,
+                        we=ln.w if tail and not mag else None,
+                        wm=(mate.w if pair else ln.w) if tail and (pair or mag) else None)
+            i += 2 if pair else 1
+        return A
 
     def solve(self, d, p):
         """Coefficients per class for the wave (d, p), and the relative boundary residual."""
-        coef, r2, b2 = {}, 0.0, 0.0
+        coef, r2, b2, c2 = {}, 0.0, 0.0, 0.0
         for c in classes_of(d, p):
             if c not in self.fac:
                 raise ValueError(f"the wave excites class {c}, which was not assembled")
             b = -np.einsum("mab,mb->ma", self.T, class_part(self.x, d, p, c)).reshape(-1) * np.repeat(self.rw, 2)
-            y, _, res = self.fac[c].solve(b, residual=True)
+            coef[c], res = self.fac[c].solve(b, residual=True)
             r2 += float(res) ** 2
             b2 += np.linalg.norm(b) ** 2
-            coef[c] = y / self.scale[c]
-        self.coef_norm = float(np.sqrt(sum(np.linalg.norm(v * self.scale[c]) ** 2 for c, v in coef.items())))
+            c2 += np.linalg.norm(coef[c] * self.fac[c].scale) ** 2
+        self.coef_norm = float(np.sqrt(c2))
         return coef, np.sqrt(r2 / b2)
 
     def field(self, coef, pts):
         cl = list(coef)
-        A, off = self.matrix(pts, None, cl)
-        return (A @ np.concatenate([coef[c] for c in cl])).reshape(-1, 3)
+        A = self.matrix(pts, None, cl)
+        return sum(A[i][:, :self.unknowns[c]] @ coef[c] for i, c in enumerate(cl)).reshape(-1, 3)
 
     def far(self, coef, dirs, rfar=1.0e6):
         return self.field(coef, rfar * dirs) * rfar * np.exp(-1j * m.K * rfar)

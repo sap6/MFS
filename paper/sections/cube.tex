@@ -143,4 +143,31 @@ Compared with the best boundary element result at each accuracy, the MFS is leve
 
 \subsection{A general incident wave}
 
-%% CUBEOBLIQUE
+\label{sec:cubeoblique}
+
+A wave from a general direction excites all eight classes. We tested the wave that arrives from the polar angle $60^\circ$ and the azimuth $25^\circ$, with its polarisation rotated by $35^\circ$ from the plane of incidence. The assembly is shared between the classes, and eight factorisations are needed instead of two. \autoref{tab:cubeoblique} compares the MFS with Bempp on graded meshes, both against the MFS run with $J = 9$ for this wave.
+
+The convergence of the MFS is the same as for the standard wave, from $6.1\times10^{-3}$ at $J = 4$ to $1.1\times10^{-4}$ at $J = 8$. The cost is between two and three times that of the standard wave. For this wave the boundary element method is ahead at moderate accuracy: it reaches $1.4\times10^{-3}$ in $9$\,s and $7.7\times10^{-4}$ in $18$\,s, where the MFS needs $20$\,s for $1.0\times10^{-3}$. The two are level near $4\times10^{-4}$ ($44$\,s against $62$\,s), and the MFS reaches $1.1\times10^{-4}$ in $62$\,s, which Bempp did not reach.
+
+\begin{table}[htbp]
+  \centering
+  \caption{Unit cube, oblique wave: MFS with eight parity classes and Bempp on graded meshes. Unknowns (for the MFS, all classes together), wall time and difference from the MFS run with $J = 9$.}
+  \label{tab:cubeoblique}
+  \begin{tabular}{lrrl}
+    \toprule
+    Method & Unknowns & Time [s] & Error \\
+    \midrule
+    MFS, $J = 4$ &  4944 &  5.4 & $6.1\times10^{-3}$ \\
+    MFS, $J = 5$ &  7128 &  8.3 & $2.7\times10^{-3}$ \\
+    MFS, $J = 6$ &  9984 & 20   & $1.0\times10^{-3}$ \\
+    MFS, $J = 7$ & 13344 & 44   & $3.9\times10^{-4}$ \\
+    MFS, $J = 8$ & 16680 & 62   & $1.1\times10^{-4}$ \\
+    \midrule
+    Bempp, quadrature 4/6 &  2592 &  5.3 & $2.1\times10^{-3}$ \\
+    Bempp, quadrature 4/6 &  4608 &  8.9 & $1.4\times10^{-3}$ \\
+    Bempp, quadrature 6/8 &  4608 & 18   & $7.7\times10^{-4}$ \\
+    Bempp, quadrature 6/8 &  7200 & 34   & $4.9\times10^{-4}$ \\
+    Bempp, quadrature 6/8 & 10368 & 62   & $3.9\times10^{-4}$ \\
+    \bottomrule
+  \end{tabular}
+\end{table}

@@ -23,6 +23,8 @@ import time
 os.environ["PATH"] = os.path.join(sys.prefix, "bin") + os.pathsep + os.environ.get("PATH", "")
 
 import bempp_cl.api as bempp  # noqa: E402
+
+import bem_reference as br  # noqa: E402
 import numpy as np  # noqa: E402
 import scipy.linalg as sla  # noqa: E402
 
@@ -76,23 +78,8 @@ def optical(far_fun, d, p):
 
 
 def solve(grid, points, D=D, P=P):
-    div = bempp.function_space(grid, "RWG", 0)
-    curl = bempp.function_space(grid, "SNC", 0)
-    efie = bempp.operators.boundary.maxwell.electric_field(div, div, curl, K)
-
-    @bempp.complex_callable
-    def trace(x, n, domain_index, result):
-        inc = P * np.exp(1j * K * (x[0] * D[0] + x[1] * D[1] + x[2] * D[2]))
-        result[:] = np.cross(inc, n)
-
-    t0 = time.time()
-    A = np.asarray(efie.weak_form().to_dense())
-    rhs = bempp.GridFunction(div, fun=trace, dual_space=curl).projections(curl)
-    t1 = time.time()
-    lu = sla.lu_factor(A, overwrite_a=True, check_finite=False)
-    lam = bempp.GridFunction(div, coefficients=sla.lu_solve(lu, rhs, check_finite=False))
+    lam, div, (ta, tl) = br.efie_solve(grid, K, D, P)
     t2 = time.time()
-    del A, lu
 
     def field(x):
         return -(bempp.operators.potential.maxwell.electric_field(div, x.T, K) * lam).T
@@ -102,7 +89,7 @@ def solve(grid, points, D=D, P=P):
 
     E = field(points)
     t3 = time.time()
-    return E, far, div.global_dof_count, (t1 - t0, t2 - t1, t3 - t2)
+    return E, far, div.global_dof_count, (ta, tl, t3 - t2)
 
 
 if __name__ == "__main__":
