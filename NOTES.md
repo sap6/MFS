@@ -47,11 +47,12 @@ where we show it".
   best configuration (item 43; `retime_all.sh`). Use only those numbers.
 - **On the cube Bempp was also given the mirror symmetry** that the MFS uses
   (item 55). On that equal footing, with the final MFS timings of item 56,
-  and Bempp's best grading (item 58: g = 1.5 with the default quadrature
-  on coarse meshes, found in the last quarter of an hour), Bempp is faster
-  down to 0.07% (1.5 s for 0.115%, 2.6 s for 0.075%, against the MFS's
-  3.1 s for 0.095%), the two are level near 0.06%, and the MFS is faster
-  below (4.3 s for 0.037% against 5.8 s; 2.5 times at 0.02-0.015%) and
+  and Bempp's best grading so far (item 58: g = 1.5 and 1.75 with the
+  default quadrature on coarse meshes, found in the last quarter of an
+  hour; **the scan of the grading is not finished**), Bempp is faster
+  down to 0.05% (1.5 s for 0.115%, 2.6 s for 0.054%, against the MFS's
+  3.1 s for 0.095%), and the MFS is faster below 0.04% (4.3 s for 0.037%
+  against 5.0 s for 0.043% and 5.8 s for 0.038%; 2.5 times at 0.02-0.015%) and
   continues to 0.0015% (measured against J = 11). For the oblique wave
   Bempp is faster down to 0.04% and the two are level below (g = 1.5
   does not change this). Do not write that the MFS is faster on the cube without saying
@@ -1001,6 +1002,19 @@ towards the MFS field.
       1.6e-3). Oblique, g = 1.5: 7.1 s 1.26e-3; 24.8 s 6.5e-4 (4/6); 6/8:
       10.9 s 1.24e-3; 37.5 s 6.2e-4. Finer meshes: g = 2 better (item 57).
     - k = 6 pi: g = 1.5 better throughout (item 57).
+    - **g = 1.75 is better still in the middle** (k = 2 pi, symmetric):
+      4/6: 2.6, 5.0, 8.7 s for 5.4e-4, 4.3e-4, 3.7e-4 (7200, 10368, 14112
+      dofs); 6/8: 3.4, 5.2, 9.5, 16.3 s for 7.1e-4, 4.2e-4, 2.8e-4, 2.07e-4;
+      8/10: 16.4, 25.5, 42 s for 2.7e-4, 1.9e-4, 1.4e-4 (worse than g = 2
+      with 8/10: 15, 22, 34 s for 2.0e-4, 1.5e-4, 1.25e-4). So Bempp's
+      best envelope at k = 2 pi is now: 1.5 s 1.15e-3 (g 1.5); 2.6 s 5.4e-4
+      (g 1.75); 5.0 s 4.3e-4; 5.8 s 3.8e-4 (g 2, 6/8); 9.0-9.5 s 2.8e-4 to
+      3.0e-4; 15 s 2.0e-4; 22 s 1.5e-4; 34 s 1.25e-4; 69 s 1.0e-4. Against
+      the MFS (3.1 s 9.5e-4; 4.3 s 3.7e-4; 6.3 s 1.7e-4; 8.6 s 1.5e-4):
+      **Bempp faster down to 5e-4, MFS faster below 4e-4 (1.3 times at
+      3.7e-4, about 2.5 times at 2e-4 and 1.5e-4)**. g = 1.75 was not run
+      at k = 4 pi or for the oblique waves: those paragraphs may still
+      move towards Bempp in the range 5e-4 to 1e-3.
     - The draft text was corrected in all four places (cube cost paragraph,
       two-wavelength subsection twice, discussion) and in the appendix on
       the grading, with a TODO. **Still to do (T27)**: g = 1.5 rows in
@@ -1131,9 +1145,12 @@ Open, in the order I would take them:
 - [x] **T21 Why does one depth per octave stall?** Answered in items 53-54: a
       fixed ratio has a fixed attainable accuracy (2D model: 8e-5, 6e-6, 1e-9
       for ratios 0.5, 0.6, 0.71); tapered depths help in 2D but not in 3D.
-- [ ] **T27 Bempp with grading 1.5 in the tables and figures (item 58).
-      Do this first.** The text quotes it; the tables and Figure 6 show
-      only g = 2.
+- [ ] **T27 Finish the scan of Bempp's grading and put it in the tables
+      and figures (item 58). Do this first.** g = 1.25, 1.5, 1.75, 2 with
+      each quadrature, at k = 2 pi (standard and oblique) and k = 4 pi;
+      take the lower envelope. The text quotes g = 1.5 and 1.75; the
+      tables and Figure 6 show only g = 2. Every "faster" statement about
+      the cube between 3e-4 and 1e-3 depends on this.
 - [ ] **T25 Cube at higher wavenumbers (item 57).** k = 4 pi is done
       (standard and oblique wave) and is in the draft. k = 6 pi converges
       with the base layout scaled with the wavelength but is untuned and
@@ -1271,6 +1288,7 @@ Open, in the order I would take them:
 - Bempp with symmetry, k = 2 pi, g = 1.5, 4/6: 2.0e-3, 1.15e-3, 7.5e-4, 5.3e-4, 4.0e-4 in 0.8, 1.5, 2.6, 5.9, 8.5 s (2592..14112 dofs); 6/8 and 8/10 give the same errors. Beats g = 2 down to 7e-4 (item 58).
 - Bempp with symmetry, k = 4 pi, g = 1.5, 4/6: 2.7e-3 in 1.5 s, 1.05e-3 in 4.4 s; oblique: 1.26e-3 in 7.1 s, 6.5e-4 in 24.8 s.
 - Bempp with symmetry, k = 2 pi, oblique wave, g = 1.5, 4/6: 2.65e-3, 1.44e-3, 9.2e-4, 6.4e-4, 4.7e-4 in 0.9 to 10.9 s: no gain over g = 2.
+- Bempp with symmetry, k = 2 pi, g = 1.75: 4/6: 5.4e-4, 4.3e-4, 3.7e-4 in 2.6, 5.0, 8.7 s; 6/8: 7.1e-4, 4.2e-4, 2.8e-4, 2.07e-4 in 3.4, 5.2, 9.5, 16.3 s; 8/10: 2.7e-4, 1.9e-4, 1.4e-4 in 16, 26, 42 s (item 58).
 
 ## 6. Write-up session
 
