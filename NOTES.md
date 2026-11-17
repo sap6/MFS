@@ -433,7 +433,7 @@ towards the MFS field.
     used tori) and it has no closed-form reference. Do not present the
     focal-ring statement as new before Millar 1983 has been read.
 
-### Fourth session, 2026-11-17, overnight (items 39-51)
+### Fourth session, 2026-11-17, overnight (items 39-52)
 
 39. **Bempp was run with its slow backend.** bempp-cl assembles with OpenCL
     if `pyopencl` and a CPU driver are installed and falls back to Numba
@@ -648,6 +648,18 @@ towards the MFS field.
     The optical mismatch of 8:5 is 1.5e-4 in all variants, larger than the
     field error: it is an indicator, not a bound. Cases with more than about
     10000 unknowns per class ran out of memory.
+52. **How robust is the cube reference?** (`cube_floor.py d9 ...`, dense
+    family at J = 9, differences of the field from the family's own run.)
+    More modes (n0 = 18 instead of 14): 6.3e-7. Tails of 14 lines instead of
+    9: 6.3e-7. A second vertex exponent: 1.7e-7. Another collocation grid
+    (3 nodes per panel, panels shrinking by 2^(-1/2)): 9.7e-7. Row-weight
+    exponent beta = 0.3: 5.9e-5 (and further from J = 10: 9.2e-5; residual
+    1.1e-3); beta = 0.7: 2.1e-5 (and closer to J = 10: 2.0e-5 instead of
+    3.5e-5; optical mismatch 8.5e-6 instead of 1.3e-5). So only the level J
+    and the weighting matter at the 1e-5 level, and beta = 0.7 may be a
+    slightly better choice than 0.5 for the far field (not adopted: it would
+    mean re-running every cube table; T24). A finer base grid (12, panels
+    0.07) at J = 9 needs more than the 15 GB and was killed.
 
 ## 3. Current best commands
 
@@ -762,6 +774,11 @@ Open, in the order I would take them:
       Item 47 shows that two per octave do not. A rate in terms of the depth
       ratio (as for lightning solvers, where the clustering is tapered) would
       turn the observation into an argument. Tapered depths were not tried.
+- [ ] **T24 Row-weight exponent 0.7 instead of 0.5 on the cube (optional).**
+      Item 52: at J = 9 it is closer to the reference and has a smaller
+      optical mismatch. Check J = 5..8 for both families; if it is uniformly
+      better, adopt it and re-run `fig_cost_cube.py run` and
+      `cube_oblique_table.py run`.
 - [ ] **T22 A boundary element code that uses the mirror symmetry**
       (optional): the one comparison the cube timings cannot answer (item 44).
 - [ ] **T15 Vertex treatment beyond the diagonal (optional).** No longer
