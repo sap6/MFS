@@ -58,9 +58,18 @@ where we show it".
   (base grid 6 / 0.15 from J = 6 on, line quadrature 12 / 8 nodes; `paper/tables/cube_mfs.tex`, `cube_oblique.tex`). The MFS
   times and errors in items 43, 47 and 55 are from the finer base grid and
   are superseded; the Bempp numbers there stand.
-- **The optical theorem is an indicator, not a bound** (item 56): two fits
-  with a too coarse interior grid were wrong by 2.4% and 0.03% with
-  mismatches of 1e-5 and 3e-5.
+- **The optical theorem is an indicator, not a bound** (items 56, 57):
+  fits with a too coarse interior grid were wrong by 2.4%, 0.03% and 3.6%
+  with mismatches of 1e-5, 3e-5 and 4e-4.
+- **The cube layout also converges at two and three wavelengths** (item
+  57; `cube_wavenumber.py`), confirmed by Bempp to 2.4e-4 and 8e-4. At two
+  wavelengths the MFS is level with Bempp-with-symmetry at 0.1% and 2 to 5
+  times faster below; this is in the draft (Section 6.6). Three
+  wavelengths is untuned and only mentioned in the limits.
+- **The line quadrature must grow with the wavenumber** (item 57 a;
+  `line_tree.nodes`). A fixed rule looked like a failure of the layout at
+  three wavelengths for two hours. At any new wavenumber, compare two
+  quadrature settings before interpreting a stall.
 - **The cube family with one source depth per octave stalls near 1.3e-4;
   two depths per octave converge** with no stall (item 47), down to a
   difference of 1.46e-5 between J = 10 and J = 11 (item 56). The
@@ -911,8 +920,16 @@ towards the MFS field.
     - Two or three wavenumbers are not a law: do not write "the advantage
       grows with k". The families at S = 2, 3 were tuned in an hour and the
       grading of the Bempp mesh was not re-tuned. Not done: oblique wave
-      at k = 4 pi; whether the S = 1 collocation really fails at S = 2 (it
-      looked so, but that was seen with the wrong quadrature).
+      at k = 4 pi.
+    - Is the finer interior collocation needed at S = 2? (re-tested with
+      the right quadrature) For one depth per octave, yes: with the S = 1
+      grid J = 5 gives 3.6e-2 instead of 2.3e-3 and J = 8 gives 1.0e-3
+      instead of 2.2e-4 (optical mismatch 3.6e-4 and 1.2e-4: again no
+      warning). For two depths per octave (four nodes per panel), no: J = 8,
+      9 give 1.48e-4 and 4.7e-5 with the S = 1 grid, as with the scaled one,
+      in 31 and 48 s instead of 43 and 64 s. The table in the draft uses
+      the scaled grid for both families; the two-depth rows could be 25%
+      faster (not re-run).
 
 ## 3. Current best commands
 
@@ -1154,6 +1171,7 @@ Open, in the order I would take them:
 - Cube at k = 4 pi re-run with 20/10 nodes (item 57): one depth J = 5..8: 2.3e-3, 1.1e-3, 4.8e-4, 2.2e-4 in 3.3 to 13 s; two depths J = 7..9: 3.8e-4, 1.5e-4, 4.5e-5 in 29 to 64 s; Bempp with symmetry 8/10, 28800 dofs: 2.4e-4 away, 74 s. (The line two above this group, with 3.3e-4 and 7.4e-5, is superseded.)
 - Cube at k = 6 pi, base 12/18 at depth 0.067, hmax / 3, 8 more modes, 28/12 nodes: one depth J = 6, 7, 8: 2.0e-3, 1.3e-3, 8.6e-4 in 21 to 32 s; two depths J = 6, 7: 8.2e-4, 3.0e-4 in 56, 80 s (against J = 8, optical 8.8e-5).
 - Bempp with symmetry at k = 6 pi against the MFS (two depths, J = 8): 8/10: 4.1e-3, 1.5e-3, 8.2e-4 for 10368, 18432, 28800 dofs (14, 35, 74 s); 6/8, 28800 dofs: 8.6e-4 in 49 s.
+- Cube at k = 4 pi with the k = 2 pi interior collocation (20/10 nodes): one depth J = 5, 8: 3.6e-2, 1.0e-3 (scaled grid: 2.3e-3, 2.2e-4); two depths J = 8, 9: 1.48e-4, 4.7e-5 (scaled: 1.48e-4, 4.5e-5), 25% faster.
 
 ## 6. Write-up session
 
