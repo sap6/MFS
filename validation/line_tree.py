@@ -28,8 +28,8 @@ import numpy as np
 from numba import njit, prange
 
 LMOM = 4          # levels 0..3 use moments (panel widths 2, 1, 0.5, 0.25 in u)
-PM = 20           # nodes of a moment panel
-NG = 10           # Gauss nodes of a deeper panel
+PM = 12           # nodes of a moment panel (20 gives the same cube fields to 1e-8)
+NG = 8            # Gauss nodes of a deeper panel (10: the same to 1e-8)
 ALPHA_M = 1.0     # accept a moment panel if its length <= ALPHA_M * distance
 ALPHA_G = 1.0     # the same for Gauss panels
 LHARD = 40        # absolute depth limit of the descent

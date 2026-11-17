@@ -47,12 +47,12 @@ where we show it".
   best configuration (item 43; `retime_all.sh`). Use only those numbers.
 - **On the cube Bempp was also given the mirror symmetry** that the MFS uses
   (item 55). On that equal footing, with the final MFS timings of item 56,
-  Bempp is faster above 0.06%, the two are level from 0.06% to 0.04%, and
-  the MFS is faster below 0.03% (1.3-3 times) and continues to 0.0015%
-  (measured against J = 11). Do not write that the MFS is faster on the cube without saying
+  Bempp is faster above 0.06% (2.4 times at 0.1%), the two are level near
+  0.06%, and the MFS is faster below 0.04% (1.3 times there, 2.4-3.5 times
+  at 0.02-0.015%) and continues to 0.0015% (measured against J = 11). Do not write that the MFS is faster on the cube without saying
   which Bempp (with or without symmetry) and at what error.
-- **The cube MFS numbers to use are those of item 56** (base grid 6 / 0.15
-  from J = 6 on; `paper/tables/cube_mfs.tex`, `cube_oblique.tex`). The MFS
+- **The cube MFS numbers to use are the FINAL ones at the end of item 56**
+  (base grid 6 / 0.15 from J = 6 on, line quadrature 12 / 8 nodes; `paper/tables/cube_mfs.tex`, `cube_oblique.tex`). The MFS
   times and errors in items 43, 47 and 55 are from the finer base grid and
   are superseded; the Bempp numbers there stand.
 - **The optical theorem is an indicator, not a bound** (item 56): two fits
@@ -134,9 +134,9 @@ the cube without that qualification.
 | Unit sphere, k = 4pi | same | 1.3e-12 (N = 1200) | Mie |
 | Unit cube, k = 2pi | uniform dipoles on inner cube | stalls at 25% | Bempp |
 | Unit cube, k = 2pi | lightning-type edge sources, no tail | 0.5% (J = 10); 0.8% at J = 12 (stall) | Bempp h = 0.05 |
-| Unit cube, k = 2pi | edge sources + edge and vertex tails, **one depth per octave** (`cube_mfs.balanced`) | 1.28%, 0.53%, 0.21%, 0.095%, 0.037%, 0.017%, 0.015% for J = 3..9 (1.2 to 10.5 s), then stalls (item 56) | MFS dense J = 11 |
-| Unit cube, k = 2pi | the same with **two depths per octave** (`cube_mfs.dense`) | 1.39%, 0.51%, 0.20%, 0.083%, 0.034%, 0.0135%, 0.0050%, 0.0015% for J = 3..10 (2.3 to 50 s); optical mismatch down to 1.7e-6 at J = 11 (76 s); no stall | its own J = 11 (estimated error 1e-5); graded Bempp with symmetry (28800 dofs, quadrature 8/10) is 0.010% away; cross-sections agree to 4e-5 |
-| Unit cube, oblique wave (from theta 60, phi 25, polarisation angle 35 degrees) | the same, eight parity classes | one depth: 0.62% to 0.019% for J = 4..9 (2.2 to 22 s); two depths: 0.014% at J = 8 (71 s) | MFS dense J = 10 for that wave; graded Bempp with symmetry, 28800 dofs, is 0.013% away |
+| Unit cube, k = 2pi | edge sources + edge and vertex tails, **one depth per octave** (`cube_mfs.balanced`) | 1.28%, 0.53%, 0.21%, 0.095%, 0.037%, 0.017%, 0.015% for J = 3..9 (1.1 to 8.6 s), then stalls (item 56) | MFS dense J = 11 |
+| Unit cube, k = 2pi | the same with **two depths per octave** (`cube_mfs.dense`) | 1.39%, 0.51%, 0.20%, 0.082%, 0.034%, 0.0135%, 0.0050%, 0.0015% for J = 3..10 (1.9 to 46 s); optical mismatch down to 1.8e-6 at J = 11 (68 s); no stall | its own J = 11 (estimated error 1e-5); graded Bempp with symmetry (28800 dofs, quadrature 8/10) is 0.010% away; cross-sections agree to 4e-5 |
+| Unit cube, oblique wave (from theta 60, phi 25, polarisation angle 35 degrees) | the same, eight parity classes | one depth: 0.62% to 0.019% for J = 4..9 (1.9 to 20 s); two depths: 0.014% at J = 8 (65 s) | MFS dense J = 10 for that wave; graded Bempp with symmetry, 28800 dofs, is 0.013% away |
 | Torus R = 1, a = 0.5, k = 2pi (also a = 0.25, 0.8; any wave) | dipoles on the inner torus a_s = 0.5 a, solved mode by mode about the axis | field 5e-7 (8064 unknowns, 3 s), 2e-9 (13824, 7 s), 7e-12 (21120, 10 s) against the finest run; residual 1e-10, optical mismatch 9e-14 | finest MFS (40320 unknowns); Bempp 9600 dofs is 0.82% away and its 1/N extrapolation of the cross-section agrees to 7e-5 |
 | NASA almond, 1.19 GHz, nose-on | confocal / shrunk source surface | unstable or 20%+ | - |
 | NASA almond, 1.19 / 7 / 9.92 GHz, monostatic RCS, HH and VV | skeleton sources + tip tail, four parity classes | within 0.03 / 0.04 / 0.12 dB rms of Bempp; self-converged to 0.001 dB (1.19 GHz) and 0.01 dB rms (9.92 GHz) | Bempp 9558 / 13632 dofs |
@@ -817,6 +817,36 @@ towards the MFS field.
       its estimates (6e-5 for J = 9, 3e-5 for J = 10) are confirmed by it
       within a factor 1.2 to 2 (measured 5.05e-5 and 1.46e-5, plus the
       error of J = 11).
+    - **Line quadrature 12 / 8 nodes instead of 20 / 10** (`line_tree.PM`,
+      `NG`): all cube fields unchanged to below 1e-7 (J = 11: 8e-7), matrix
+      entries accurate to 1e-6 instead of 5e-10, assembly 25-30% faster,
+      total 12-20% faster. 12 / 6 changes the dense J = 9 field by 1.5e-6
+      and 10 / 5 by 9e-6: not adopted. Shorter tails (6 lines instead of
+      9): 10% at equal error, not adopted. At J = 6 the assembly of the
+      free lines is 2.7 of 3.8 s, so there is no further cheap gain at the
+      coarse levels.
+    - **FINAL cube numbers (these are the ones in the draft)**, errors
+      against dense J = 11:
+      - standard wave, one depth per octave, J = 3..9: 1.1, 1.4, 1.8, 3.1,
+        4.3, 6.3, 8.6 s for 1.28%, 0.53%, 0.21%, 0.095%, 0.037%, 0.017%,
+        0.015%;
+      - two depths per octave, J = 3..11: 1.9, 2.8, 4.5, 8.0, 13.6, 20.4,
+        30.1, 45.9, 68.5 s for 1.39%, 0.51%, 0.20%, 0.082%, 0.034%,
+        0.0135%, 0.0050%, 0.0015%, reference (optical mismatch 1.8e-6);
+      - oblique wave (reference dense J = 10 for that wave), one depth,
+        J = 4..9: 1.9, 2.8, 5.0, 8.8, 13.5, 20.2 s for 0.62%, 0.28%,
+        0.117%, 0.053%, 0.027%, 0.019%; two depths, J = 6, 7, 8: 18.5,
+        32.7, 64.5 s for 0.098%, 0.039%, 0.014%;
+      - against Bempp with symmetry, standard wave: Bempp 1.3 s (0.11%)
+        against MFS 3.1 s (0.095%); level near 0.06% (Bempp 4.3 s for
+        0.061%; MFS 4.3 s for 0.037%); MFS 4.3 s against 5.8 s at 0.037%;
+        6.3 s (0.017%) and 8.6 s (0.015%) against 15 s (0.020%) and 22 s
+        (0.015%); Bempp's best 0.010% in 69 s; MFS 0.0135% in 20 s,
+        0.0050% in 30 s, 0.0015% in 46 s. Without symmetry in Bempp: 2
+        times at 0.1%, 7 times at 0.04%, 15 times at 0.02%.
+      - oblique wave: Bempp-sym 5.0 s against 8.8 s at 0.052%; level below
+        (15 s against 14 s at 0.027%; 40 s for 0.016% against 20 s for
+        0.019%; 91 s for 0.013% against 65 s for 0.014%).
     - Edge appendix: the next terms of the wall currents have exponents
       larger by 2 (electric) and 4/3 (magnetic) (8/3, 11/3, 8/3, 11/3;
       `DERIVATIONS.md` B), not "by two or more" as the draft said.
@@ -1036,6 +1066,8 @@ Open, in the order I would take them:
 - Cube tables re-run with the adopted grid (item 56): one depth J = 7, 8, 9: 5.2, 7.7, 10.5 s for 3.6e-4, 1.6e-4, 1.5e-4; two depths J = 8, 9, 10: 24, 36, 50 s for 1.2e-4, 3.6e-5, reference.
 - Cube two depths per octave, J = 11 (new reference): 76 s, optical 1.7e-6, sigma_ext 2.927982; J = 8, 9, 10 differ from it by 1.35e-4, 5.05e-5, 1.46e-5.
 - Cube, tail length 9 / 6 / 4 lines, one depth per octave: J = 6: 3.9 / 3.4 / 3.2 s for 9.5e-4 / 8.7e-4 / 1.8e-3; J = 8: 7.4 / 6.9 / 6.9 s for 1.72e-4 / 1.83e-4 / 5.3e-4. Six lines save 10% at equal error; not adopted (assembly of the free lines dominates: 2.7 of 3.8 s at J = 6).
+- Cube line quadrature PM / NG = 20/10, 16/8, 12/8, 12/6, 10/5: J = 8 one depth 7.6, 6.7, 6.1, 5.6, 5.2 s, field change 0, 1e-9, 8e-9, 2e-7, 4e-6; dense J = 9: 36.5, 35.9, 30.1, 29.2, 26.6 s, change 0, 7e-9, 1e-8, 1.5e-6, 9e-6. 12/8 adopted.
+- Cube tables re-run with 12/8 (final, item 56): one depth J = 6..9: 3.1, 4.3, 6.3, 8.6 s; two depths J = 8..11: 20, 30, 46, 68 s; all fields equal to the 20/10 run to below 1e-7 (J = 11: 8e-7).
 
 ## 6. Write-up session
 

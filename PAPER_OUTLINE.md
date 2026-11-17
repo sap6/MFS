@@ -4,8 +4,9 @@
 > section 6 and items 39-50). This outline is kept as the plan it was written
 > against. Three things in it are superseded: every cost figure (both codes
 > were re-timed at their best), the cube accuracy ("0.011%, floor"; now
-> 0.0035% with two source depths per octave, reference good to 2.5e-5,
-> Bempp agreeing to 0.014%), and the almond null (a 0.1 degree shift).
+> 0.0015% with two source depths per octave, reference good to about 1e-5,
+> Bempp agreeing to 0.010%; `NOTES.md` item 56), and the almond null (a 0.1
+> degree shift).
 
 For the author. Bullets and pointers only; the prose is yours. Every number
 below is in `NOTES.md` with the script that prints it. Derivations are in
