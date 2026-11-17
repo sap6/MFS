@@ -53,13 +53,34 @@ make it stronger?".
   `bem_grading_scan_k1.npz`.
 - **What makes the cube result strong is the convergence law, not the
   seconds** (item 61): the error is 0.44 exp(-0.048 sqrt N), the order
-  rises from 2.3 to 6.3 while Bempp's falls from 1.4 to 0.8, and plain MFS
-  sits at 21%. The paper leads with this.
+  rises from about 2.5 to 6 while Bempp's falls from 1.4 to 0.8, and plain
+  MFS sits at 21%. The paper leads with this.
 - **Timing rule** (item 60): the containers differ and drift. Time the two
   codes alternately in one session (`cube_duel.py`), keep the smaller of
   repeated times, and run nothing else meanwhile. All tables were re-timed
   today (`retime_rest.sh`); the times of the fourth session are obsolete.
-- The two-depth family is usable up to J = 11 only (item 62).
+- The two-depth family with the interior grid 6 / 0.15 is usable up to
+  J = 11; with 8 / 0.1 it continues to J = 12, which confirms the reference
+  to 7e-6 (item 62; quoted in the paper, tables unchanged; T28).
+- **State at the end of the session (16:20 UTC)**: everything committed
+  and pushed to `ccr-116c520c-fts35f` (last commit: this note); nothing
+  running; nothing pushed to `sap6/mfs-paper`; no pull request. The short
+  paper was checked by an independent reviewer and corrected (item 63).
+  The final `paper/main.pdf` and `paper/supplement.pdf` were sent to the
+  author in chat.
+- **Working with the author**: they read on a phone and cannot open
+  repository files there, so give details in chat and send PDFs with the
+  file tool. Their wishes for the paper: about 25 pages in the 12 pt
+  preprint layout, clear and accessible, the thesis's voice and some of
+  its wording, a short title, not "too much Bempp". The uploaded PDFs are
+  in the session's upload folder, not in the repository; what they say is
+  in `LITERATURE.md` section 10.
+- **Open for the author**: title; abstract and highlights
+  (`paper/highlights.txt`); whether to keep the thesis phrases a referee
+  may call promotional (item 63); acknowledgements and AI declaration;
+  Timo's check of the edge exponents and the proof (T20). Optional work:
+  T28 (J = 12 as reference), T29 (a second polyhedron), T25 (three
+  wavelengths), the Bempp scan for the oblique wave and k = 4 pi.
 
 ### Fourth session, 2026-11-17, overnight
 
