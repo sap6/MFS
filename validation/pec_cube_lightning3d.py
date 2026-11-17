@@ -363,8 +363,10 @@ def pair_block(l1, l2, x, T=None):
 class Sources:
     def __init__(self, J, n_base=6, depth0=0.2, q=0.25, gamma=2.0, n0=4, angles=(0.0,), kinds="e", vrays=1,
                  tail_n=0, tail_q=0.5, tail_e=(2 / 3,), tail_m=(4 / 3,), tail_normal=0,
-                 tail_er=(5 / 3,), tail_mr=(7 / 3,), vtail_n=0, vtail_exp=1):
+                 tail_er=(5 / 3,), tail_mr=(7 / 3,), vtail_n=0, vtail_exp=1, depths=None):
         self.depths = depth0 * q ** np.arange(J + 1) if J >= 0 else np.array([])
+        if depths is not None and J >= 0:                    # any decreasing list of depths (cube_mfs.tapered)
+            self.depths = np.asarray(depths, float)
         pts = [base_sources(n_base, depth0)]
         # inward rays from every vertex: the body diagonal, optionally three more
         dirs = [np.array([1.0, 1, 1])]

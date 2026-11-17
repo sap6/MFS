@@ -433,7 +433,7 @@ towards the MFS field.
     used tori) and it has no closed-form reference. Do not present the
     focal-ring statement as new before Millar 1983 has been read.
 
-### Fourth session, 2026-11-17, overnight (items 39-53)
+### Fourth session, 2026-11-17, overnight (items 39-54)
 
 39. **Bempp was run with its slow backend.** bempp-cl assembles with OpenCL
     if `pyopencl` and a CPU driver are installed and falls back to Numba
@@ -659,24 +659,34 @@ towards the MFS field.
     slightly better choice than 0.5 for the far field (not adopted: it would
     mean re-running every cube table; T24). A finer base grid (12, panels
     0.07) at J = 9 needs more than the 15 GB and was killed.
-53. **The depth ratio sets a floor in 2D too** (`proto2d_depth_ratio.py`,
-    unit square, sources on the corner bisectors with tails; far field
-    against a free solve). TE: with ratio 1/2 the error stalls at 8.4e-5 from
-    a deepest depth of 4e-3 down to 2e-5, with one tail exponent per source
-    type or with six; with ratio 2^(-1/2) it stalls at 4.7e-6, which is the
-    accuracy of the reference used (ratio 0.6: 5.8e-6 from a ratio-0.87
-    solve; ratio 2^(-1/2): 1.3e-6). TM: 1.4e-7 and 1.1e-8. Free solves with
-    ratios 0.5, 0.6, 0.71: boundary residual 3.8e-3, 4.8e-4, 9.0e-6 (TE). So
-    a fixed geometric ratio gives a fixed attainable accuracy, as the theory
-    of lightning solvers says (root-exponential convergence needs tapered
-    clustering), and the 3D family with two depths per octave will stall
-    too, probably near 1e-5. Tapered depths were not tried (T21).
+53. **The depth ratio sets a floor in 2D too** (`proto2d_tapered.py`,
+    `proto2d_depth_ratio.py`; unit square, point sources on the corner
+    bisectors). Free solves down to depth 1e-9, TE, far field against a
+    converged solve: ratio 1/2 (30 depths): 8.1e-5; ratio 0.6 (40): 5.8e-6;
+    ratio 2^(-1/2) (58): 1.4e-9; ratio 0.8 (89): 1e-11. With tails instead
+    of deep depths the ratio-1/2 error is the same 8.4e-5 from a deepest
+    depth of 4e-3 down to 2e-5, with one tail exponent per source type or
+    six. So a fixed geometric ratio gives a fixed attainable accuracy, as
+    the theory of lightning solvers says, and the 3D floor of 1.3e-4 for one
+    depth per octave is the same effect. (The collocation must follow: two
+    and three times as many nodes per panel for ratios 2^(-1/2) and 0.8.)
     Also found: the reference solve of `proto2d_square_tail.py` (70 depths,
     down to 1e-16) is wrong by 85% with numpy 2.5 / scipy 1.18 (far-field
-    norm 49.75 instead of 35.95); 30, 40 and 50 depths agree to 3e-7. Both
-    2D scripts now use 40. Free solves with ratios 0.8 and above are
-    under-sampled in this prototype (more unknowns than rows) and must not
-    be used.
+    norm 49.75 instead of 35.95); 30, 40 and 50 depths agree to 3e-7. That
+    script now uses 40.
+54. **Tapered depths: a large gain in 2D, none in 3D** (T21, closed).
+    Lightning-type spacing d_j = d0 exp(-sigma (sqrt(n) - sqrt(j))), dense
+    near d0 and sparse near the corner. 2D (free solves, TE): 30 tapered
+    depths give 9.5e-8 where 30 geometric ones (ratio 1/2) give 8.1e-5; 40
+    tapered equal 58 geometric (2^(-1/2)) at 1e-9. 3D cube (`cube_mfs.tapered`,
+    with tails, error against the reference): with as many depths as one
+    per octave it is no better at J = 6 (9.4e-4) and worse at J = 8 and 9
+    (4.4e-4 and 4.3e-4 against 1.9e-4 and 1.25e-4); 13 and 16 tapered
+    depths at J = 9 give 1.27e-4 and 5.3e-5, where 19 uniform ones give
+    3.5e-5 (34 s against 45 s). So with the tail in place the resolution
+    near the deepest depth matters and the uniform ratios stay. Three
+    collocation nodes per panel or four made no difference for the tapered
+    layouts.
 
 ## 3. Current best commands
 
@@ -705,7 +715,7 @@ python3 diag_cube.py 5 "tail_n=9"                 # residual map by zone, optica
 python3 pec_almond_skeleton.py 1.19 --bem         # nose-on case only (see its header)
 python3 almond_rcs.py 1.19 6:3 10 --s=0.5         # monostatic RCS, HH and VV, compares with stored Bempp
 python3 proto2d_square.py TE ; python3 proto2d_ellipse.py ; python3 proto2d_square_tail.py TE   # 2D prototypes, seconds
-python3 proto2d_depth_ratio.py TE                 # 2D: the depth ratio sets the attainable accuracy (item 53)
+python3 proto2d_tapered.py TE                     # 2D: geometric against tapered depths; the ratio sets the attainable accuracy (items 53-54)
 ```
 
 Costs: section 2, items 43 and 47 (everything before them is obsolete). Almond:
@@ -788,10 +798,9 @@ Open, in the order I would take them:
       bibliographic record (year, publisher).
 - [ ] **T20 Timo to check** `DERIVATIONS.md` B (edge exponents) and the proof
       of the theorem in the draft (section 5 of the paper).
-- [ ] **T21 Why does one depth per octave stall at 1.3e-4?** (optional)
-      Item 47 shows that two per octave do not. A rate in terms of the depth
-      ratio (as for lightning solvers, where the clustering is tapered) would
-      turn the observation into an argument. Tapered depths were not tried.
+- [x] **T21 Why does one depth per octave stall?** Answered in items 53-54: a
+      fixed ratio has a fixed attainable accuracy (2D model: 8e-5, 6e-6, 1e-9
+      for ratios 0.5, 0.6, 0.71); tapered depths help in 2D but not in 3D.
 - [ ] **T24 Row-weight exponent for the dense cube family (optional).**
       Tested at J = 5..8 against the reference: for two depths per octave
       beta = 0.7 lowers the error by 1.3-1.5 and beta = 0.9 by 1.5-1.7 at

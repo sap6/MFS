@@ -230,6 +230,19 @@ def dense(J):
     return dict(kw=kw, hmax=hmax, col=dict(COL, col_p=4))
 
 
+def tapered(J, n=None, col_p=4):
+    """The balanced family with tapered depths, as in lightning solvers:
+    n depths d_j = 0.2 exp(-sigma (sqrt(n) - sqrt(j))), j = n..1, dense near
+    0.2 and sparse near the deepest depth 0.2 * 2^(-J) (sigma is fixed by
+    the two ends). Default n = J + 1, the number of depths of the family
+    with one depth per octave. Returns the keywords for Cube."""
+    n = J + 1 if n is None else n
+    sigma = J * np.log(2.0) / (np.sqrt(n) - 1.0)
+    kw, hmax = balanced(J)
+    kw.update(depths=0.2 * np.exp(-sigma * (np.sqrt(n) - np.sqrt(np.arange(n, 0, -1)))))
+    return dict(kw=kw, hmax=hmax, col=dict(COL, col_p=col_p))
+
+
 def run(J, d=m.D, p=m.P, pts=None, family="balanced", max_gb=6.0, **kw):
     """One wave: field at pts, total time, and a dictionary of diagnostics.
     family: "balanced" (one depth per octave) or "dense" (two). If the
@@ -239,6 +252,9 @@ def run(J, d=m.D, p=m.P, pts=None, family="balanced", max_gb=6.0, **kw):
     if family == "dense":
         kw = dict(dense(J), **kw)
         J = 2 * J
+    elif family == "tapered":
+        kw = dict(tapered(J, kw.pop("n", None), kw.pop("col_p", 4)), **kw)
+        J = len(kw["kw"]["depths"]) - 1
     todo = classes_of(d, p)
     E, info, r2, b2, c2 = None, None, 0.0, 0.0, 0.0
     ext = sca_F = 0.0
