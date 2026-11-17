@@ -1013,8 +1013,14 @@ towards the MFS field.
       the MFS (3.1 s 9.5e-4; 4.3 s 3.7e-4; 6.3 s 1.7e-4; 8.6 s 1.5e-4):
       **Bempp faster down to 5e-4, MFS faster below 4e-4 (1.3 times at
       3.7e-4, about 2.5 times at 2e-4 and 1.5e-4)**. g = 1.75 was not run
-      at k = 4 pi or for the oblique waves: those paragraphs may still
-      move towards Bempp in the range 5e-4 to 1e-3.
+      for the oblique waves: those paragraphs may still move towards
+      Bempp in the range 5e-4 to 1e-3. At k = 4 pi (standard wave) g = 1.75
+      gives 9.6e-4 (10368 dofs, 4/6), 6.1e-4 (18432, 4/6, 14 s) and 3.8e-4
+      (18432, 6/8, 20 to 26 s): the MFS (9.3 s for 4.8e-4, 12.7 s for
+      2.2e-4) keeps a factor of about two at 4e-4 to 5e-4; g = 1.75 on the
+      finest mesh was not run, so the "13 s against 74 s at 2.3e-4" of the
+      draft is against g = 2 only. The discussion now says "a factor of two
+      at 5e-4 and more at smaller errors".
     - The draft text was corrected in all four places (cube cost paragraph,
       two-wavelength subsection twice, discussion) and in the appendix on
       the grading, with a TODO. **Still to do (T27)**: g = 1.5 rows in
@@ -1289,6 +1295,7 @@ Open, in the order I would take them:
 - Bempp with symmetry, k = 4 pi, g = 1.5, 4/6: 2.7e-3 in 1.5 s, 1.05e-3 in 4.4 s; oblique: 1.26e-3 in 7.1 s, 6.5e-4 in 24.8 s.
 - Bempp with symmetry, k = 2 pi, oblique wave, g = 1.5, 4/6: 2.65e-3, 1.44e-3, 9.2e-4, 6.4e-4, 4.7e-4 in 0.9 to 10.9 s: no gain over g = 2.
 - Bempp with symmetry, k = 2 pi, g = 1.75: 4/6: 5.4e-4, 4.3e-4, 3.7e-4 in 2.6, 5.0, 8.7 s; 6/8: 7.1e-4, 4.2e-4, 2.8e-4, 2.07e-4 in 3.4, 5.2, 9.5, 16.3 s; 8/10: 2.7e-4, 1.9e-4, 1.4e-4 in 16, 26, 42 s (item 58).
+- Bempp with symmetry, k = 4 pi, g = 1.75: 9.6e-4 (10368 dofs, 4/6), 6.1e-4 (18432, 4/6), 3.8e-4 (18432, 6/8).
 
 ## 6. Write-up session
 
