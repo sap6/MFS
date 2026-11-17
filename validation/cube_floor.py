@@ -45,7 +45,7 @@ def rel(a, b):
 
 if __name__ == "__main__":
     d = np.load("fig_cost_cube.npz")
-    pts, ref = d["pts"], d["dense_E11"]
+    pts, ref = d["pts"], d["ref_E"]
     cm.run(2, pts=pts)
     fields = {}
     for name in sys.argv[1:]:

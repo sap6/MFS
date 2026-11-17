@@ -28,7 +28,44 @@ tangential E_sc = -tangential E_inc on the surface, least-squares collocation.
 - Nothing was ever pushed to `sap6/mfs-paper`; it is still the thesis text
   (commit 4f8731f).
 
-### Fifth session, 2026-11-17, daytime (read this first)
+### Sixth session, 2026-11-17, evening (read this first)
+
+The author went over the short paper and asked for: one paper without a
+supplement, about as long as the JCP papers we cite (22-24 pages there); a
+more general title; a more polished voice (the thesis was written by an
+inexperienced student: fix promotional phrases); better flow, less cramped;
+no second polyhedron; tune three wavelengths; full Bempp scans for the
+other cases; and asked why timings must be re-measured and how to make
+them stable. Details in items 64-67.
+
+- **The paper is `paper/main.tex` alone** (third draft; `supplement.tex`
+  is deleted, the second draft is commit 485b981). Derivations are in the
+  text, three appendices (cone exponents, line quadrature, Bempp settings).
+  Length target: 22-24 pages in the journal layout
+  (`\documentclass[final,3p,times]`), which is 33-37 pages in the 12 pt
+  preprint layout. Title, accepted by the author as "fine, if a bit
+  basic": "The Method of Fundamental Solutions for Maxwell's Equations".
+- **The cube reference is now J = 12 on the finer interior grid**
+  (`ref_E` in `fig_cost_cube.npz`, item 65). All cube errors are measured
+  against it; the headline is "root-exponential down to 2e-5", no longer
+  1.5e-5.
+- **An independent reading of the draft found real errors** (item 64):
+  the tail has its own coefficients; the lines lie at the distance d from
+  the edge, not at depth d below the faces; the almond's magnetic tail
+  exponent is 1.975, not 1.056; torus and almond "errors" are
+  self-convergence. All corrected in the text; the code was right.
+- **Timings**: the laptop was never used for timing; every session gets a
+  different cloud machine. Errors never depend on the machine. One
+  command, `validation/time_paper.sh`, measures every time of the paper
+  again (item 66). The text quotes few seconds; they are in the tables.
+  For submission run it once on a fixed machine.
+- **How the author sees the chat**: on the phone only the *last* message
+  of a turn is shown in full; messages written between tool calls are
+  replaced by a one-line summary, so lists and details sent mid-turn are
+  lost. Put everything the author must read in the final message, or send
+  it as an image or PDF with the file tool.
+
+### Fifth session, 2026-11-17, daytime
 
 The author read the first draft on a phone and asked for: a shorter paper
 (25 pages in preprint form), in the voice and partly the wording of the
@@ -1288,6 +1325,97 @@ towards the MFS field.
     - To build: `python3 make_tables.py && pdflatex main && bibtex main &&
       pdflatex main && pdflatex main`; the same for `supplement`. The long
       version builds in `paper/long/` with `TEXINPUTS=..:`.
+
+### Sixth session, 2026-11-17, evening (items 64-67)
+
+64. **Third draft: one paper, no supplement** (`paper/main.tex`,
+    `sections/*.tex`, `sections/appendix.tex`). Structure: introduction;
+    method; sphere and torus (the torus arguments of the old supplement
+    are now Section 3.3); where the sources must go (theorem); cube
+    (layout, singular tail with the edge-exponent derivation and table,
+    boundary points, results, other waves and larger cubes); almond; cost
+    comparison; discussion; appendices A (cone exponents), B (line
+    quadrature), C (Bempp settings, table of best runs). Dropped: the
+    detailed cost tables of sphere, torus and almond, the Bempp g = 2
+    table, the oblique and k = 4 pi tables (replaced by one figure and one
+    table from `cube_cases.py`).
+    - Promotional thesis phrases removed ("highly sought after", "daunting
+      tasks", "truly meshless", "significant challenges", "deliberately
+      challenging", "as a final challenge").
+    - **Titles offered** (the author disliked the first seven; least
+      disliked were "The MFS for Electromagnetic Scattering in Three
+      Dimensions" and the thesis title): second round: "The Method of
+      Fundamental Solutions for Maxwell's Equations" (chosen: "fine, if a
+      bit basic"); "A Convergent MFS for Maxwell's Equations"; "Meshless
+      Electromagnetic Scattering with the MFS"; "Electromagnetic Scattering
+      by Perfect Conductors with the MFS"; "The MFS for Maxwell Scattering
+      by Smooth and Non-Smooth Conductors"; "Convergence of the MFS for
+      Maxwell's Equations".
+    - **Independent reading (a fresh agent, text only), what it found and
+      what was done.** Real errors in the text, code correct:
+      (a) "the tail adds no unknowns" was wrong: each tail has one set of
+      mode coefficients for its nine lines (two components, as many modes
+      as the line at d_J; `TailLine`), 9% of the unknowns at J = 8;
+      (b) the edge lines lie at the *distance* d_j from the edge in the
+      bisector plane (`Line`: yb = H - d cos 45), not at depth d_j below
+      the faces; a line spans |t| <= 1/2 - d; the vertex points lie at the
+      distances d_j from the vertex; only the base grid is "0.2 below the
+      faces"; (c) almond tip tail: the class even under both mirrors uses
+      nu = 0.29959 and 1.46427 and tau = 1.97538 (H is an axial vector, so
+      its potential has the opposite parities: `tip_exponents` takes
+      `CONE_TAU[(-sy, -sz)]`); the second draft said tau = 1.056;
+      (d) 7e-12 (torus) and 5.6e-5 (almond) are differences from the finest
+      MFS layout, not errors against an independent reference: the text
+      now says so everywhere; (e) the bound for the torus is a conjecture:
+      abstract and introduction no longer say "identify"; (f) N meant
+      sources in Sections 2-3 and unknowns of the whole cube in Section 5:
+      the cube now uses N_u, the sphere's source radius is R_s (figure
+      regenerated); (g) the optical-theorem counter-example moved to the
+      cube section with its numbers (2.4% error with mismatch 1.2e-5);
+      (h) "ahead at every accuracy" was false for the almond (Bempp is
+      ahead near 1e-2).
+    - **Not done, for the authors**: the rear half of the almond is half
+      an ellipsoid, whose continuation is classically singular on the
+      focal ellipse (semi-axes sqrt(a^2 - c^2), sqrt(b^2 - c^2)): its y
+      semi-axis is the paper's 0.943 b, its x semi-axis 0.988 a, so the
+      true singular set does not reach the rear apex, while the
+      section-by-section focal curve does. A citation for the ellipsoid
+      (Khavinson and Shapiro on the Schwarz potential?) would turn the
+      heuristic into a known result for the rear half; not verified, not
+      in the text. The symbol J is used for the level, the current and
+      the almond rows (left as it is). No sentence on interior resonances
+      of the source surface with electric dipoles only.
+
+65. **The cube reference is J = 12 with (n_base, hmax) = (8, 0.1)**
+    (T28 done in the cheap way). The J = 12 field of item 62 was still on
+    disk; it is now `ref_E` (and `ref_info`) in `fig_cost_cube.npz`, and
+    `fig_cost_cube.py reference` recomputes it (4 min, 5 GB). Every script
+    that used `dense_E11` uses `ref_E`. Errors of the two-depth family
+    against it, J = 4..11: 5.10e-3, 2.02e-3, 8.31e-4, 3.44e-4, 1.40e-4,
+    5.60e-5, 2.01e-5, 6.70e-6 (ratios 2.4 to 2.8, then 3.0); one depth,
+    J = 4..9: 5.30e-3, 2.11e-3, 9.59e-4, 3.78e-4, 1.76e-4, 1.51e-4. Fit to
+    J = 4..10: 0.34 exp(-0.046 sqrt N_u), largest deviation a factor 1.09
+    (it was 0.44 exp(-0.048 sqrt N), factor 1.23, against J = 11). Local
+    orders 2.3, 2.6, 3.2, 3.7, 4.2, 5.2. The old headline "1.5e-5" was the
+    difference between J = 10 and J = 11 and underestimated the error of
+    J = 10 by 30%. The error of the reference itself is about 4e-6 (J = 11
+    and 12 on the fine grid differ by 6.2e-6; factor 2.5 per level), so
+    the J = 11 entry (6.7e-6) is not a clean error and is left out of the
+    fit. The Bempp errors are recomputed against `ref_E` by `cube_duel.py`.
+
+66. **Timings between sessions** (the author's question). Nothing was
+    ever timed on the laptop. Each session, and each long pause, gets
+    another cloud machine, and they drift within a session. What is now
+    in place: (1) errors are stored separately and never re-run for a
+    re-timing; (2) `validation/time_paper.sh` measures every time of the
+    paper in one go, competing runs alternately (`cube_duel.py` for the
+    standard cube case, `cube_cases.py` for the general wave and two and
+    three wavelengths, then sphere, torus, almond and Bempp without
+    symmetry), about three hours; (3) the text states who is faster where
+    and by what factor and leaves the seconds to the tables, so a
+    re-timing changes tables and figures only (check the few ratios in
+    Section 7.2 and 5.5 afterwards); (4) for submission, run it once on a
+    fixed machine (the laptop when attached, or the supervisor's).
 
 ## 3. Current best commands
 

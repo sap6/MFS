@@ -39,7 +39,7 @@ if __name__ == "__main__":
         for i, R in enumerate(sorted({r["R"] for r in rn})):
             s = sorted((r for r in rn if r["R"] == R), key=lambda r: r["N"])
             ax.semilogy([np.sqrt(r["N"]) for r in s], [r["mid"] for r in s], linestyle=DASH[i % 4], color=COLS[i % 4],
-                        marker=MARK[i % 4], ms=4.5, lw=1.4, mec="white", mew=0.6, label=f"$R = {R}$")
+                        marker=MARK[i % 4], ms=4.5, lw=1.4, mec="white", mew=0.6, label=f"$R_s = {R}$")
         ax.set(xlabel=r"$\sqrt{N}$", ylabel="relative error against Mie" if col == 0 else "")
         ax.set_title(f"$k = {k / np.pi:.0f}\\pi$: error against the number of sources", loc="left", fontsize=8.5)
         ax.legend(frameon=False, fontsize=7.5, loc="lower left")
@@ -50,7 +50,7 @@ if __name__ == "__main__":
                         mec="white", mew=0.6, label=lab)
         ax.semilogy(R, [r["alpha_norm"] for r in rr], linestyle=":", color=MUTED, marker="s", ms=4, lw=1.2,
                     mec="white", mew=0.5, label="coefficient norm")
-        ax.set(xlabel="source radius $R$")
+        ax.set(xlabel="source radius $R_s$")
         ax.set_title(f"$k = {k / np.pi:.0f}\\pi$, $N = {rr[0]['N']}$: dependence on the source radius", loc="left", fontsize=8.5)
         ax.legend(frameon=False, fontsize=7.5, loc="upper center")
     for ax in axs.ravel():

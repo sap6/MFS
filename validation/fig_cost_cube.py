@@ -21,7 +21,19 @@ import numpy as np
 import cube_mfs
 from cube_mfs import COL, balanced  # noqa: F401  (re-exported: other scripts import them from here)
 
-J_REF = 11          # reference: the family with two depths per octave at this level
+J_REF = 11          # deepest level of the family with two depths per octave and the interior grid (6, 0.15)
+# The reference field of all cube errors is "ref_E" in fig_cost_cube.npz: two depths per octave at
+# J = 12 with the finer interior grid (n_base, hmax) = (8, 0.1), which the family needs from J = 12 on
+# (NOTES.md items 62, 64). "ref_info" = (J, time, unknowns per class, equations, optical mismatch, sigma_ext).
+
+
+def reference_run(pts, J=12):
+    """Computes the reference field (about 4 minutes, 5 GB)."""
+    kw = cube_mfs.dense(J)
+    kw["kw"] = dict(kw["kw"], n_base=8)
+    kw["hmax"] = 0.1
+    E, t, info = cube_mfs.run(J, pts=pts, family="dense", **kw)
+    return E, np.array([J, t, max(info["per_class"]), info["rows"], info["optical"], info["ext"]])
 J_FAST = 9          # deepest level of the family with one depth per octave
 
 
@@ -75,21 +87,19 @@ def rel(a, b):
 
 def report():
     d = np.load("fig_cost_cube.npz")
-    ref = d[f"dense_E{J_REF}"]
+    ref = d["ref_E"]
     bem = sorted((np.load(f) for f in glob.glob("bem_cube_h*_q4.npz")), key=lambda b: int(b["ndof"]))
     bem = [b for b in bem if int(b["ndof"]) > 1000]
     # Bempp extrapolated from its two finest meshes, error ~ N^(-2/3) (h^(4/3), the edge-limited rate)
     f1, f2 = (float(b["ndof"]) ** (-2 / 3) for b in bem[-2:])
     ext = bem[-1]["E"] + (bem[-1]["E"] - bem[-2]["E"]) * f2 / (f1 - f2)
-    print(f"reference: MFS with tails, two depths per octave, J = {J_REF}. It differs from extrapolated quasi-uniform Bempp by {rel(ref, ext):.2e}")
+    print(f"reference: MFS with tails, two depths per octave, J = {int(d['ref_info'][0])}, finer interior grid. It differs from extrapolated quasi-uniform Bempp by {rel(ref, ext):.2e}")
     curves = {}
     print("method        size   unknowns   time[s]   error vs MFS ref   error vs extrap. Bempp   optical")
     for name, label in (("tail", "MFS+tail"), ("dense", "MFS dense"), ("notail", "MFS no tail"), ("plain", "plain MFS")):
         pts_ = []
         for J, t, unk, nrow, opt in d[name]:
             E = d[f"{name}_E{int(J)}"]
-            if name == "dense" and int(J) == J_REF:
-                continue
             pts_.append((t, rel(E, ref)))
             print(f"{label:12s} {int(J):5d} {int(unk):9d} {t:9.1f} {rel(E, ref):14.2e} {rel(E, ext):18.2e} {opt:16.1e}")
         curves[label] = np.array(pts_)
@@ -190,6 +200,11 @@ def plot(curves, fname="fig_cost_cube"):
 if __name__ == "__main__":
     if len(sys.argv) > 1 and sys.argv[1] == "extend":
         extend()
+    if len(sys.argv) > 1 and sys.argv[1] == "reference":
+        out = dict(np.load("fig_cost_cube.npz"))
+        cube_mfs.run(2, pts=out["pts"], family="dense")
+        out["ref_E"], out["ref_info"] = reference_run(out["pts"])
+        np.savez("fig_cost_cube.npz", **out)
     if len(sys.argv) > 1 and sys.argv[1] == "run":
         run()
     plot(report())

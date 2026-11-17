@@ -40,7 +40,7 @@ For the smooth bodies of \autoref{sec:smooth} the electric dipoles are sufficien
 
 We choose $N$ source points $\by_1,\dots,\by_N$ inside the conductor and approximate the scattered field by
 \begin{equation}
-  \bE_N(\bx) = \sum_{j=1}^{N}\Bigl[\bG(\bx,\by_j)\,\balpha_j + \frac{1}{k}\nabla_{\bx}\Phi(\bx,\by_j)\times\bbeta_j\Bigr].
+  \bE_N(\bx) = \sum_{j=1}^{N}\Bigl[\bG(\bx,\by_j)\,\balpha_j + \frac{1}{k}\nabla_{\bx}\Phi(\|\bx-\by_j\|)\times\bbeta_j\Bigr].
   \label{eq:mfs}
 \end{equation}
 Each coefficient $\balpha_j$ or $\bbeta_j$ is a 3-component vector. The approximation satisfies \eqref{eq:maxwell} and the radiation condition for any choice of the coefficients, so only the boundary condition \eqref{eq:pec} has to be enforced. We do this at $M$ boundary points $\bx_1,\dots,\bx_M$ on $\Gamma$. At each boundary point a local tangent basis $\bt_i^{1},\bt_i^{2}$ is computed, and the coefficients minimise
@@ -48,9 +48,9 @@ Each coefficient $\balpha_j$ or $\bbeta_j$ is a 3-component vector. The approxim
   \sum_{i=1}^{M} w_i \sum_{s=1}^{2}\bigl|\bt_i^{s}\cdot\bigl(\bE_N(\bx_i)+\Einc(\bx_i)\bigr)\bigr|^2,
   \label{eq:leastsquares}
 \end{equation}
-where the weight $w_i$ is the surface area that the point represents. After projection onto the tangent plane each $3\times3$ block of the system is reduced to a $2\times3$ block, so for electric dipoles this is a linear least-squares problem $A\balpha = \mathbf{b}$ with $2M$ equations and $3N$ unknowns. We always take more equations than unknowns, so that the boundary condition is also controlled between the boundary points.
+where the weight $w_i$ is the surface area that the point represents (modified near the edges of the cube, \autoref{sec:cubepoints}). After projection onto the tangent plane each $3\times3$ block of the system is reduced to a $2\times3$ block, so for electric dipoles this is a linear least-squares problem $A\balpha = \mathbf{b}$ with $2M$ equations and $3N$ unknowns. We always take more equations than unknowns, so that the boundary condition is also controlled between the boundary points.
 
-A well-documented disadvantage of the MFS is that this system is often ill-conditioned \cite{fairweather1998,barnett2008}. For the sphere and the torus we therefore solve it with orthogonal factorisations \cite{golub2013}, QR for the sphere and the singular value decomposition for the small systems of the torus. For the layouts of the cube and the almond the matrices are well conditioned once their columns are scaled to unit norm, with condition numbers below $10^{6}$, and we use the corrected semi-normal equations \cite{bjorck1987}, which cost about half as much as QR. In all cases the cost is $O(MN^2)$ operations, and the systems have at most a few thousand unknowns once the symmetry of the body has been used.
+A known disadvantage of the MFS is that this system is often ill-conditioned \cite{fairweather1998,barnett2008}. For the sphere and the torus we therefore solve it with orthogonal factorisations \cite{golub2013}, QR for the sphere and the singular value decomposition for the small systems of the torus. For the layouts of the cube and the almond the matrices are well conditioned once their columns are scaled to unit norm, with condition numbers below $10^{6}$, and we use the corrected semi-normal equations \cite{bjorck1987}, which cost about half as much as QR. In all cases the cost is $O(MN^2)$ operations, and the systems have at most a few thousand unknowns once the symmetry of the body has been used.
 
 \subsection{Measuring the error}
 \label{sec:errors}
@@ -60,12 +60,12 @@ For the sphere the Mie series \cite{mie1908,bohren1998} gives the exact scattere
   \varepsilon = \Bigl(\sum\nolimits_{l}|\bE_N(\mathbf{z}_l)-\bE(\mathbf{z}_l)|^2\Bigr)^{1/2}\Big/\Bigl(\sum\nolimits_{l}|\bE(\mathbf{z}_l)|^2\Bigr)^{1/2}
   \label{eq:fielderror}
 \end{equation}
-at $400$ points $\mathbf{z}_l$ on a sphere that encloses the body. For the other shapes no exact solution exists, and we use \eqref{eq:fielderror} with a reference field in place of $\bE$, always stating which. We also report the boundary residual, which is the square root of \eqref{eq:leastsquares} relative to its value for the incident field alone, and we use two further checks. The first is the optical theorem. A perfect conductor absorbs no energy, so the extinction and scattering cross-sections
+at points $\mathbf{z}_l$ on a sphere that encloses the body, $400$ points on the sphere of radius $2$ for the unit sphere and the unit cube. For the other shapes no exact solution exists, and we use \eqref{eq:fielderror} with a reference field in place of $\bE$, always stating which. We also report the boundary residual, which is the square root of \eqref{eq:leastsquares} relative to its value for the incident field alone, and we use two further checks. The first is the optical theorem. A perfect conductor absorbs no energy, so the extinction and scattering cross-sections
 \begin{equation}
   \sext = \frac{4\pi}{k}\,\operatorname{Im}\bigl(\bar\bp\cdot\bF(\bd)\bigr), \qquad
   \ssca = \int_{S^2}|\bF(\hat\bx)|^2\,\mathrm{d}s(\hat\bx)
   \label{eq:optical}
 \end{equation}
-are equal for the exact solution, and the mismatch $|\sext-\ssca|/\ssca$ is an error indicator that needs no reference. It is an indicator and not a bound: it exposed fits that were under-sampled at the edges of the cube, but it missed fits that were under-sampled in the interior of the faces.
+are equal for the exact solution, and the quantity $|\sext-\ssca|/\ssca$, which we call the optical mismatch, is an error indicator that needs no reference. It is an indicator and not a bound, as an example in \autoref{sec:cubepoints} shows.
 
-The second check is an independent solver. We use the boundary element library Bempp-cl \cite{betcke2021,scroggs2017}, which solves the electric field integral equation with Rao--Wilton--Glisson elements \cite{rao1982} on a triangular mesh. It serves both as a reference and as a yardstick for the computing time, and its settings are given in \autoref{app:bempp}. All timings in this paper were measured on one machine with four cores and include assembly, solution and the evaluation of the field.
+The second check is an independent solver. We use the boundary element library Bempp-cl \cite{betcke2021,scroggs2017}, which solves the electric field integral equation with Rao--Wilton--Glisson elements \cite{rao1982} on a triangular mesh. It serves both as a reference and as a yardstick for the computing time, and its settings are given in \ref{app:bempp}. All timings in this paper were measured on one machine, with four cores of an Intel Xeon processor at $2.1$\,GHz and $15$\,GB of memory, and include assembly, solution and the evaluation of the field.

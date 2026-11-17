@@ -70,15 +70,14 @@ def almond():
 
 def cube():
     d = np.load(os.path.join(V, "fig_cost_cube.npz"))
-    jref = int(d["dense"][-1][0])
-    ref = d[f"dense_E{jref}"]
+    ref = d["ref_E"]                                    # two depths per octave at J = 12, finer interior grid
     rows = []
     for name, label in (("tail", "one"), ("dense", "two")):
         if rows:
             rows.append("    \\midrule")
         for J, t, unk, nrow, opt in d[name]:
             J = int(J)
-            err = "reference" if (name == "dense" and J == jref) else sci(rel(d[f"{name}_E{J}"], ref))
+            err = sci(rel(d[f"{name}_E{J}"], ref))
             rows.append(f"    {label} & {J} & {int(unk) // 2} & {int(nrow)} & {tm(t)} & {err} & {sci(opt)} \\\\")
     write("cube_mfs", rows)
     write("cube_mfs_short", [r for r in rows if "& 3 &" not in r])        # the short paper starts at J = 4
@@ -216,10 +215,9 @@ def summary(env):
     rows.append(f"     & Bempp & {int(r[0])} & {tm(r[1])} & {sci(rel(d[f'bem_E{i}'], ref))} \\\\")
     rows.append("    \\midrule")
     d = np.load(os.path.join(V, "fig_cost_cube.npz"))
-    jref = int(d["dense"][-1][0])
-    ref = d[f"dense_E{jref}"]
+    ref = d["ref_E"]
     first = "Cube"
-    for name, label, Js in (("tail", "one depth", (6, 8)), ("dense", "two depths", (9, jref - 1))):
+    for name, label, Js in (("tail", "one depth", (6, 8)), ("dense", "two depths", (9, 10))):
         for J, t, unk, nrow, opt in d[name]:
             if int(J) in Js:
                 rows.append(f"    {first} & MFS, {label}, $J = {int(J)}$ & {int(unk) // 2} & {tm(t)} & {sci(rel(d[f'{name}_E{int(J)}'], ref))} \\\\")

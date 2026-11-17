@@ -8,22 +8,22 @@ In this section we construct sources for the unit cube $[-\tfrac12,\tfrac12]^3$ 
 
 The layout has three kinds of free sources (\autoref{fig:cubelayout}).
 
-\emph{Base points.} A grid of $n_b\times n_b$ electric dipoles on each face of an inner cube at depth $0.2$ below the faces represents the smooth part of the field. These points stand for the inner part of the skeleton, whose field is smooth outside the inner cube.
-
-\emph{Edge lines.} For each edge we choose depths that decrease geometrically,
+\emph{Edge lines.} On the bisector plane of each edge we place lines parallel to the edge. We call the distance of a line from the edge, measured in the bisector plane, its depth. The depths decrease geometrically,
 \begin{equation}
   d_j = 0.2\,q^{\,j}, \qquad j = 0,1,\dots, \qquad \text{down to } d_J = 0.2\cdot 2^{-J},
   \label{eq:depths}
 \end{equation}
-and place at each depth a line parallel to the edge, on the bisector plane, at depth $d_j$ below the two faces. We call $J$ the level of the layout. We use two ratios: $q = 1/2$, which gives one line per octave of depth, and $q = 2^{-1/2}$, which gives two.
+and we call $J$ the level of the layout and $d_J$ its smallest depth. We use two ratios: $q = 1/2$, which gives one line per octave of depth, and $q = 2^{-1/2}$, which gives two, so that the smallest depth then has the index $2J$.
 
-A lightning solver in two dimensions places one point source at each depth \cite{gopal2019siam}. In three dimensions a row of points at depth $d$ would need about $1/d$ of them, so we let each line carry a continuous dipole density instead. With $t$ the coordinate along the line at depth $d$, the stretched variable
+A lightning solver in two dimensions places one point source at each depth \cite{gopal2019siam}. In three dimensions a row of points at depth $d$ would need about $1/d$ of them, so we let each line carry a continuous dipole density instead. The line at depth $d$ runs between the body diagonals of the two vertices, over $|t|\le\tfrac12-d$ in the coordinate $t$ along the edge. The stretched variable
 \begin{equation}
-  u(t) = \frac{1}{\lambda}\log\frac{\tfrac12+t}{\tfrac12-t}, \qquad \lambda = \log\frac{1-d}{d},
+  u(t) = \frac{1}{\lambda}\ln\frac{\tfrac12+t}{\tfrac12-t}, \qquad \lambda = \ln\frac{1-d}{d},
 \end{equation}
-maps the line to $[-1,1]$ and resolves every scale between $d$ and the length of the edge near both vertices. The density is a vector polynomial in $u$ with $n = n_0 + \lceil 2\log(1/d)\rceil$ Legendre modes, and each line exists twice, once with electric and once with magnetic dipoles. A line at depth $10^{-3}$ thus costs about $25$ modes, where a row of points would need a thousand. On the cube the method is therefore no longer free of integration, but the integrals are one-dimensional, and they are evaluated by a quadrature that shares its nodes between the boundary points (\autoref{app:lines}).
+maps the line to $[-1,1]$ and resolves every scale between $d$ and the length of the edge near both vertices. The density is a polynomial in $u$ with three vector components and $n = n_0 + \lceil 2\ln(1/d)\rceil$ Legendre modes, where $n_0$ grows slowly with the level (\autoref{sec:cubepoints}). Each line exists twice, once with electric and once with magnetic dipoles. A line at depth $10^{-3}$ thus costs about $25$ modes, where a row of points would need a thousand. On the cube the method is therefore no longer free of integration, but the integrals are one-dimensional, and they are evaluated by a quadrature that shares its nodes between the boundary points (\ref{app:lines}).
 
-\emph{Vertex points.} On the body diagonal through each vertex we place an electric and a magnetic point dipole at each of the same depths.
+\emph{Vertex points.} On the body diagonal through each vertex we place an electric and a magnetic point dipole at each of the distances $d_j$ from the vertex.
+
+\emph{Base points.} The edge lines cover the part of the skeleton near the edges, where the currents are singular. On the inner part of the skeleton the currents are smooth, and we represent their field by a grid of $n_b\times n_b$ electric dipoles on each face of an inner cube, whose faces lie at the distance $0.2$ below the faces of the cube. Alone, such a grid is the layout that fails in \autoref{sec:skeleton}. Here it only has to represent the smooth field that the edge lines and vertex points leave over. The distance $0.2$ is a parameter of the layout.
 
 \begin{figure}[htbp]
   \centering
@@ -35,26 +35,26 @@ maps the line to $[-1,1]$ and resolves every scale between $d$ and the length of
 \subsection{The singular tail}
 \label{sec:tail}
 
-The deepest free line lies at the depth $d_J$. The current sheet of \autoref{thm:skeleton} continues below this depth, all the way to the edge, and cutting it off leaves an error that decays only like $d_J^{0.55}$ in our experiments. To continue the free lines to ever smaller depths would be expensive, and it is not necessary, because close to the edge the form of the currents is known.
+The deepest free line lies at the depth $d_J$. The current sheet of \autoref{thm:skeleton} continues below this depth, all the way to the edge, and cutting it off limits the accuracy (\autoref{sec:cuberesults}). To continue the free lines to ever smaller depths would be expensive, and it is not necessary, because close to the edge the form of the currents is known.
 
-We therefore continue the lines at the depths $d_J2^{-i}$, $i = 1,\dots,9$, without new unknowns. These lines are not free: they carry the modes of the line at $d_J$, multiplied by the fixed weights $2^{-ie}$. We call this continuation the \emph{singular tail}. The exponent $e$ is not fitted. It follows from the edge expansion of the field, as we now show.
+We therefore add lines at the depths $d_J2^{-i}$, $i = 1,\dots,9$, which are not free. All nine lines carry the same set of mode coefficients, multiplied by the fixed weights $2^{-ie}$, and the remainder of the geometric series below the last depth is added to the last line. We call this continuation the \emph{singular tail}. It adds one set of coefficients per edge and kind of dipole, with as many modes as the line at $d_J$, in place of nine. The exponent $e$ is not a fitting parameter. It follows from the edge expansion of the field, as we now show.
 
 Consider one edge of the cube, with the coordinate $s$ along the edge and polar coordinates $(\rho,\phi)$ around it, so that the exterior is the wedge $0<\phi<3\pi/2$. Near the edge the field is a sum of terms of two types \cite{meixner1972,costabel2000},
 \begin{align}
-  E_s &= a_n(s)\,\rho^{2n/3}\sin(2n\phi/3), & n &= 1,2,\dots, \label{eq:tm}\\
-  H_s &= b_n(s)\,\rho^{2n/3}\cos(2n\phi/3), & n &= 0,1,2,\dots, \label{eq:te}
+  E_s &= a_\ell(s)\,\rho^{2\ell/3}\sin(2\ell\phi/3), & \ell &= 1,2,\dots, \label{eq:tm}\\
+  H_s &= b_\ell(s)\,\rho^{2\ell/3}\cos(2\ell\phi/3), & \ell &= 0,1,2,\dots, \label{eq:te}
 \end{align}
-each multiplied by a power series in $\rho^2$. The transverse components follow from $E_s$ and $H_s$ and are one power of $\rho$ lower.
+each multiplied by a power series in $\rho^2$. The components across the edge follow from $E_s$ and $H_s$ and are one power of $\rho$ lower.
 
-The reflection used in the proof of \autoref{thm:skeleton} continues each term into the body by the same formula. The two continuations, through the two faces, meet on the bisector half-plane, which is the wall of the skeleton at this edge. With the angle $\psi = \phi - 3\pi/4$ measured from the exterior bisector, the wall is $\psi = \pi$ seen from one side and $\psi = -\pi$ from the other. The angular factors in \eqref{eq:tm} and \eqref{eq:te} are sines and cosines of $2n\psi/3$. Their jump across the wall is proportional to $\sin(2n\pi/3)$ for the part that is odd in $\psi$ and vanishes for the even part. Terms with $n$ a multiple of three do not jump: they are polynomial fields and need no sources.
+The reflection used in the proof of \autoref{thm:skeleton} continues each term into the body by the same formula. The two continuations, through the two faces, meet on the bisector half-plane, which is the wall of the skeleton at this edge. With the angle $\psi = \phi - 3\pi/4$ measured from the exterior bisector, the wall is $\psi = \pi$ seen from one side and $\psi = -\pi$ from the other. The angular factors in \eqref{eq:tm} and \eqref{eq:te} are sines and cosines of $2\ell\psi/3$. Their jump across the wall is proportional to $\sin(2\ell\pi/3)$ for the part that is odd in $\psi$ and vanishes for the even part. Terms with $\ell$ a multiple of three do not jump: they are regular at the edge and need no sources.
 
-Let $m$ be the mirror in the bisector plane. A term is even under $m$ if $E_s$ is even in $\psi$ or $H_s$ is odd in $\psi$. For an even term the tangential electric field is continuous across the wall and the tangential magnetic field jumps, so by \eqref{eq:jumps} it leaves only an electric current. An odd term leaves only a magnetic current. Reading off the leading jumps gives the current densities of \autoref{tab:edgeexp}, where $\rho$ is now the depth on the wall. The electric current behaves like $\rho^{-1/3}$ along the edge and like $\rho^{2/3}$ along the bisector, and the magnetic current like $\rho^{1/3}$ and $\rho^{4/3}$.
+A term is even under the mirror in the bisector plane if $E_s$ is even in $\psi$ or $H_s$ is odd in $\psi$. For an even term the tangential electric field is continuous across the wall and the tangential magnetic field jumps, so by \eqref{eq:jumps} it leaves only an electric current. An odd term leaves only a magnetic current. Both currents are tangential to the wall, so the tail has two components, along the edge and along the bisector, and none normal to the bisector plane. Reading off the leading jumps gives the current densities of \autoref{tab:edgeexp}, where $\rho$ is the distance from the edge on the wall. The electric current behaves like $\rho^{-1/3}$ along the edge and like $\rho^{2/3}$ along the bisector, and the magnetic current like $\rho^{1/3}$ and $\rho^{4/3}$.
 
 It remains to turn the densities into weights. The tail replaces the current sheet below $d_J$ by lines at the depths $d_J2^{-i}$, and a line stands for the strip of the sheet around it, whose width is proportional to its depth. A density $\rho^{e-1}$ therefore gives the line weights $2^{-ie}$, with $e = 2/3$, $5/3$, $4/3$ and $7/3$ for the four components.
 
 \begin{table}[htbp]
   \centering
-  \caption{Exponents of the edge tail of the cube. The current density on the bisector half-plane behaves like $\rho^{e-1}$ at depth $\rho$ below the edge.}
+  \caption{Exponents of the edge tail of the cube. The current density on the bisector half-plane behaves like $\rho^{e-1}$ at the distance $\rho$ from the edge.}
   \label{tab:edgeexp}
   \begin{tabular}{llll}
     \toprule
@@ -68,33 +68,36 @@ It remains to turn the densities into weights. The tail replaces the current she
   \end{tabular}
 \end{table}
 
-The vertex points are continued in the same way along the diagonal. Near a vertex the field behaves like $r^{\nu-1}$ in the distance $r$, and the tail weights of the electric and magnetic dipoles have the exponents $\nu+2$ and $\tau+2$, where $\nu = 0.4542$ and $\tau = 0.840$ are the smallest electric and magnetic exponents of the corner. We computed them from eigenvalue problems on the sphere (\autoref{app:cone}), and they agree with the values $0.45410$ and $0.84108$ of De Smedt and Van Bladel \cite{desmedt1986}.
+The vertex points are continued in the same way along the diagonal. Near a vertex the electric field behaves like $r^{\nu-1}$ in the distance $r$, and the tail weights of the electric and magnetic dipoles have the exponents $\nu+2$ and $\tau+2$, where $\nu = 0.4542$ and $\tau = 0.840$ are the smallest electric and magnetic exponents of the corner. We computed them from eigenvalue problems on the sphere (\ref{app:cone}). De Smedt and Van Bladel \cite{desmedt1986} give $0.45410$ and $0.84108$.
 
-The tails are cheap: at $J = 8$ all of them together are $9\%$ of the unknowns. \autoref{fig:edgeresidual} shows their effect on the residual at the boundary. Without the tail the residual is of order one at all distances from the edge below $d_J$. With the tail it stays near $10^{-2}$ or below down to the end of the tail at $d_J2^{-9}$, so the strip in which the boundary condition is violated is narrower by a factor of $2^{9}$.
+The tails are cheap: at $J = 8$ all of them together are $9\%$ of the unknowns. \autoref{fig:edgeresidual} shows their effect on the pointwise residual of the boundary condition. Without the tail the residual is of order one at all distances from the edge below $d_J$. With the tail it stays near $10^{-2}$ or below down to the end of the tail at $d_J2^{-9}$, so the strip in which the boundary condition is violated is narrower by a factor of $2^{9}$.
 
 \begin{figure}[htbp]
   \centering
   \includegraphics[width=0.6\textwidth]{fig_edge_residual.pdf}
-  \caption{Unit cube, $J = 6$, one depth per octave: tangential residual on a face as a function of the distance to an edge, away from the vertices, with and without the tail. The dotted line marks the deepest free depth $d_J$.}
+  \caption{Unit cube, $J = 6$, one depth per octave: pointwise tangential residual on a face as a function of the distance to an edge, away from the vertices, with and without the tail. The dotted line marks the smallest free depth $d_J$.}
   \label{fig:edgeresidual}
 \end{figure}
 
 \subsection{Boundary points, weights and symmetry}
+\label{sec:cubepoints}
 
-The boundary points on each face form a tensor grid. In each direction the nodes are Gauss--Legendre points on panels that halve in length towards both edges until they are shorter than $d_J$, and panels in the interior are no longer than $h_{\max}$. We use three nodes per panel for $q = 1/2$ and four for $q = 2^{-1/2}$. The fit needs enough equations at every scale: with two nodes per panel and $q = 1/2$ the error at $J = 5$ is $85\%$, although the residual at the boundary points is small.
+The boundary points on each face form a tensor grid. In each direction the nodes are Gauss--Legendre points on panels that halve in length towards both edges until they are shorter than $d_J$, and panels in the interior are no longer than $h_{\max}$. We use three nodes per panel for $q = 1/2$ and four for $q = 2^{-1/2}$. The rows are weighted by $w_i = A_i\,\rho_i$, where $A_i$ is the area represented by the point and $\rho_i$ its distance to the nearest edge, so that the fit does not spend its effort on the edge singularity of the residual.
 
-The rows are weighted by $w_i = A_i\,\rho_i$, where $A_i$ is the area represented by the point and $\rho_i$ its distance to the nearest edge, so that the fit does not spend its effort on the edge singularity of the residual. All resolution parameters grow together with the level: $n_0 = \max(4, 2J-4)$, and $(n_b, h_{\max}) = (4, 0.25)$ for $J\le5$ and $(6, 0.15)$ for $J\ge6$.
+All resolution parameters grow together with the level: $n_0 = \max(4, 2J-4)$, and $(n_b, h_{\max}) = (4, 0.25)$ for $J\le5$ and $(6, 0.15)$ for $J\ge6$. With this interior grid the layouts can be used up to $J = 11$. From $J = 12$ on the interior must be refined as well, and we use $(n_b, h_{\max}) = (8, 0.1)$.
 
-The cube and the layout are symmetric under the three mirrors $x\to-x$, $y\to-y$ and $z\to-z$. Any incident field is the sum of eight parts of definite parity, and each part needs only the sources and boundary points of one octant. The eight matrices are signed sums of the same reflected blocks, so the line integrals are computed once, and the factorisation of a class serves every incident wave. Our standard wave excites two classes, and a general wave excites all eight.
+The fit needs enough equations at every scale, and the two error indicators of \autoref{sec:errors} do not always show when it has too few. With two nodes per panel and $q = 1/2$ the error at $J = 5$ is $85\%$, although the residual at the boundary points is small. The optical mismatch of this fit is $0.35$, so the optical theorem exposes it. It does not expose a grid that is too coarse in the interior of the faces: with $(n_b, h_{\max}) = (4, 0.25)$ at $J = 8$ the error is $2.4\%$, while the optical mismatch is $1.2\times10^{-5}$. We therefore checked every layout against a reference field and not only against the optical theorem.
+
+The cube and the layout are symmetric under the three mirrors $x\to-x$, $y\to-y$ and $z\to-z$. Any incident field is the sum of eight parts of definite parity under the three mirrors. We call each part a parity class, and each class needs only the sources and boundary points of one octant. The eight matrices are signed sums of the same reflected blocks, so the line integrals are computed once, and the factorisation of a class serves every incident wave. Our standard wave excites two classes, and a general wave excites all eight.
 
 \subsection{Results}
 \label{sec:cuberesults}
 
-\autoref{tab:cube} lists the results for both depth ratios, and \autoref{fig:cubeconv} shows them against the number of unknowns. Since the cube has no exact solution, the reference is the finest layout, with two depths per octave at level $J = 11$. We first describe the convergence and then the evidence that the limit is the correct field.
+\autoref{tab:cube} lists the results for both depth ratios, and \autoref{fig:cubeconv} shows them against the number of unknowns. Since the cube has no exact solution, the errors are differences from a reference layout: two depths per octave at level $J = 12$ on the finer interior grid, with $7749$ unknowns per class. We first describe the convergence and then the evidence that the reference is the correct field.
 
 \begin{table}[htbp]
   \centering
-  \caption{Unit cube, $k = 2\pi$. MFS with edge sources and tails, with one and with two source depths per octave: unknowns and equations per parity class (two classes are solved), wall time, difference from the run with two depths per octave at $J = 11$, and optical mismatch.}
+  \caption{Unit cube, $k = 2\pi$. MFS with edge sources and tails, with one and with two source depths per octave: unknowns and equations per parity class (two classes are solved), wall time, difference from the reference layout ($J = 12$), and optical mismatch.}
   \label{tab:cube}
   \small
   \begin{tabular}{lrrrrll}
@@ -106,24 +109,24 @@ The cube and the layout are symmetric under the three mirrors $x\to-x$, $y\to-y$
   \end{tabular}
 \end{table}
 
-With two depths per octave the error falls from $5.1\times10^{-3}$ at $J = 4$ to $1.5\times10^{-5}$ at $J = 10$, by a factor of $2.4$ to $3.5$ per level, and the optical mismatch falls with it to $1.8\times10^{-6}$. Let $N$ be the number of unknowns of the whole cube, which is eight times the entry of \autoref{tab:cube}. Against $\sqrt{N}$ the errors lie on a straight line (\autoref{fig:cubeconv}),
+With two depths per octave the error falls from $5.1\times10^{-3}$ at $J = 4$ to $2.0\times10^{-5}$ at $J = 10$, by a factor of $2.4$ to $2.8$ per level, and the optical mismatch falls with it. Let $N_u$ be the number of unknowns of the whole cube, which is eight times the entry of \autoref{tab:cube}. Against $\sqrt{N_u}$ the errors of the levels $4$ to $10$ lie on a straight line (\autoref{fig:cubeconv}),
 \begin{equation}
-  \varepsilon \approx 0.44\,\exp\bigl(-0.048\sqrt{N}\bigr),
+  \varepsilon \approx 0.34\,\exp\bigl(-0.046\sqrt{N_u}\bigr),
   \label{eq:rootexp}
 \end{equation}
-to within a factor of $1.3$ over two and a half orders of magnitude. This is the root-exponential convergence of the lightning solvers in two dimensions \cite{gopal2019siam}, and it is what the layout suggests: both the number of lines and the number of modes per line grow linearly with the level, and the error decays geometrically with the level. Measured as an algebraic order, the rate rises from about $N^{-2.5}$ to $N^{-6}$ along the table.
+to within a factor of $1.1$ over more than two orders of magnitude. This is the root-exponential convergence of the lightning solvers in two dimensions \cite{gopal2019siam}, and it is what the layout suggests: both the number of lines and the number of modes per line grow linearly with the level, and the error decays geometrically with the level. Measured as an algebraic order, the rate rises from about $N_u^{-2.3}$ to $N_u^{-5}$ along the table. The entry for $J = 11$, $7\times10^{-6}$, is of the size of the error of the reference itself and is not used in the fit.
+
+We observe this law over the range of the table and do not claim that it continues without limit. The lightning solvers taper their clustering, whereas our ratio $q$ is fixed, and a fixed ratio has a floor. This is what the layout with one depth per octave shows. It has about $60\%$ of the unknowns and takes between $30\%$ and $60\%$ of the time. Down to level $J = 7$ its errors equal those of the denser layout to within $20\%$, and then it stalls near $1.5\times10^{-4}$. The matrices are well conditioned, so this is not an effect of rounding. The two-dimensional analogue behaves in the same way: for the unit square with point sources on the bisectors of the corners, the error of the far field stalls at $8\times10^{-5}$ for $q = 1/2$, at $6\times10^{-6}$ for $q = 0.6$ and at $10^{-9}$ for $q = 2^{-1/2}$. We therefore regard $q = 1/2$ as the economical choice for errors down to $2\times10^{-4}$ and $q = 2^{-1/2}$ as the choice below, and we expect a floor for $q = 2^{-1/2}$ as well, beyond the accuracy that we could reach.
 
 \begin{figure}[htbp]
   \centering
   \includegraphics[width=0.78\textwidth]{fig_cube_convergence.pdf}
-  \caption{Unit cube, $k = 2\pi$: error of the scattered field against the square root of the number of unknowns $N$ of the whole cube (for the MFS, all eight parity classes together). The grey line is the fit \eqref{eq:rootexp} to the layout with two depths per octave. For Bempp the smallest error over all settings is shown for each mesh.}
+  \caption{Unit cube, $k = 2\pi$: error of the scattered field against the square root of the number of unknowns $N_u$ of the whole cube (for the MFS, all eight parity classes together). The grey line is the fit \eqref{eq:rootexp} to the layout with two depths per octave. For Bempp the smallest error over all settings is shown for each mesh.}
   \label{fig:cubeconv}
 \end{figure}
 
-The layout with one depth per octave has about $60\%$ of the unknowns and takes between $30\%$ and $60\%$ of the time. Down to level $J = 7$ its errors equal those of the denser layout to within $20\%$, and then it stalls near $1.5\times10^{-4}$. The matrices are well conditioned, so this is not an effect of rounding. The two-dimensional analogue behaves in the same way: for the unit square with point sources on the bisectors of the corners, the error of the far field stalls at $8\times10^{-5}$ for $q = 1/2$, at $6\times10^{-6}$ for $q = 0.6$ and at $10^{-9}$ for $q = 2^{-1/2}$. We therefore regard $q = 1/2$ as the economical choice for errors down to $2\times10^{-4}$ and $q = 2^{-1/2}$ as the choice below.
+The convergence depends on the tails. With the same edge lines and one depth per octave but without the tails, the error is $5.4\times10^{-2}$, $2.5\times10^{-2}$ and $1.1\times10^{-2}$ for $J = 4$, $6$ and $8$. It decays only like $d_J^{0.55}$, and at $J = 8$ the tails reduce it by a factor of $60$. The exponents matter as well. Adding the next term of each edge expansion to the tail changes the error by less than $1\%$ of its value, but lowering the exponents of the two components along the bisector, $J_\rho$ and $K_\rho$, by one gives an error of $65\%$.
 
-The tails are essential for this convergence. With the same edge lines but without the tails, the error is $5.4\times10^{-2}$, $2.5\times10^{-2}$ and $1.1\times10^{-2}$ for $J = 4$, $6$ and $8$, so at $J = 8$ the tails reduce the error by a factor of $64$. The exponents matter as well. Adding the next term of each edge expansion to the tail changes the error by less than $1\%$ of its value, but lowering the exponents of the two transverse components by one gives an error of $65\%$.
-
-Three checks support the reference. First, the result is insensitive to the parameters of the layout: at $J = 9$ the field changes by less than $3\times10^{-6}$ when the modes, the tails, the base grid or the boundary grid are refined. Second, a run at $J = 12$ with a finer interior grid ($n_b = 8$, $h_{\max} = 0.1$) differs from the reference by $7\times10^{-6}$ and has an optical mismatch of $9\times10^{-7}$. Third, we computed the same field with Bempp on meshes graded towards the edges. With $10368$, $14112$, $18432$ and $28800$ unknowns the boundary element field differs from the MFS reference by $2.0\times10^{-4}$, $1.5\times10^{-4}$, $1.1\times10^{-4}$ and $8\times10^{-5}$, and its extrapolated extinction cross-section is $2.92786$, where the MFS gives $2.92798$. The two methods thus agree to $8\times10^{-5}$ in the field and to $4\times10^{-5}$ in the cross-section. Below that level the only reference for the MFS is its own convergence.
+Three checks support the reference. First, the result is insensitive to the parameters of the layout: at $J = 9$ the field changes by less than $3\times10^{-6}$ when the modes, the tails, the base grid or the boundary grid are refined. Second, the levels $11$ and $12$ on the finer interior grid differ by $6\times10^{-6}$, and the optical mismatch of the reference is $9\times10^{-7}$. With the observed factor of $2.5$ per level this puts the error of the reference at about $4\times10^{-6}$. Third, we computed the same field with Bempp on meshes graded towards the edges (\ref{app:bempp}). On the finest mesh that fits into memory, with $28800$ unknowns, the boundary element field differs from the reference by $8\times10^{-5}$, and its extrapolated extinction cross-section is $2.92786$, where the MFS gives $2.92798$. The two methods thus agree to $8\times10^{-5}$ in the field and to $4\times10^{-5}$ in the cross-section. Below that level the only reference for the MFS is its own convergence.
 
 %%OTHERCASES%%

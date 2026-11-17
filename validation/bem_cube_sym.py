@@ -211,7 +211,7 @@ if __name__ == "__main__":
     bempp.GLOBAL_PARAMETERS.quadrature.regular = reg
     bempp.GLOBAL_PARAMETERS.quadrature.singular = sing
     pts = np.load("bem_cube_h0.05.npz")["pts"]
-    ref = np.load("cube_oblique.npz")["Eref"] if wave else np.load("fig_cost_cube.npz")["dense_E11"]
+    ref = np.load("cube_oblique.npz")["Eref"] if wave else np.load("fig_cost_cube.npz")["ref_E"]
     solve(4, 1.0, pts, d, p)                                        # warm-up: compilation
     for n in ns:
         E, N, sizes, (ts, ta, tl, te), grid = solve(n, g, pts, d, p)

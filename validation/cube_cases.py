@@ -26,9 +26,9 @@ import pec_cube_lightning3d as m
 
 SIDE = {"k1o": 1, "k2": 2, "k2o": 2, "k3": 3}
 OBLIQUE = (60.0, 25.0, 35.0)
-LEVELS = {                                                  # (levels with one depth per octave, with two)
-    "k1o": (range(4, 10), range(4, 9)),
-    "k2": (range(4, 9), range(5, 10)),
+LEVELS = {                                                  # (levels with one depth per octave, with two); the two-depth
+    "k1o": (range(4, 10), range(4, 9)),                     # levels stop two below the reference level, whose own error
+    "k2": (range(4, 9), range(5, 9)),                       # would otherwise bias the last entry (NOTES.md item 64)
     "k2o": (range(5, 9), (7, 8)),
     "k3": (range(5, 9), range(6, 9)),
 }

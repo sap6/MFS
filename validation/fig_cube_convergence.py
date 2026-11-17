@@ -26,16 +26,18 @@ def rel(a, b):
 
 def data():
     d = np.load("fig_cost_cube.npz")
-    jref = int(d["dense"][-1][0])
-    ref = d[f"dense_E{jref}"]
+    ref = d["ref_E"]                                    # two depths per octave at J = 12 with the finer interior grid
     out = {}
     for name, key in (("tail", "MFS+tail"), ("dense", "MFS dense"), ("notail", "MFS no tail"), ("plain", "plain MFS")):
-        rows = [(4 * r[2], rel(d[f"{name}_E{int(r[0])}"], ref)) for r in d[name] if not (name == "dense" and int(r[0]) == jref)]
+        rows = [(4 * r[2], rel(d[f"{name}_E{int(r[0])}"], ref)) for r in d[name]]
         out[key] = np.array(rows)
     rows = sorted((int(b["ndof"]), rel(b["E"], ref)) for b in (np.load(f) for f in glob.glob("bem_cube_h*_q4.npz")) if int(b["ndof"]) > 1000)
     out["Bempp"] = np.array(rows)
     best = {}
-    if os.path.exists("bem_grading_scan_k1.npz"):
+    if os.path.exists("bem_grading_scan_k1_final.npz"):      # errors against the present reference (cube_duel.py)
+        for g, reg, sing, n, N, t, err in np.load("bem_grading_scan_k1_final.npz")["all"]:
+            best[int(N)] = min(best.get(int(N), 1.0), err)
+    elif os.path.exists("bem_grading_scan_k1.npz"):
         for g, reg, sing, n, N, t, err in np.load("bem_grading_scan_k1.npz")["rows"]:
             best[int(N)] = min(best.get(int(N), 1.0), err)
     else:
@@ -47,8 +49,9 @@ def data():
     return out
 
 
-def fit(c, lo=1):
-    x, y = np.sqrt(c[lo:, 0]), np.log(c[lo:, 1])
+def fit(c, lo=1, hi=-1):
+    """Fit to the levels J = 4..10: J = 3 is too coarse and J = 11 is too close to the reference."""
+    x, y = np.sqrt(c[lo:hi, 0]), np.log(c[lo:hi, 1])
     p = np.polyfit(x, y, 1)
     return p, np.exp(np.abs(y - np.polyval(p, x)).max())
 
@@ -56,7 +59,7 @@ def fit(c, lo=1):
 if __name__ == "__main__":
     c = data()
     p, dev = fit(c["MFS dense"])
-    print(f"two depths per octave, J >= 4: error = {np.exp(p[1]):.3g} exp({p[0]:.4f} sqrt(N)), largest deviation a factor {dev:.2f}")
+    print(f"two depths per octave, J >= 4: error = {np.exp(p[1]):.3g} exp({p[0]:.4f} sqrt(N_u)) (fit to J = 4..10), largest deviation a factor {dev:.2f}")
     for key in ("MFS dense", "MFS+tail", "Bempp sym"):
         v = c[key]
         print(f"{key}: local order -dlog(err)/dlog(N): " + " ".join(f"{-np.log(v[i + 1, 1] / v[i, 1]) / np.log(v[i + 1, 0] / v[i, 0]):.1f}" for i in range(len(v) - 1)))
@@ -69,12 +72,12 @@ if __name__ == "__main__":
               "Bempp": "Bempp, quasi-uniform meshes", "Bempp sym": "Bempp, graded meshes (best setting per mesh)"}
     xs = np.array([np.sqrt(c["MFS dense"][1, 0]) - 4, np.sqrt(c["MFS dense"][-1, 0]) + 8])
     ax.semilogy(xs, np.exp(np.polyval(p, xs)), color=MUTED, lw=0.8, ls="-", zorder=1)
-    ax.annotate(rf"${np.exp(p[1]):.2f}\,\exp({p[0]:.3f}\sqrt{{N}})$", (xs[1] - 42, np.exp(np.polyval(p, xs[1] - 42)) * 3.2), fontsize=8, color=MUTED, ha="left")
+    ax.annotate(rf"${np.exp(p[1]):.2f}\,\exp({p[0]:.3f}\sqrt{{N_u}})$", (xs[1] - 42, np.exp(np.polyval(p, xs[1] - 42)) * 3.2), fontsize=8, color=MUTED, ha="left")
     for key in ("plain MFS", "MFS no tail", "MFS+tail", "MFS dense", "Bempp", "Bempp sym"):
         col, mk, ls, _ = STYLE[key]
         v = c[key]
         ax.semilogy(np.sqrt(v[:, 0]), v[:, 1], linestyle=ls, color=col, marker=mk, ms=5, lw=1.4, mec="white", mew=0.7, label=labels[key], zorder=3)
-    ax.set_xlabel(r"$\sqrt{N}$,  $N$ = number of unknowns")
+    ax.set_xlabel(r"$\sqrt{N_u}$,  $N_u$ = number of unknowns")
     ax.set_ylabel("relative error of the scattered field")
     ax.grid(True, which="major", color="#e4e3df", lw=0.6)
     for sp in ("top", "right"):
