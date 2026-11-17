@@ -47,9 +47,12 @@ where we show it".
   best configuration (item 43; `retime_all.sh`). Use only those numbers.
 - **On the cube Bempp was also given the mirror symmetry** that the MFS uses
   (item 55). On that equal footing, with the final MFS timings of item 56,
-  Bempp is faster above 0.06% (2.4 times at 0.1%), the two are level near
-  0.06%, and the MFS is faster below 0.04% (1.3 times there, 2.4-3.5 times
-  at 0.02-0.015%) and continues to 0.0015% (measured against J = 11). Do not write that the MFS is faster on the cube without saying
+  Bempp is faster down to 0.1% (2.4 times there: 1.3 s against 3.1 s), the
+  two are level near 0.09% (Bempp then needs the higher quadrature), and
+  the MFS is faster below (4.3 s for 0.037% against 5.8 s; 2.5 times at
+  0.02-0.015%) and continues to 0.0015% (measured against J = 11). For
+  the oblique wave Bempp is faster down to 0.04% and the two are level
+  below. Do not write that the MFS is faster on the cube without saying
   which Bempp (with or without symmetry) and at what error.
 - **The cube MFS numbers to use are the FINAL ones at the end of item 56**
   (base grid 6 / 0.15 from J = 6 on, line quadrature 12 / 8 nodes; `paper/tables/cube_mfs.tex`, `cube_oblique.tex`). The MFS
@@ -838,8 +841,9 @@ towards the MFS field.
         0.117%, 0.053%, 0.027%, 0.019%; two depths, J = 6, 7, 8: 18.5,
         32.7, 64.5 s for 0.098%, 0.039%, 0.014%;
       - against Bempp with symmetry, standard wave: Bempp 1.3 s (0.11%)
-        against MFS 3.1 s (0.095%); level near 0.06% (Bempp 4.3 s for
-        0.061%; MFS 4.3 s for 0.037%); MFS 4.3 s against 5.8 s at 0.037%;
+        against MFS 3.1 s (0.095%); level near 0.09% (Bempp 3.7 s for
+        0.087%); in 4.3 s the MFS has 0.037% and Bempp 0.061%; MFS 4.3 s
+        against 5.8 s at 0.037%;
         6.3 s (0.017%) and 8.6 s (0.015%) against 15 s (0.020%) and 22 s
         (0.015%); Bempp's best 0.010% in 69 s; MFS 0.0135% in 20 s,
         0.0050% in 30 s, 0.0015% in 46 s. Without symmetry in Bempp: 2
