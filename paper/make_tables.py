@@ -236,11 +236,46 @@ def summary(env):
     write("summary", rows)
 
 
+def cube_cases():
+    """Cube beyond the standard case (../validation/cube_cases.py): selected runs of the lower
+    envelopes of the MFS and of Bempp with symmetry, about a factor of two apart in error."""
+    rows = []
+    for case, label in (("k1o", "One wavelength, general wave"), ("k2", "Two wavelengths"), ("k3", "Three wavelengths")):
+        f = os.path.join(V, f"cube_cases_{case}.npz")
+        if not os.path.exists(f):
+            print(f"--- cube_cases: no data for {case}")
+            continue
+        d = np.load(f)
+        if rows:
+            rows.append("    \\midrule")
+        first = label
+        mfs = sorted(d["mfs"], key=lambda r: r[5])
+        env, emin = [], np.inf
+        for r in mfs:                                   # MFS runs that no faster MFS run beats
+            if r[6] < 0.97 * emin:
+                env.append(r)
+                emin = r[6]
+        for name, runs, fmt in (("MFS", env, lambda r: f"MFS, {'two depths' if r[0] else 'one depth'}, $J = {int(r[1])}$ & {int(r[3])}"),
+                                ("Bempp", list(d["env"]), lambda r: f"Bempp, $g = {r[0]:g}$, quadrature {int(r[1])}/{int(r[2])} & {int(r[4])}")):
+            pick, last = [], np.inf
+            for r in runs:
+                if r[6] < 4e-3 and r[6] < last / 1.9:
+                    pick.append(r)
+                    last = r[6]
+            if len(runs) and (not pick or pick[-1][6] != runs[-1][6]):
+                pick.append(runs[-1])
+            for r in pick:
+                rows.append(f"    {first} & {fmt(r)} & {tm(r[5])} & {sci(r[6])} \\\\")
+                first = ""
+    write("cube_cases", rows)
+
+
 if __name__ == "__main__":
     sphere()
     torus()
     almond()
     cube()
-    cube_oblique()
-    cube_k2()
     summary(cube_bem_env())
+    cube_cases()
+    # cube_oblique() and cube_k2() made the tables of the supplement of the second draft (g = 2 only);
+    # they are superseded by cube_cases() and their data are no longer re-timed.

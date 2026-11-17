@@ -1,0 +1,72 @@
+\appendix
+
+\section{Exponents at a conical point}
+\label{app:cone}
+
+The tails at the vertices of the cube and at the tip of the almond need the exponents of the field at a conical point. Near the vertex of a perfectly conducting cone the field is a sum of terms of two types \cite{vanbladel1996,desmedt1986,costabel2000},
+\begin{equation}
+  \bE = \nabla\bigl(r^{\nu}\,Y(\hat\bx)\bigr), \qquad \bH = \nabla\bigl(r^{\tau}\,Z(\hat\bx)\bigr),
+\end{equation}
+where $Y$ and $Z$ are eigenfunctions of the Laplace--Beltrami operator on the part of the unit sphere outside the cone, with Dirichlet and Neumann conditions and eigenvalues $\nu(\nu+1)$ and $\tau(\tau+1)$. The electric type gives $\bE\sim r^{\nu-1}$. The magnetic type gives $\bH\sim r^{\tau-1}$ and $\bE\sim r^{\tau}$. For polyhedral corners these are the principal singular parts of the time-harmonic field found by Costabel and Dauge \cite[Section 6.6]{costabel2000}.
+
+We compute the eigenvalues by the method of particular solutions in its stable form \cite{betcke2005}. For a trial value of $\nu$ the functions $P_\nu(-\hat\bx\cdot\mathbf{s}_j)$, with $P_\nu$ the Legendre function and $\mathbf{s}_j$ a point of the sphere inside the cone, satisfy the eigenvalue equation on the sphere away from $\mathbf{s}_j$. They are the fundamental solutions of the sphere, so this is again a method of fundamental solutions. The value $\nu$ is an exponent when a combination of these functions vanishes on the boundary curve without vanishing in the domain. For the almond tip the poles $\mathbf{s}_j$ lie on the focal segment of the elliptic cross-section and cluster towards its ends. For the cube corner they lie inside the spherical triangle that the cube cuts out and cluster exponentially towards its three corners. For a circular cone, where the exponent is known as a root of a Legendre function, the method reproduces it to eight digits.
+
+\emph{Cube vertex.} For the exterior of a corner of the cube we obtain $\nu = 0.45417$ and $1.23087$, and $\tau = 0.840$ and $1.20635$. De Smedt and Van Bladel \cite{desmedt1986} give $\nu = 0.45410$ and $\tau = 0.84108$ for the rectangular corner.
+
+\emph{Almond tip.} The tip is an elliptic cone with half-angles $34.09^\circ$ and $12.71^\circ$, that is, with axis ratio $1/3$. \autoref{tab:coneexp} lists the exponents by the parities of the potential under the two mirrors of the almond. Only one exponent is below $0.87$, $\nu = 0.29959$, and it belongs to the class that is even under both mirrors. The values are unchanged in five digits when the number of poles is varied from $12$ to $36$. Bilinear interpolation in the tables of \cite{desmedt1986} gives $\nu = 0.298$ and $\tau = 0.885$ and $0.967$ for this cone, against our $0.29959$, $0.87905$ and $0.96803$. The differences of up to $0.7\%$ are of the size of the accuracy stated there.
+
+\begin{table}[htbp]
+  \centering
+  \caption{Exponents of the elliptic cone at the tip of the almond, by the parities of the potential under the mirrors $y\to-y$ and $z\to-z$. The two smallest exponents of each type are listed.}
+  \label{tab:coneexp}
+  \begin{tabular}{lll}
+    \toprule
+    Parity $(y,z)$ & $\nu$ (electric type) & $\tau$ (magnetic type) \\
+    \midrule
+    even, even & $0.29959$, $1.46427$ & $1.05604$, $1.98580$ \\
+    odd, even  & $1.10372$, $2.24730$ & $0.96803$, $1.96545$ \\
+    even, odd  & $1.04120$, $2.10576$ & $0.87905$, $1.75454$ \\
+    odd, odd   & $2.01295$, $3.04849$ & $1.97538$, $2.90094$ \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\emph{From exponents to weights.} The tail sources lie on rows that run into the conical point with a spacing proportional to the distance $r$. Dipoles of strength $r^{e}$ on such a row produce a field that scales like $r^{e-3}$. A field $r^{\nu-1}$ therefore needs electric dipoles with $e = \nu+2$, and the magnetic type needs magnetic dipoles with $e = \tau+2$.
+
+\section{Evaluation of the line sources}
+\label{app:lines}
+
+A line source of the cube at depth $d$ carries a polynomial density in the stretched variable $u$, and each matrix entry is the integral of a dipole field against one mode. The integrand varies on the scale of the distance between the target and the line, which ranges from $d/3$ to the size of the cube. We organise the quadrature so that most of the work is shared between the targets.
+
+The interval $-1\le u\le1$ is divided into a binary tree of panels, and each panel carries a fixed set of nodes. On the four coarsest levels a panel is wide compared with the scale on which the modes vary. There we use $12$ Gauss nodes in the physical variable $t$ and replace the kernel by its polynomial interpolant, so that the weights are the exact moments of the Lagrange polynomials against the modes. On the finer levels we use $8$ Gauss nodes in $u$. All nodes and weights are computed once for each depth. A target descends the tree and accepts a panel as soon as the length of the panel is smaller than its distance from the target. A distant target then needs $12$ kernel values for the whole line, and a target at distance $d$ needs a few hundred.
+
+Three further savings follow from the structure of the layout. The electric and the magnetic line at the same position share the kernel values. The lines of a tail share the nodes, and their kernel values are summed with the tail weights before the modes are accumulated. The eight mirror images of a target are processed together, and their signed sums are written to the matrices of the parity classes in one pass.
+
+With $20$ and $10$ nodes in place of $12$ and $8$ the fields of \autoref{tab:cube} change by less than $10^{-6}$, and by less than $10^{-7}$ up to $J = 10$. These node numbers are for a side of one wavelength. They must grow with the wavenumber, because the phase of the kernel varies along a panel in proportion to $k$. At two wavelengths we use $20$ and $10$ nodes, which changes the fields by less than $10^{-10}$ against $32$ and $14$, whereas with $12$ and $8$ the fields there are wrong by up to $2\times10^{-4}$.
+
+\section{Boundary element settings}
+\label{app:bempp}
+
+We used Bempp-cl version 0.4.2 \cite{betcke2021}. The electric field integral equation is discretised with Rao--Wilton--Glisson functions as trial functions and scaled N\'ed\'elec functions as test functions. The dense matrix is assembled in double precision, and the system is solved by LU factorisation with LAPACK.
+
+\emph{Backend.} Bempp-cl has two assembly backends. We ran the OpenCL backend on the processor through the PoCL driver. It assembled the matrices of this paper about twenty times faster than the Numba backend, with identical results.
+
+\emph{Quadrature and meshes for the cube.} The quadrature orders of the library are $4$ for regular and $6$ for singular integrals by default, and we also used the orders $6$ and $8$, and $8$ and $10$. The graded meshes use a tensor grid on each face with the nodes $\pm\tfrac12\bigl(1-(1-|\xi|)^{g}\bigr)$, $\xi$ equally spaced in $[-1,1]$, and each rectangle is cut into two triangles. We scanned the grading exponent $g$ between $1.25$ and $2.25$ together with the three quadrature settings and seven mesh sizes, for each of the incident waves and wavenumbers that we report. \autoref{tab:bemenv} lists, for the standard wave at $k = 2\pi$, the runs that no faster run beats. The best grading depends on the accuracy: gradings between $1.6$ and $1.9$ with the default quadrature are the fastest at errors above $4\times10^{-4}$, and gradings of $1.9$ and $2$ with raised quadrature orders below. With the default quadrature the error is not monotone in $g$, which suggests that the quadrature error and the mesh error partly cancel at the best values. The curves for Bempp in Figures~\ref{fig:costall} and~\ref{fig:cubecases} are these lower envelopes.
+
+\begin{table}[htbp]
+  \centering
+  \caption{Unit cube, $k = 2\pi$, standard wave: the fastest Bempp runs with the mirror symmetry for each accuracy, over all gradings $g$, quadrature orders and mesh sizes that we tried. Difference from the MFS reference.}
+  \label{tab:bemenv}
+  \small
+  \begin{tabular}{rlrrl}
+    \toprule
+    $g$ & Quadrature & Unknowns & Time [s] & Error \\
+    \midrule
+\tablebody{cube_bem_env}
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\emph{Mirror symmetry.} Bempp does not use the symmetry of a body. To compare on an equal footing we solved the boundary element system of the cube with the three mirror planes ourselves. The graded mesh is built so that it is invariant under the eight reflections. A reflection then acts on the Rao--Wilton--Glisson coefficients as a signed permutation, and a current of a given parity class is a combination of symmetrised basis functions, one for each orbit of basis functions under the reflections. We assemble only the rows of the matrix that belong to the test functions of one octant, which Bempp allows by restricting the test space to a part of the mesh. The rows are folded with the symmetrised basis, and each class is solved by an LU factorisation of an eighth of the size.
+
+The solution with symmetry differs from that of the full system by $3\times10^{-5}$ with the default quadrature and by $2\times10^{-6}$ with the orders $8$ and $10$, because the quadrature rules of the library are not invariant under the reflections. With the symmetry the boundary element solution is obtained three to eight times faster, and meshes with up to $28800$ unknowns fit into memory. Without it the OpenCL driver limits a single matrix to $4$\,GB on our machine, which is $16384$ unknowns.

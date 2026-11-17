@@ -23,3 +23,6 @@ paper/long/*.bbl
 paper/supplement.bbl
 validation/*_t.txt
 validation/*_t.log
+paper/*.fdb_latexmk
+paper/*.fls
+paper/main_3p.pdf

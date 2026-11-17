@@ -1,6 +1,6 @@
-%% Second draft, 17 November 2026: short version (about 25 pages in this layout), in the
-%% voice of the MSci thesis. The long first draft is in long/ and feeds supplement.tex.
-%% Every number is produced by a script in ../validation (see ../NOTES.md).
+%% Third draft, 17 November 2026: one paper without a supplement (derivations in the text,
+%% three appendices). Earlier versions: long/ (first draft) and the git history (short paper
+%% with supplement). Every number is produced by a script in ../validation (see ../NOTES.md).
 %% Lines starting with "%% TODO" are open points for the authors.
 \documentclass[preprint,12pt]{elsarticle}
 
@@ -32,8 +32,9 @@
 \makeatletter\newcommand{\tablebody}[1]{\@@input tables/#1.tex }\makeatother
 
 \newtheorem{theorem}{Theorem}
+\providecommand{\theoremautorefname}{Theorem}
+\renewcommand{\appendixautorefname}{Appendix}
 
-%% a smaller bibliography keeps the manuscript near 25 pages
 \def\bibfont{\small}
 
 \newcommand{\bE}{\mathbf{E}}
@@ -56,7 +57,6 @@
 \newcommand{\ssca}{\sigma_{\mathrm{sca}}}
 \newcommand{\rmi}{\mathrm{i}}
 \newcommand{\rme}{\mathrm{e}}
-\newcommand{\supp}[1]{Supplementary Material, Section~S#1}
 
 \journal{Journal of Computational Physics}
 
@@ -64,10 +64,10 @@
 
 \begin{frontmatter}
 
-%% TODO (authors): title. Alternatives:
-%%   "Solving Maxwell's equations with the Method of Fundamental Solutions: edges and tips"
-%%   "Where to put the sources: the Method of Fundamental Solutions for Maxwell scattering"
-\title{The Method of Fundamental Solutions for Maxwell's Equations on Bodies with Edges}
+%% TODO (authors): TITLE UNDECIDED. This is a placeholder. The author disliked all earlier
+%% candidates (least disliked: "The Method of Fundamental Solutions for Electromagnetic Scattering
+%% in Three Dimensions" and the thesis title). See NOTES.md for the list offered.
+\title{The Method of Fundamental Solutions for Maxwell's Equations}
 
 \author[inst1]{Saptarshi Bandyopadhyay}
 \ead{saptarshi.bandyopadhyay.21@ucl.ac.uk}
@@ -88,7 +88,7 @@
 %% The highlights are in highlights.txt (the journal takes them as a separate file).
 
 \begin{keyword}
-Method of Fundamental Solutions \sep Maxwell's equations \sep electromagnetic scattering \sep edge singularities \sep method of auxiliary sources \sep radar cross-section
+Method of Fundamental Solutions \sep Maxwell's equations \sep electromagnetic scattering \sep source placement \sep edge singularities \sep radar cross-section
 \end{keyword}
 
 \end{frontmatter}
@@ -108,7 +108,9 @@ The complete source code, including the scripts that generate every table and fi
 %% TODO (authors): acknowledgements; declaration on the use of AI tools as
 %% required by the journal (see NOTES.md, section 6).
 
-\setlength{\bibsep}{1.5pt plus 0.5pt}
+\input{sections/appendix}
+
+\setlength{\bibsep}{2pt plus 0.5pt}
 \bibliographystyle{elsarticle-num}
 \bibliography{refs}
 

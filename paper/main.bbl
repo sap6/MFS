@@ -238,4 +238,15 @@ R.~F. Millar, Singularities of two-dimensional exterior solutions of the
 \newblock \href {https://doi.org/10.1017/S0305004100046545}
   {\path{doi:10.1017/S0305004100046545}}.
 
+\bibitem{vanbladel1996}
+J.~Van~Bladel, Singular Electromagnetic Fields and Sources, IEEE Press, 1996.
+\newblock \href {https://doi.org/10.1109/9780470546420}
+  {\path{doi:10.1109/9780470546420}}.
+
+\bibitem{betcke2005}
+T.~Betcke, L.~N. Trefethen, Reviving the method of particular solutions, SIAM
+  Rev. 47 (2005) 469--491.
+\newblock \href {https://doi.org/10.1137/S0036144503437336}
+  {\path{doi:10.1137/S0036144503437336}}.
+
 \end{thebibliography}
