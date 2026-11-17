@@ -46,10 +46,18 @@ where we show it".
 - **All cost tables were re-timed in one container** with both codes in their
   best configuration (item 43; `retime_all.sh`). Use only those numbers.
 - **On the cube Bempp was also given the mirror symmetry** that the MFS uses
-  (item 55). On that equal footing Bempp is faster above 0.05%, the two are
-  level near 0.03%, and the MFS is faster below 0.02% (1.5-2.5 times) and
-  continues to 0.0035%. Do not write that the MFS is faster on the cube
-  without saying which Bempp (with or without symmetry) and at what error.
+  (item 55). On that equal footing, with the final MFS timings of item 56,
+  Bempp is faster above 0.06%, the two are level from 0.06% to 0.04%, and
+  the MFS is faster below 0.03% (1.4-3 times) and continues to an estimated
+  0.003%. Do not write that the MFS is faster on the cube without saying
+  which Bempp (with or without symmetry) and at what error.
+- **The cube MFS numbers to use are those of item 56** (base grid 6 / 0.15
+  from J = 6 on; `paper/tables/cube_mfs.tex`, `cube_oblique.tex`). The MFS
+  times and errors in items 43, 47 and 55 are from the finer base grid and
+  are superseded; the Bempp numbers there stand.
+- **The optical theorem is an indicator, not a bound** (item 56): two fits
+  with a too coarse interior grid were wrong by 2.4% and 0.03% with
+  mismatches of 1e-5 and 3e-5.
 - **The cube family with one source depth per octave stalls near 1.3e-4;
   two depths per octave converge** to 3.5e-5 with no stall (item 47). The
   reference for the cube is now the dense family at J = 10
@@ -735,6 +743,61 @@ towards the MFS field.
       fails, the rate, and reaching 3.5e-5; not speed at 0.1%.
       Item 44 (a) is superseded by this measurement.
 
+56. **Last tuning of the cube family, and two cautions** (inline runs and
+    `fig_cost_cube.py run`, `cube_oblique_table.py run`; adopted in
+    `cube_mfs.balanced`).
+    - *Fewer modes do not pay*: n0 - 2, n0 - 4 or a slower growth of the
+      modes with depth all increase the error at equal J.
+    - *The base grid was over-resolved from J = 7 on.* (n_base, hmax) =
+      (6, 0.15) instead of (8, 0.1) gives the same fields for the dense
+      family (difference 1.4e-6 to 2.2e-6 at J = 7..10) and is 25% faster.
+      Adopted for J >= 6 in both families. All cube tables were re-run:
+      - standard wave, one depth per octave, J = 3..9: 1.2, 1.6, 2.5, 3.7,
+        5.2, 7.7, 10.5 s for 1.28%, 0.53%, 0.21%, 0.094%, 0.036%, 0.016%,
+        0.015%;
+      - two depths per octave, J = 3..10: 2.3, 3.7, 5.5, 10, 16, 24, 36,
+        50 s for 1.39%, 0.51%, 0.20%, 0.081%, 0.032%, 0.012%, 0.0036%,
+        reference (optical mismatch 5.5e-6, sigma_ext 2.927964; J = 8, 9:
+        2.927854, 2.927930);
+      - oblique wave, one depth, J = 4..9: 2.2, 3.4, 6.7, 9.8, 14, 22 s for
+        0.62%, 0.28%, 0.117%, 0.053%, 0.027%, 0.019%; two depths, J = 6, 7,
+        8: 20, 34, 71 s for 0.098%, 0.039%, 0.014%.
+    - *Against Bempp with symmetry (item 55)*: Bempp faster above 0.06%
+      (1.3 s against 3.7 s at 0.1%); level 0.06%-0.04% (4.3 s for 0.060%,
+      5.8 s for 0.037% against 5.2 s for 0.036%); MFS faster below 0.03%:
+      7.7 s for 0.016% against 15 s (0.020%) and 22 s (0.0145%); 24 s
+      against 34 s at 0.012%; Bempp's best 0.010% in 69 s, MFS under 30 s.
+      Against Bempp without symmetry: 1.6 times at 0.1%, 6 times at 0.04%
+      (5.2 s against 30 s), 12 times at 0.02% (7.7 s against 97 s).
+      Oblique wave: Bempp-sym faster down to 0.03% (5.0 s against 9.8 s at
+      0.052%), level below (15 s against 14 s at 0.027%; 40 s for 0.016%
+      against 22 s for 0.019%).
+    - **Caution 1: the coarser base grid is not enough for the one-depth
+      family beyond J = 9.** With (6, 0.15): J = 10, 11, 12 give 2.9e-4,
+      4.6e-4, 9.0e-4 (rising); with (8, 0.1) they gave 1.3e-4 to 1.8e-4
+      (item 47). J = 9 itself is 1.50e-4 against 1.25e-4. The family is
+      only recommended down to 2e-4 (J <= 8), where the two grids agree.
+      If the one-depth family is ever run deeper, use (8, 0.1). The dense
+      family (four nodes per panel) is unaffected up to J = 10.
+    - **Caution 2: the optical theorem missed two bad fits.** Base grid
+      (4, 0.25) at J = 8: error 2.4%, optical mismatch 1.2e-5 (at J = 7:
+      0.6% and 1.1e-3). One-depth J = 10 with (6, 0.15): error 2.9e-4,
+      mismatch 3.0e-5. The draft said the mismatch "exposed every
+      under-sampled fit"; corrected to "the fits under-sampled at the
+      edges" plus the counter-example. Always check a new parameter set
+      against the reference field, not only against the optical theorem.
+    - **Caution 3: errors against a self-reference.** The dense family's
+      level-to-level change falls by 2.3-2.9 per level (8.95e-3, 3.11e-3,
+      1.19e-3, 4.86e-4, 2.04e-4, 8.42e-5, 3.61e-5). With that rate the
+      true errors of J = 9 and J = 10 are about 6e-5 and 3e-5; the table
+      entry 3.6e-5 for J = 9 is its difference from J = 10 and understates
+      its error. The draft now says "estimated error 3e-5" for the finest
+      run (abstract, introduction, highlights, conclusion) instead of
+      "converges to 3.5e-5".
+    - Edge appendix: the next terms of the wall currents have exponents
+      larger by 2 (electric) and 4/3 (magnetic) (8/3, 11/3, 8/3, 11/3;
+      `DERIVATIONS.md` B), not "by two or more" as the draft said.
+
 ## 3. Current best commands
 
 ```
@@ -943,6 +1006,12 @@ Open, in the order I would take them:
 - Almond 1.19 GHz nose-on, variants of layout 8:5: spacing 0.5: 8.3e-6; finer collocation: 3.3e-6; two rows per octave: 2.7e-6.
 - Cube dense J = 9 variants: modes 6.3e-7, tail length 6.3e-7, second vertex exponent 1.7e-7, other collocation grid 9.7e-7; beta 0.3: 5.9e-5; beta 0.7: 2.1e-5.
 
+- Cube base grid 6 / 0.15 instead of 8 / 0.1 from J = 7: dense family fields equal to 1.4e-6..2.2e-6 (J = 7..10), 25% faster; one depth J = 9: 1.50e-4 against 1.25e-4. Adopted.
+- Cube, fewer modes (n0 - 2, n0 - 4) at J = 7, 8: error larger at equal J; not adopted.
+- Cube base grid 4 / 0.25 at J = 7, 8: errors 6e-3, 2.4e-2 with optical mismatch 1.1e-3, 1.2e-5 (the mismatch does not flag the second).
+- Cube one depth per octave with base 6 / 0.15, J = 10, 11, 12: 2.85e-4, 4.6e-4, 9.0e-4 (optical 3.0e-5, 3.1e-5, 1.2e-4); with 8 / 0.1 they were 1.3e-4..1.8e-4.
+- Cube tables re-run with the adopted grid (item 56): one depth J = 7, 8, 9: 5.2, 7.7, 10.5 s for 3.6e-4, 1.6e-4, 1.5e-4; two depths J = 8, 9, 10: 24, 36, 50 s for 1.2e-4, 3.6e-5, reference.
+
 ## 6. Write-up session
 
 **State on 2026-11-17: a complete first draft exists in `paper/`** (in this
@@ -957,9 +1026,8 @@ voice of the thesis and with the academic-humanizer rules (item 50).
 - Open in the draft (marked `%% TODO`): title; acknowledgements; AI
   declaration; measurement uncertainty from Kelley et al.; Millar 1983;
   comparison of the exponent tables with De Smedt and Van Bladel.
-- Length: 40 pages in the 12 pt preprint format (`main.pdf`), **24 pages in
-  the journal's own layout** (`main_3p.pdf`: 19 of body, 3 of appendices,
-  2 of references). The author's target is 25, which the journal layout
+- Length: 42 pages in the 12 pt preprint format (`main.pdf`), **26 pages in
+  the journal's own layout** (`main_3p.pdf`, rebuilt after item 56). The author's target is 25, which the journal layout
   meets. If the preprint format must come down too, in the order I would
   try: (1) the three cost tables of sphere, torus and almond duplicate
   their figures; `validation/fig_cost_all.pdf` is one four-panel figure
