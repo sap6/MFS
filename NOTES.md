@@ -1059,14 +1059,15 @@ Done in the third session of 2026-11-16 (items 33-38), at the author's
 request: **T19 Torus** (new example, solver, singular set, cost table
 against Bempp, two figures) and a second literature pass with full texts.
 
-Done in the overnight session of 2026-11-17 (items 39-50), at the author's
+Done in the overnight session of 2026-11-17 (items 39-57), at the author's
 request: both codes at their best (Bempp: OpenCL and three smaller fixes; MFS:
 cube solver 25 times faster), all cost tables re-timed (**T14**), part of
 **T16** (Bempp's fast backend; no symmetric, high-order or compressed BEM),
 **T18** in part (`cube_mfs.py` is the cube solver; old files kept), the missing
 figures of T13, the almond null, the sphere against the wavenumber, the cube
-floor (which turned out to be the depth ratio, not the vertices of T15), and a
-first draft of the paper (`paper/`).
+floor (which turned out to be the depth ratio, not the vertices of T15), a
+first draft of the paper (`paper/`), Bempp with the mirror symmetry of the
+cube (**T22**), and the cube at two and three wavelengths (item 57).
 
 Open, in the order I would take them:
 
@@ -1088,14 +1089,15 @@ Open, in the order I would take them:
 - [x] **T21 Why does one depth per octave stall?** Answered in items 53-54: a
       fixed ratio has a fixed attainable accuracy (2D model: 8e-5, 6e-6, 1e-9
       for ratios 0.5, 0.6, 0.71); tapered depths help in 2D but not in 3D.
-- [ ] **T25 Cube at higher wavenumbers (item 57).** k = 4 pi is done for
-      the standard wave and is in the draft. k = 6 pi converges with the
-      base layout scaled with the wavelength but is untuned and expensive
-      (0.09% in 32 s, 0.03% in 80 s): tune it (2D first), decide whether
-      it goes into the paper. Also open: re-tune
-      the grading of the Bempp mesh at k = 4 pi before quoting factors as
-      a trend; one unified scaling rule for all k (S = 2 currently keeps
-      the S = 1 base layout, S = 3 scales it).
+- [ ] **T25 Cube at higher wavenumbers (item 57).** k = 4 pi is done
+      (standard and oblique wave) and is in the draft. k = 6 pi converges
+      with the base layout scaled with the wavelength but is untuned and
+      expensive (0.09% in 32 s, 0.03% in 80 s): tune it, decide whether it
+      goes into the paper. Also open: re-tune the grading of the Bempp
+      mesh at k = 4 pi before quoting factors as a trend; re-run the
+      k = 4 pi table with the single scaling rule of item 57 (tested, works)
+      if the paper is to state one rule for all wavenumbers; the two-depth
+      rows at k = 4 pi can use the coarser interior panels (25% faster).
 - [ ] **T26 Use all 48 symmetries of the cube in the assembly (optional).**
       The line integrals are 70% of the time at the coarse levels (2.7 of
       3.8 s at J = 6). The three faces of an octant are images of one
