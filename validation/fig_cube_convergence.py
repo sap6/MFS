@@ -29,7 +29,7 @@ def data():
     ref = d["ref_E"]                                    # two depths per octave at J = 12 with the finer interior grid
     out = {}
     for name, key in (("tail", "MFS+tail"), ("dense", "MFS dense"), ("notail", "MFS no tail"), ("plain", "plain MFS")):
-        rows = [(4 * r[2], rel(d[f"{name}_E{int(r[0])}"], ref)) for r in d[name]]
+        rows = [(4 * r[2], rel(d[f"{name}_E{int(r[0])}"], ref)) for r in d[name] if not (name == "dense" and int(r[0]) == int(d["ref_info"][0]))]
         out[key] = np.array(rows)
     rows = sorted((int(b["ndof"]), rel(b["E"], ref)) for b in (np.load(f) for f in glob.glob("bem_cube_h*_q4.npz")) if int(b["ndof"]) > 1000)
     out["Bempp"] = np.array(rows)

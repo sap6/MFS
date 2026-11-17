@@ -16,7 +16,7 @@ BLUE, GREEN, INK, MUTED = "#2a78d6", "#1baf7a", "#1f1f1e", "#6b6a64"
 
 
 def residual(J, tail, rho, zs):
-    cube = cm.Cube(J, classes=cm.classes_of(m.D, m.P), tail=tail)
+    cube = cm.Cube(2 * J, classes=cm.classes_of(m.D, m.P), tail=tail, **cm.dense(J))     # the layout of the paper (two depths per octave)
     coef, res = cube.solve(m.D, m.P)
     x = np.array([(m.H - r, m.H, z) for z in zs for r in rho])
     T = np.tile(np.array([[1.0, 0, 0], [0, 0, 1.0]]), (len(x), 1, 1))

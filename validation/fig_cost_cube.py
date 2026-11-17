@@ -21,19 +21,9 @@ import numpy as np
 import cube_mfs
 from cube_mfs import COL, balanced  # noqa: F401  (re-exported: other scripts import them from here)
 
-J_REF = 11          # deepest level of the family with two depths per octave and the interior grid (6, 0.15)
-# The reference field of all cube errors is "ref_E" in fig_cost_cube.npz: two depths per octave at
-# J = 12 with the finer interior grid (n_base, hmax) = (8, 0.1), which the family needs from J = 12 on
-# (NOTES.md items 62, 64). "ref_info" = (J, time, unknowns per class, equations, optical mismatch, sigma_ext).
-
-
-def reference_run(pts, J=12):
-    """Computes the reference field (about 4 minutes, 5 GB)."""
-    kw = cube_mfs.dense(J)
-    kw["kw"] = dict(kw["kw"], n_base=8)
-    kw["hmax"] = 0.1
-    E, t, info = cube_mfs.run(J, pts=pts, family="dense", **kw)
-    return E, np.array([J, t, max(info["per_class"]), info["rows"], info["optical"], info["ext"]])
+J_REF = 12          # reference: the family with two depths per octave at this level (5 GB per class, about 4 minutes).
+# Its field is stored twice in fig_cost_cube.npz, as "dense_E12" and as "ref_E", the reference of all cube
+# errors; "ref_info" = (J, time, unknowns per class, equations, optical mismatch, 0) (NOTES.md items 65, 68).
 J_FAST = 9          # deepest level of the family with one depth per octave
 
 
@@ -51,7 +41,7 @@ def run():
     run_mfs(2, pts, family="dense")
     out = {"pts": pts}
     for name, Js, kw in (("tail", range(3, J_FAST + 1), {}), ("dense", range(3, J_REF + 1), dict(family="dense")),
-                         ("notail", (4, 6, 8), dict(tail=0)), ("plain", (4, 6, 8, 10), None)):
+                         ("notail", (4, 6, 8), dict(tail=0, family="dense")), ("plain", (4, 6, 8, 10), None)):
         rows = []
         for J in Js:
             if kw is None:                             # plain MFS: J plays the role of the grid size
@@ -62,6 +52,8 @@ def run():
             out[f"{name}_E{J}"] = E
             print(f"{name:7s} J/n={J:2d} unknowns={unk:5d} rows={nrow:6d} time={t:6.1f}s optical={opt:.1e}", flush=True)
             out[name] = np.array(rows)
+            if name == "dense" and J == J_REF:
+                out["ref_E"], out["ref_info"] = E, np.array([J, t, unk // 2, nrow, opt, 0.0])
             np.savez("fig_cost_cube.npz", **out)
 
 
@@ -200,11 +192,6 @@ def plot(curves, fname="fig_cost_cube"):
 if __name__ == "__main__":
     if len(sys.argv) > 1 and sys.argv[1] == "extend":
         extend()
-    if len(sys.argv) > 1 and sys.argv[1] == "reference":
-        out = dict(np.load("fig_cost_cube.npz"))
-        cube_mfs.run(2, pts=out["pts"], family="dense")
-        out["ref_E"], out["ref_info"] = reference_run(out["pts"])
-        np.savez("fig_cost_cube.npz", **out)
     if len(sys.argv) > 1 and sys.argv[1] == "run":
         run()
     plot(report())

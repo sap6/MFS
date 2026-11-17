@@ -14,7 +14,7 @@ import matplotlib.pyplot as plt
 import matplotlib.ticker
 import numpy as np
 
-from fig_cost_all import BLUE, NAVY, INK, MUTED, curve
+from fig_cost_all import BLUE, INK, MUTED, curve
 
 PANELS = (("k1o", "(a) side one wavelength, general wave"), ("k2", "(b) side two wavelengths, standard wave"))
 
@@ -25,9 +25,7 @@ if __name__ == "__main__":
     for ax, (case, title) in zip(axs, PANELS):
         if os.path.exists(f"cube_cases_{case}.npz"):
             d = np.load(f"cube_cases_{case}.npz")
-            for fam, col, mk, ls, lab in ((0, BLUE, "o", "-", "MFS, one depth per octave"), (1, NAVY, "h", (0, (6, 1.5)), "MFS, two depths per octave")):
-                r = d["mfs"][d["mfs"][:, 0] == fam]
-                curve(ax, r[:, 5], r[:, 6], col, mk, ls, lab)
+            curve(ax, d["mfs"][:, 5], d["mfs"][:, 6], BLUE, "o", "-", "MFS")
             env = d["env"][d["env"][:, 6] < 2e-2]
             curve(ax, env[:, 5], env[:, 6], "#9c3b12", "X", (0, (3, 1)), "Bempp, graded, with symmetry")
         ax.set_title(title, loc="left", fontsize=8.5)

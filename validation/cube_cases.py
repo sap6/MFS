@@ -1,21 +1,20 @@
 """The cube beyond the standard case: a general incident wave, and a side of
-two and three wavelengths. For each case the MFS levels and the best Bempp
-runs (with the mirror symmetry; candidates from bem_grading_scan.py) are run
-alternately, several times, and each keeps its smallest wall time, as
-cube_duel.py does for the standard case (NOTES.md items 60, 64).
+two wavelengths. For each case the MFS levels (two depths per octave) and
+the best Bempp runs (with the mirror symmetry; candidates from
+bem_grading_scan.py) are run alternately, several times, and each keeps its
+smallest wall time, as cube_duel.py does for the standard case (NOTES.md
+items 60, 66, 68).
 
+    python3 cube_cases.py k1o ref             # reference field (J = 10) -> cube_cases_k1o_ref.npz; once
     python3 cube_cases.py k1o [repetitions]   # k = 2 pi, oblique wave (eight parity classes)
-    python3 cube_cases.py k2  [repetitions]   # k = 4 pi, standard wave
-    python3 cube_cases.py k2o [repetitions]   # k = 4 pi, oblique wave
-    python3 cube_cases.py k3  [repetitions]   # k = 6 pi, standard wave
-    python3 cube_cases.py k3 mfs              # MFS only, once (no Bempp scan needed)
+    python3 cube_cases.py k2 ref; python3 cube_cases.py k2 [repetitions]      # k = 4 pi, standard wave
     python3 cube_cases.py report              # tables of all finished cases
 
-Errors are differences from the reference of bem_grading_scan.reference(case).
-Writes cube_cases_<case>.npz: mfs (family 0 = one depth per octave, 1 = two;
-J; unknowns per class; unknowns of all classes; equations per class; time;
-error; optical mismatch), bem (all timed Bempp runs) and env (lower envelope),
-both with the columns of bem_grading_scan.py.
+Errors of both codes are differences from the reference field of the case.
+Writes cube_cases_<case>.npz: mfs (1; J; unknowns per class; unknowns of all
+classes; equations per class; time; error; optical mismatch), bem (all timed
+Bempp runs) and env (lower envelope), both with the columns of
+bem_grading_scan.py.
 """
 import os
 import sys
@@ -24,40 +23,26 @@ import numpy as np
 
 import pec_cube_lightning3d as m
 
-SIDE = {"k1o": 1, "k2": 2, "k2o": 2, "k3": 3}
+SIDE = {"k1o": 1, "k2": 2, "k2o": 2}
 OBLIQUE = (60.0, 25.0, 35.0)
-LEVELS = {                                                  # (levels with one depth per octave, with two); the two-depth
-    "k1o": (range(4, 10), range(4, 9)),                     # levels stop two below the reference level, whose own error
-    "k2": (range(4, 9), range(5, 9)),                       # would otherwise bias the last entry (NOTES.md item 64)
-    "k2o": (range(5, 9), (7, 8)),
-    "k3": (range(5, 9), range(6, 9)),
-}
+LEVELS = {"k1o": range(4, 9), "k2": range(4, 9), "k2o": range(5, 9)}      # two depths per octave; the reference is J = 10
+J_REF = 10
 
 
-def layout(c, S, J, family):
-    """How the layout of cube_mfs.py follows the wavenumber (NOTES.md items 57, 64).
-    S = 1: the family as it is. S = 2: 4 more modes per line; interior
-    collocation panels scaled with the wavelength, except for two depths per
-    octave from J = 6 on, where the S = 1 panels give the same errors 1.5
-    times faster. S = 3 (not in the paper: the layout is only established to
-    about 5e-4 there, item 67): in addition the first depth is 0.2 / S, the
-    base grid has 16 points per face and the interior panels are 0.065."""
+def layout(c, S, J, family="dense"):
+    """The layout of cube_mfs.py at S wavelengths per side: the same rule as at
+    one wavelength, with 4 (S - 1) more modes per line (NOTES.md items 57, 68).
+    The line quadrature takes more nodes by itself (line_tree.nodes). Valid for
+    S = 1 and 2; at S = 3 the layout is not converged (item 67)."""
     if S == 1:
         return {}
-    kw = c.dense(J) if family == "dense" else dict(zip(("kw", "hmax"), c.balanced(J)))
-    kw = dict(kw)
-    n_base, hmax = (4, 0.25 / S) if J <= 5 else (6, 0.15 / S)
-    if family == "dense" and J >= 6:
-        hmax = 0.15
-    depth0 = 0.2
-    if S > 2:
-        n_base, hmax, depth0 = BASE3, HMAX3, 0.2 / S
-    kw["kw"] = dict(kw["kw"], n_base=n_base, n0=kw["kw"]["n0"] + int(round(4 * (S - 1))), depth0=depth0)
-    kw["hmax"] = hmax
+    kw = dict(c.dense(J))
+    kw["kw"] = dict(kw["kw"], n0=kw["kw"]["n0"] + int(round(4 * (S - 1))))
     return kw
 
 
-BASE3, HMAX3 = 16, 0.065                                    # three wavelengths: base points per face, interior panel length
+def reference(case):
+    return np.load(f"cube_cases_{case}_ref.npz")["E"]
 
 
 def report():
@@ -67,9 +52,9 @@ def report():
         if not os.path.exists(f):
             continue
         d = np.load(f)
-        print(f"{case}: MFS  family  J  unknowns/class  all  equations  time  error  optical")
+        print(f"{case}: MFS  J  unknowns/class  all  equations  time  error  optical")
         for r in d["mfs"]:
-            print(f"   {'two' if r[0] else 'one'} {int(r[1]):2d} {int(r[2]):6d} {int(r[3]):6d} {int(r[4]):6d} {r[5]:7.1f} s  {r[6]:.2e}  {r[7]:.1e}")
+            print(f"   {int(r[1]):2d} {int(r[2]):6d} {int(r[3]):6d} {int(r[4]):6d} {r[5]:7.1f} s  {r[6]:.2e}  {r[7]:.1e}")
         if "env" in d:
             print("   Bempp with symmetry, lower envelope:")
             for r in d["env"]:
@@ -85,37 +70,39 @@ if __name__ == "__main__":
     m.K = 2 * np.pi * S                                     # before any solver object is built
     import cube_mfs as c
     import bem_grading_scan as scan
-    mfs_only = len(sys.argv) > 2 and sys.argv[2] == "mfs"
-    reps = 1 if mfs_only else (int(sys.argv[2]) if len(sys.argv) > 2 else 2)
-    k, ref, wave = scan.reference(case)
     pts = np.load("bem_cube_h0.05.npz")["pts"]
-    dp = c.wave(*OBLIQUE) if wave is not None else (m.D, m.P)
-    runs = [("balanced", J) for J in LEVELS[case][0]] + [("dense", J) for J in LEVELS[case][1]]
-    test = "CUBE_CASES_TEST" in os.environ                 # smoke test: two runs of each code
-    if test:
-        runs = runs[:2]
-    for fam in ("balanced", "dense"):                       # compilation
-        c.run(2, dp[0], dp[1], pts, family=fam, **layout(c, S, 2, fam))
-    cand = []
-    if not mfs_only:
-        import bem_cube_sym as b
-        import bempp_cl.api as bempp
-        b.K = k
-        rows = [tuple(r) for r in np.load(f"bem_grading_scan_{case}.npz")["rows"]]
-        cand = [r for r in rows if not any(q[5] <= 0.75 * r[5] and q[6] <= r[6] for q in rows)]
-        cand.sort(key=lambda r: (r[1], r[5]))
-        if test:
-            cand = cand[:2]
+    oblique = case.endswith("o")
+    dp = c.wave(*OBLIQUE) if oblique else (m.D, m.P)
+    c.run(2, dp[0], dp[1], pts, family="dense", **layout(c, S, 2))          # compilation
+    if len(sys.argv) > 2 and sys.argv[2] == "ref":
+        E, t, info = c.run(J_REF, dp[0], dp[1], pts, family="dense", **layout(c, S, J_REF))
+        print(f"{case} reference, two depths per octave, J = {J_REF}: unknowns/class {max(info['per_class'])} rows {info['rows']} t = {t:.0f} s "
+              f"optical {info['optical']:.1e} sigma_ext {info['ext']:.6f} |c| {info['coef_norm']:.1f}")
+        np.savez(f"cube_cases_{case}_ref.npz", E=E, pts=pts, info=np.array([J_REF, t, max(info["per_class"]), info["rows"], info["optical"], info["ext"]]))
+        old = scan.reference(case)[1]
+        print(f"   differs from the reference of the earlier family by {np.linalg.norm(E - old) / np.linalg.norm(old):.2e}")
+        sys.exit()
+    reps = int(sys.argv[2]) if len(sys.argv) > 2 else 2
+    ref = reference(case)
+    runs = list(LEVELS[case])
+    import bem_cube_sym as b
+    import bempp_cl.api as bempp
+    b.K = m.K
+    rows = [tuple(r) for r in np.load(f"bem_grading_scan_{case}.npz")["rows"]]
+    cand = [r for r in rows if not any(q[5] <= 0.75 * r[5] and q[6] <= r[6] for q in rows)]
+    cand.sort(key=lambda r: (r[1], r[5]))
+    if "CUBE_CASES_TEST" in os.environ:                    # smoke test: two runs of each code
+        runs, cand = runs[:2], cand[:2]
     print(f"{case}: {len(runs)} MFS runs and {len(cand)} Bempp runs, {reps} repetitions", flush=True)
-    t_mfs, t_bem, res = {r: [] for r in runs}, {r: [] for r in cand}, {}
-    args = (pts,) if wave is None else (pts, dp[0], dp[1])
+    t_mfs, t_bem, res, e_bem = {J: [] for J in runs}, {r: [] for r in cand}, {}, {}
+    args = (pts, dp[0], dp[1]) if oblique else (pts,)
     for rep in range(reps):
-        for fam, J in runs:
-            E, t, info = c.run(J, dp[0], dp[1], pts, family=fam, **layout(c, S, J, fam))
-            t_mfs[(fam, J)].append(t)
-            res[(fam, J)] = (max(info["per_class"]), info["unknowns"], info["rows"], np.linalg.norm(E - ref) / np.linalg.norm(ref), info["optical"])
+        for J in runs:
+            E, t, info = c.run(J, dp[0], dp[1], pts, family="dense", **layout(c, S, J))
+            t_mfs[J].append(t)
+            res[J] = (max(info["per_class"]), info["unknowns"], info["rows"], np.linalg.norm(E - ref) / np.linalg.norm(ref), info["optical"])
             if rep == 0:
-                print(f"  {fam:8s} J = {J:2d}: unknowns/class {res[(fam, J)][0]} rows {info['rows']} t = {t:6.1f} s  error {res[(fam, J)][3]:.2e} "
+                print(f"  J = {J:2d}: unknowns/class {res[J][0]} rows {info['rows']} t = {t:6.1f} s  error {res[J][3]:.2e} "
                       f"optical {info['optical']:.1e} |c| {info['coef_norm']:.1f}", flush=True)
         reg = None
         for r in cand:
@@ -126,12 +113,11 @@ if __name__ == "__main__":
                 b.solve(4, 1.0, *args)
             E, N, sizes, ts, grid = b.solve(int(r[3]), r[0], *args)
             t_bem[r].append(sum(ts))
-        out = dict(mfs=np.array([(fam == "dense", J, res[(fam, J)][0], res[(fam, J)][1], res[(fam, J)][2], min(t_mfs[(fam, J)]),
-                                  res[(fam, J)][3], res[(fam, J)][4]) for fam, J in runs], float))
-        if cand:
-            bem = [(r[0], r[1], r[2], r[3], r[4], min(t_bem[r]), r[6]) for r in cand]
-            out.update(bem=np.array(bem), env=np.array(scan.envelope(bem)))
-        np.savez(f"cube_cases_{case}{'_mfs' if mfs_only else ''}{'_t_test' if test else ''}.npz", **out)
+            e_bem[r] = np.linalg.norm(E - ref) / np.linalg.norm(ref)       # against the present reference
+        bem = [(r[0], r[1], r[2], r[3], r[4], min(t_bem[r]), e_bem[r]) for r in cand]
+        out = dict(mfs=np.array([(1, J, res[J][0], res[J][1], res[J][2], min(t_mfs[J]), res[J][3], res[J][4]) for J in runs], float),
+                   bem=np.array(bem), env=np.array(scan.envelope(bem)))
+        np.savez(f"cube_cases_{case}{'_t_test' if 'CUBE_CASES_TEST' in os.environ else ''}.npz", **out)
         print(f"repetition {rep + 1} done", flush=True)
-    if not mfs_only and not test:
+    if "CUBE_CASES_TEST" not in os.environ:
         report()

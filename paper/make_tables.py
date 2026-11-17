@@ -77,10 +77,18 @@ def cube():
             rows.append("    \\midrule")
         for J, t, unk, nrow, opt in d[name]:
             J = int(J)
-            err = sci(rel(d[f"{name}_E{J}"], ref))
+            err = "reference" if (name == "dense" and J == int(d["ref_info"][0])) else sci(rel(d[f"{name}_E{J}"], ref))
             rows.append(f"    {label} & {J} & {int(unk) // 2} & {int(nrow)} & {tm(t)} & {err} & {sci(opt)} \\\\")
-    write("cube_mfs", rows)
-    write("cube_mfs_short", [r for r in rows if "& 3 &" not in r])        # the short paper starts at J = 4
+    write("cube_mfs", rows)                             # both depth ratios, all levels (not in the paper)
+    jref = int(d["ref_info"][0])
+    main = []                                           # the table of the paper: two depths per octave, J = 4 to the reference
+    for J, t, unk, nrow, opt in d["dense"]:
+        J = int(J)
+        if J >= 4:
+            err = "reference" if J == jref else sci(rel(d[f"dense_E{J}"], ref))
+            main.append(f"    {J} & {int(unk) // 2} & {int(nrow)} & {tm(t)} & {err} & {sci(opt)} \\\\")
+    write("cube_mfs_short", main)
+    print("    one depth per octave:", [(int(r[0]), int(r[2]) // 2, tm(r[1]), f"{rel(d[f'tail_E{int(r[0])}'], ref):.2e}") for r in d["tail"]])
     dn = d["dense"]
     ch = [rel(d[f"dense_E{int(dn[i][0])}"], d[f"dense_E{int(dn[i + 1][0])}"]) for i in range(len(dn) - 1)]
     print("    dense family, change to the next level:", " ".join(f"{c:.2e}" for c in ch), " ratios:",
@@ -217,11 +225,10 @@ def summary(env):
     d = np.load(os.path.join(V, "fig_cost_cube.npz"))
     ref = d["ref_E"]
     first = "Cube"
-    for name, label, Js in (("tail", "one depth", (6, 8)), ("dense", "two depths", (9, 10))):
-        for J, t, unk, nrow, opt in d[name]:
-            if int(J) in Js:
-                rows.append(f"    {first} & MFS, {label}, $J = {int(J)}$ & {int(unk) // 2} & {tm(t)} & {sci(rel(d[f'{name}_E{int(J)}'], ref))} \\\\")
-                first = ""
+    for J, t, unk, nrow, opt in d["dense"]:
+        if int(J) in (6, 8, 10):
+            rows.append(f"    {first} & MFS, $J = {int(J)}$ & {int(unk) // 2} & {tm(t)} & {sci(rel(d[f'dense_E{int(J)}'], ref))} \\\\")
+            first = ""
     pick, last = [], np.inf                              # Bempp: envelope points more than a factor 2.2 apart in error
     for r in env:
         if r[6] < 1.3e-3 and r[6] < last / 2.2:
@@ -253,7 +260,7 @@ def cube_cases():
             if r[6] < 0.97 * emin:
                 env.append(r)
                 emin = r[6]
-        for name, runs, fmt in (("MFS", env, lambda r: f"MFS, {'two depths' if r[0] else 'one depth'}, $J = {int(r[1])}$ & {int(r[3])}"),
+        for name, runs, fmt in (("MFS", env, lambda r: f"MFS, $J = {int(r[1])}$ & {int(r[3])}"),
                                 ("Bempp", list(d["env"]), lambda r: f"Bempp, $g = {r[0]:g}$, quadrature {int(r[1])}/{int(r[2])} & {int(r[4])}")):
             pick, last = [], np.inf
             for r in runs:

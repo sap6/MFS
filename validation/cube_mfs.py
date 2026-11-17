@@ -45,7 +45,8 @@ def balanced(J):
     tail exponents are the solver defaults (derived, DERIVATIONS.md B); the
     vertex tail (one exponent, DERIVATIONS.md D) is on."""
     n0 = max(4, 2 * J - 4)
-    n_base, hmax = (4, 0.25) if J <= 5 else (6, 0.15)      # (8, 0.1) for J >= 7 gives the same fields to 2e-6 and costs 25% more
+    n_base, hmax = 8, 0.1          # one rule for all levels (NOTES.md item 68). Until 17 Nov 2026: (4, 0.25) for J <= 5 and
+    #                                (6, 0.15) above, which gave the same errors 20 to 80% faster but failed from J = 12 on.
     return dict(q=0.5, gamma=2.0, kinds="em", n0=n0, n_base=n_base, vtail_n=9), hmax
 
 

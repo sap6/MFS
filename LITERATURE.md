@@ -565,3 +565,22 @@ Not obtained: Shifman, Friedmann, Leviatan 1997 (the publisher's page
 returns 404 for the author; seen as an abstract only, so the draft must not
 say more about it than that it is 2D work on cylinders with edges);
 Hafner and Bomholt 1993 (book; the author has it as an e-book).
+
+## 11. Added on 2026-11-17 (evening), not read in full
+
+- **Khavinson and Lundberg 2014**, "A tale of ellipsoids in potential
+  theory", Notices AMS 61 (2), 148-156, doi 10.1090/noti1082 **[meta]**:
+  record checked against Crossref; ams.org and arxiv.org (1309.2042) are
+  blocked in the session, so the content is from a search summary and from
+  memory: the exterior potential of an ellipsoid continues into the body up
+  to the focal ellipse (the degenerate confocal ellipsoid in the plane of the
+  two longest axes), which carries the "mother body". Cited in Section 4.2
+  of the paper for the rear half of the almond, which is half an ellipsoid:
+  its focal ellipse has semi-axes sqrt(a^2 - c^2) = 0.988 a and
+  sqrt(b^2 - c^2) = 0.943 b. `pec_almond_skeleton.source_rows` already puts
+  the rear rows on ellipses confocal with it ("rear part: confocal ellipse
+  in the mid-plane"); the paper now says so. **The authors must check the
+  wording against the article** (a TODO marks the place). Also seen in the
+  search, not read: Ebenfelt 1992 (singularities of the continuation of
+  Dirichlet solutions) and a 1994 Trans. AMS paper (singularities for data
+  on quadrics lie on the classical focal sets).

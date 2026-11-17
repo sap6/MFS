@@ -1479,6 +1479,49 @@ towards the MFS field.
       two wavelengths), not three. No Bempp scan at k = 6 pi (pointless
       without a reference).
 
+68. **Simplified at the author's request: one cube layout, one rule**
+    ("keep it clear, not tons of optimisations and extra lines to
+    explain"; "appropriate for a first-year PhD student publishing their
+    master's thesis").
+    - `cube_mfs.balanced` now returns (n_base, hmax) = (8, 0.1) at every
+      level. The level-dependent grids (4, 0.25) / (6, 0.15) / (8, 0.1)
+      of items 56 and 62 were a 20-80% speed-up at the coarse levels and
+      the reason for the "finer grid" reference. Errors are unchanged
+      (two depths, J = 4..8: 5.10e-3, 2.02e-3, 8.31e-4, 3.44e-4, 1.40e-4
+      with either), times 5.6, 9.0, 13.8, 22.8, 34.8 s instead of 3.0,
+      5.4, 11.1, 16.3, 26.7 s.
+    - **The method of the paper is the layout with two depths per octave,
+      four nodes per panel, J = 4..12; the reference is its level J = 12**
+      (`fig_cost_cube.py run`, 15 min; `dense_E12` = `ref_E`). Errors
+      J = 4..11: 5.10e-3, 2.02e-3, 8.31e-4, 3.44e-4, 1.40e-4, 5.59e-5,
+      2.08e-5, 6.18e-6; fit to J = 4..10: 0.46 exp(-0.047 sqrt N_u) to
+      within 4%; local orders 2.5 to 5.
+    - One depth per octave (q = 1/2, three nodes per panel) is a remark
+      and a second curve in two figures, no longer a second family in the
+      tables: J = 4..9: 5.29e-3, 2.22e-3, 9.38e-4, 4.06e-4, 2.07e-4,
+      1.35e-4 in about a third of the time.
+    - General wave and two wavelengths (`cube_cases.py`): the same layout;
+      at k = 4 pi only 4 more modes per line (and the quadrature nodes).
+      No scaling of the interior panels is needed with (8, 0.1). New
+      references `cube_cases_k1o_ref.npz`, `cube_cases_k2_ref.npz` (J =
+      10; they differ from the earlier references by 2.8e-6 and 1.3e-6).
+    - Figures: the cube panel of the cost figure shows the MFS, the
+      one-depth variant, Bempp on quasi-uniform meshes and Bempp at its
+      best with symmetry; the curve "graded without symmetry" is gone
+      (and its timing runs with it).
+    - `retime_all.sh`, `retime_rest.sh` deleted; `time_paper.sh` is the
+      one timing command. `validation/README.md` is the index of solvers,
+      figure scripts and leftovers.
+    - **Opinion given to the author on "is the code too complicated"**:
+      sphere, torus and almond solvers are short (140 to 500 lines). The
+      cube is 1400 lines, half of it the line quadrature and the parity
+      classes; that is what makes level 10 take one minute instead of
+      twenty and is worth keeping, but the paper explains it in one
+      appendix. The old cube path (T23) could be deleted.
+    - **Opinion on "do we have to optimise the MFS again"**: no. See the
+      final numbers below; the paper's claim on the cube is the
+      convergence law, not the seconds.
+
 ## 3. Current best commands
 
 ```

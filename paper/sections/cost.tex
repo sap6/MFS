@@ -8,7 +8,7 @@ For Bempp we used its fastest assembly backend. For the cube we graded the meshe
 \begin{figure}[htbp]
   \centering
   \includegraphics[width=0.94\textwidth]{fig_cost_all.pdf}
-  \caption{Error of the scattered field against wall time on four cores for the MFS and for Bempp. (a) Unit sphere at $k = 2\pi$, error against the Mie series. (b) Torus, difference from the finest MFS run. (c) NASA almond at $1.19$\,GHz, difference from the finest MFS layout. (d) Unit cube at $k = 2\pi$, difference from the MFS reference of \autoref{sec:cuberesults}; for Bempp with the mirror symmetry the fastest run for each accuracy over all gradings and quadrature orders is shown.}
+  \caption{Error of the scattered field against wall time on four cores for the MFS and for Bempp. (a) Unit sphere at $k = 2\pi$, error against the Mie series. (b) Torus, difference from the finest MFS run. (c) NASA almond at $1.19$\,GHz, difference from the finest MFS layout. (d) Unit cube at $k = 2\pi$, difference from the finest MFS layout (\autoref{sec:cuberesults}); the dashed curve is the MFS with one depth per octave, and for Bempp with the mirror symmetry the fastest run for each accuracy over all gradings and quadrature orders is shown.}
   \label{fig:costall}
 \end{figure}
 
@@ -30,10 +30,23 @@ For Bempp we used its fastest assembly backend. For the cube we graded the meshe
 
 On the sphere, the torus and the almond the MFS reaches errors between $6\times10^{-5}$ and $7\times10^{-12}$ in ten seconds or less, while Bempp stays between $3\times10^{-3}$ and $8\times10^{-3}$ after half a minute. For the torus and the almond the reference is the finest MFS layout, so these numbers measure the convergence of each method towards the MFS limit; the independent checks are the cross-section of the torus (\autoref{sec:torus}) and the benchmark of the almond (\autoref{sec:almond}). The error of Bempp is inversely proportional to the number of unknowns, which is the rate of a lowest-order method on flat triangles. The outcome is not surprising: it is the comparison of a spectrally accurate method with a low-order one, and a boundary element method of high order should narrow the gap.
 
+These errors are measured at a distance of one radius or more from the body. Closer to the surface the difference between the two methods grows (\autoref{fig:nearfield}). The MFS field is a finite sum of dipole fields and is evaluated in the same way at every point outside the body. For the sphere with $N = 400$ its error is largest at the surface, where it is $3\times10^{-7}$, and with $N = 1200$ it is $6\times10^{-14}$ at every distance. The boundary element field is an integral over the mesh, which becomes nearly singular close to the surface. With the standard quadrature of the library the error of Bempp on its finest mesh, whose elements have the size $0.07$, is $4\times10^{-3}$ down to a distance of $0.03$. It then grows to $8\%$ at the distance $0.01$ and exceeds $100\%$ at $10^{-3}$. A boundary element code can remove this difficulty with special quadrature for nearly singular integrals. The MFS does not have it.
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.6\textwidth]{fig_sphere_nearfield.pdf}
+  \caption{Unit sphere, $k = 2\pi$: error of the scattered field against the Mie series as a function of the distance from the surface, for the MFS with $N = 400$ and $N = 1200$ sources and for Bempp on meshes with elements of size $0.1$ and $0.07$.}
+  \label{fig:nearfield}
+\end{figure}
+
 \subsection{The cube}
 
-On the cube the comparison is closer, because the boundary element method handles edges well once the mesh is graded. %%CUBECOST%%
+On the cube the comparison is closer, because the boundary element method handles edges well once the mesh is graded. For Bempp we show, for each accuracy, the fastest run over all gradings, quadrature orders and mesh sizes (\ref{app:bempp}).
+
+Down to an error of about $1.5\times10^{-4}$ the boundary element method is the faster of the two, by a factor that falls from about eight at an error of $10^{-3}$ to four at $3.5\times10^{-4}$. At $1.5\times10^{-4}$ the two are level, at about half a minute. Below that level the MFS is faster: it reaches $2\times10^{-5}$ in less time than the boundary element method needs for its smallest error, $8\times10^{-5}$, on the finest mesh that fits into memory. The variant of the MFS with one depth per octave (\autoref{sec:cuberesults}) moves the crossover to a larger error. It is level with the boundary element method at $4\times10^{-4}$ and two to three times as fast between $2\times10^{-4}$ and $1.4\times10^{-4}$, where it stalls. Without the mirror symmetry, as Bempp is distributed, its times are three to eight times longer.
+
+The other two cases of \autoref{sec:cubeother} give the same picture (\autoref{fig:cubecases}). At two wavelengths the two methods are level at an error of $4\times10^{-4}$, and below that the MFS is more than twice as fast. For the general wave, which costs the MFS eight factorisations instead of two, the boundary element method is the faster of the two at every accuracy that it reaches, by a factor that falls from about ten at an error of $10^{-3}$ to less than two at $1.4\times10^{-4}$.
 
 \subsection{What the comparison shows}
 
-On the sphere and the torus the MFS is ahead at every accuracy that we tested, and on the almond at errors below about $10^{-2}$. On the cube its strength is not its speed at engineering accuracy but its rate of convergence. The smallest error of the boundary element method on each mesh decays algebraically, with an order that falls from about $1.4$ on the coarser meshes to about $0.8$ on the finer ones, whereas the order of the MFS rises from about $2.3$ to $5$ (\autoref{fig:cubeconv}). The MFS is not economical in unknowns at low accuracy, but it reaches accuracies that the boundary element code does not reach on our machine.
+On the sphere and the torus the MFS is ahead at every accuracy that we tested, and on the almond at errors below about $10^{-2}$. On the cube its strength is not its speed at engineering accuracy but its rate of convergence. The smallest error of the boundary element method on each mesh decays algebraically, with an order that falls from about $1.4$ on the coarser meshes to about $0.8$ on the finer ones, whereas the order of the MFS rises from about $2.5$ to $5$ (\autoref{fig:cubeconv}). The MFS is not economical in unknowns at low accuracy, but it reaches accuracies that the boundary element code does not reach on our machine.

@@ -63,17 +63,13 @@ if __name__ == "__main__":
     ax = axs[1, 1]
     d = np.load("fig_cost_cube.npz")
     ref = d["ref_E"]                                    # two depths per octave at J = 12 with the finer interior grid
-    for key, col, mk, ls, lab in (("tail", BLUE, "o", "-", "MFS, one depth per octave"), ("dense", NAVY, "h", (0, (6, 1.5)), "MFS, two depths per octave")):
-        rows = list(d[key])
+    jref = int(d["ref_info"][0])
+    for key, col, mk, ls, lab in (("dense", BLUE, "o", "-", "MFS"), ("tail", NAVY, "h", (0, (6, 1.5)), "MFS, one depth per octave")):
+        rows = [r for r in d[key] if not (key == "dense" and int(r[0]) == jref)]
         curve(ax, [r[1] for r in rows], [rel(d[f"{key}_E{int(r[0])}"], ref) for r in rows], col, mk, ls, lab)
     bem = sorted((np.load(f) for f in glob.glob("bem_cube_h*_q4.npz")), key=lambda b: int(b["ndof"]))
     bem = [b for b in bem if int(b["ndof"]) > 1000]
     curve(ax, [float(b["t_solve"]) for b in bem], [rel(b["E"], ref) for b in bem], ORANGE, "D", "-.", "Bempp, quasi-uniform")
-    full = []                                           # graded meshes without the symmetry (g = 2): best quadrature at each time
-    for tag in ("", "_q6_8", "_q8_10"):
-        full += [(float(b["t_solve"]), rel(b["E"], ref)) for b in (np.load(g) for g in glob.glob(f"bem_cube_graded_n*_g2{tag}.npz"))]
-    env = lower_envelope(full)
-    curve(ax, env[:, 0], env[:, 1], PINK, "v", (0, (5, 1, 1, 1)), "Bempp, graded")
     if os.path.exists("bem_grading_scan_k1_final.npz"):  # with the symmetry: best grading and quadrature at each time, re-timed
         env = np.load("bem_grading_scan_k1_final.npz")["rows"][:, [5, 6]]
     elif os.path.exists("bem_grading_scan_k1.npz"):
