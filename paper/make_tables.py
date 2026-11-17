@@ -148,9 +148,31 @@ def cube_oblique():
     write("cube_oblique", rows)
 
 
+def cube_k2():
+    d = np.load(os.path.join(V, "cube_wavenumber_k2.npz"))
+    ref = d["dense_E10"]
+    rows = []
+    for fam, label, Js in (("balanced", "one depth", (5, 6, 7, 8)), ("dense", "two depths", (7, 8, 9, 10))):
+        for J in Js:
+            t, unk = d[f"{fam}_info{J}"][:2]
+            err = "reference" if (fam, J) == ("dense", 10) else sci(rel(d[f"{fam}_E{J}"], ref))
+            rows.append(f"    MFS, {label}, $J = {J}$ & {int(unk)} & {tm(t)} & {err} \\\\")
+        rows.append("    \\midrule")
+    for k in ("balanced", "dense"):
+        print(f"    k = 4 pi, {k}:", [(J, f"{d[f'{k}_info{J}'][0]:.1f}s", int(d[f'{k}_info{J}'][1]), f"{rel(d[f'{k}_E{J}'], ref):.2e}", f"{d[f'{k}_info{J}'][3]:.1e}")
+                                     for J in range(4, 11) if f"{k}_E{J}" in d])
+    b = np.load(os.path.join(V, "cube_wavenumber_k2_bem.npz"))["rows"]
+    for reg, sing, n, N, t, err in b:
+        print(f"    k = 4 pi, Bempp with symmetry {int(reg)}/{int(sing)} dofs={int(N)} t={t:.1f} err={err:.2e}")
+        if (int(reg), int(N)) in ((4, 4608), (4, 10368), (6, 10368), (6, 18432), (6, 28800), (8, 18432), (8, 28800)):
+            rows.append(f"    Bempp with symmetry, quadrature {int(reg)}/{int(sing)} & {int(N)} & {tm(t)} & {sci(err)} \\\\")
+    write("cube_k2", rows)
+
+
 if __name__ == "__main__":
     sphere()
     torus()
     almond()
     cube()
     cube_oblique()
+    cube_k2()

@@ -855,6 +855,41 @@ towards the MFS field.
       larger by 2 (electric) and 4/3 (magnetic) (8/3, 11/3, 8/3, 11/3;
       `DERIVATIONS.md` B), not "by two or more" as the draft said.
 
+57. **The cube at twice the wavenumber (k = 4 pi, side two wavelengths):
+    the layout converges at the same rate, and the MFS is ahead of Bempp
+    with symmetry below 2e-3** (`cube_wavenumber.py 2`, `... 2 bem`,
+    `... 2 explore`; data `cube_wavenumber_k2.npz`, `_bem.npz`; table
+    `paper/tables/cube_k2.tex`; draft section "A cube of two wavelengths").
+    - What must change with k: the interior collocation panels (hmax
+      divided by k / 2 pi) and 4 more modes per line (n0 + 4). Nothing else.
+    - What does not work: the k = 2 pi collocation (one depth per octave
+      erratic: 3.6e-2 at J = 5, 2e-3 to 3e-3 at J = 8, 9; two depths stop
+      converging at J = 9, optical mismatch rising). A finer base grid
+      (12 or 16 points per face at depth 0.2) makes the coefficient norm
+      grow to 2e3 and 5e5 and triggers the QR fallback: not needed, do not
+      use. Modes + 0 instead of + 4 at J = 6: 1e-3 instead of 2.5e-4.
+    - Results (errors against dense J = 10, optical mismatch 4.2e-6):
+      one depth J = 4..8: 1.7, 2.5, 4.8, 7.3, 10.2 s for 5.8e-3, 2.3e-3,
+      1.1e-3, 4.8e-4, 3.3e-4; two depths J = 5..9: 6.5, 15, 23, 35, 52 s
+      for 2.2e-3, 9.1e-4, 3.7e-4, 1.55e-4, 7.4e-5 (ratio 2.1-2.4 per level,
+      as at k = 2 pi); J = 10: 102 s (classes one after the other).
+      Robustness at dense J = 8: base 8 and 8 more modes change the field
+      by 5.7e-5. Unknowns are 15-30% more than at k = 2 pi.
+    - Bempp with symmetry, graded g = 2 (differences from the MFS field):
+      4/6: 0.7, 1.4, 3.6, 9.5, 22 s for 1.1e-2, 3.9e-3, 1.6e-3, 1.2e-3,
+      1.1e-3; 6/8: 3.3, 7.9, 20, 45 s for 3.8e-3, 1.0e-3, 5.2e-4, 3.8e-4;
+      8/10: 5.8, 14, 33, 72 s for 3.8e-3, 1.0e-3, 4.3e-4, 2.6e-4. So
+      Bempp confirms the field to 2.6e-4 and is still converging.
+    - Reading: Bempp faster above 3e-3; level near 2e-3; MFS faster below:
+      4.8 s against 7.9 s at 1e-3, 7.3 s against 20 s at 5e-4, 10 s
+      (3.3e-4) against 45 s (3.8e-4). Bempp needs 18432 dofs for 4e-4
+      where it needed 7200 at k = 2 pi; the MFS 1917 per class instead of
+      1605. Two wavenumbers only: do not write "the advantage grows with
+      k" as a law. The k = 4 pi family was tuned in half an hour and the
+      grading of the Bempp mesh was not re-tuned (g = 2 as at k = 2 pi).
+      Not done: oblique wave at k = 4 pi, k = 6 pi (memory: the dense
+      family at J = 9 would need about 5 GB per class).
+
 ## 3. Current best commands
 
 ```
@@ -866,6 +901,8 @@ python3 fig_cost_cube.py ; python3 fig_cost_almond.py ; python3 fig_cost_sphere.
 python3 fig_almond_rcs.py ; python3 fig_almond_benchmark.py                         # almond RCS against Bempp / against the Austin benchmark
 python3 cube_mfs.py 4,5,6,7,8 [60 25 35]          # cube, the solver: standard wave, or any plane wave (from theta, phi; polarisation angle); eight parity classes
 python3 cube_oblique_table.py                     # cube, oblique wave: both MFS families and graded Bempp against the dense reference (add `run`, 12 min)
+python3 fig_cost_cube.py extend                  # adds missing levels of the two-depth family up to J_REF without re-timing the rest
+python3 cube_wavenumber.py 2 [bem|explore]       # cube at k = 4 pi (item 57): MFS table (6 min); `bem`: Bempp with symmetry against it (4 min)
 python3 cube_floor.py J10 dense_p4 dense_colq     # what limits the one-depth-per-octave family (item 47)
 python3 test_line_tree.py 5                       # accuracy of the fast line quadrature against the adaptive rule
 python3 fig_layouts.py ; python3 fig_edge_residual.py 6 ; python3 fig_sphere.py   # layout sketches; residual near an edge; sphere convergence figure
@@ -969,6 +1006,17 @@ Open, in the order I would take them:
 - [x] **T21 Why does one depth per octave stall?** Answered in items 53-54: a
       fixed ratio has a fixed attainable accuracy (2D model: 8e-5, 6e-6, 1e-9
       for ratios 0.5, 0.6, 0.71); tapered depths help in 2D but not in 3D.
+- [ ] **T25 Cube at higher wavenumbers (optional, item 57).** k = 4 pi is
+      done for the standard wave. Open: oblique wave at k = 4 pi; k = 6 pi
+      (needs the classes solved one at a time, or the full octahedral
+      symmetry); re-tune the grading of the Bempp mesh at k = 4 pi before
+      quoting factors as a trend.
+- [ ] **T26 Use all 48 symmetries of the cube in the assembly (optional).**
+      The line integrals are 70% of the time at the coarse levels (2.7 of
+      3.8 s at J = 6). The three faces of an octant are images of one
+      another under the rotation about the body diagonal, so two thirds of
+      the kernel work is redundant. A boundary element code could do the
+      same, so this is engineering, not an argument for the paper.
 - [ ] **T24 Row-weight exponent for the dense cube family (optional).**
       Tested at J = 5..8 against the reference: for two depths per octave
       beta = 0.7 lowers the error by 1.3-1.5 and beta = 0.9 by 1.5-1.7 at
@@ -1072,6 +1120,8 @@ Open, in the order I would take them:
 - Cube, tail length 9 / 6 / 4 lines, one depth per octave: J = 6: 3.9 / 3.4 / 3.2 s for 9.5e-4 / 8.7e-4 / 1.8e-3; J = 8: 7.4 / 6.9 / 6.9 s for 1.72e-4 / 1.83e-4 / 5.3e-4. Six lines save 10% at equal error; not adopted (assembly of the free lines dominates: 2.7 of 3.8 s at J = 6).
 - Cube line quadrature PM / NG = 20/10, 16/8, 12/8, 12/6, 10/5: J = 8 one depth 7.6, 6.7, 6.1, 5.6, 5.2 s, field change 0, 1e-9, 8e-9, 2e-7, 4e-6; dense J = 9: 36.5, 35.9, 30.1, 29.2, 26.6 s, change 0, 7e-9, 1e-8, 1.5e-6, 9e-6. 12/8 adopted.
 - Cube tables re-run with 12/8 (final, item 56): one depth J = 6..9: 3.1, 4.3, 6.3, 8.6 s; two depths J = 8..11: 20, 30, 46, 68 s; all fields equal to the 20/10 run to below 1e-7 (J = 11: 8e-7).
+- Cube at k = 4 pi with the k = 2 pi collocation and 4 more modes: one depth J = 4..9: 1.0e-2, 3.6e-2, 1.1e-3, 6.8e-4, 2.1e-3, 3.4e-3 (erratic); two depths stall near 2e-4 to 3e-4.
+- Cube at k = 4 pi, hmax halved, 4 more modes (item 57): one depth J = 5..8: 2.3e-3, 1.1e-3, 4.8e-4, 3.3e-4 in 2.5 to 10 s; two depths J = 7..9: 3.7e-4, 1.55e-4, 7.4e-5 in 23 to 52 s; Bempp with symmetry 8/10, 28800 dofs: 2.6e-4 away, 72 s.
 
 ## 6. Write-up session
 
@@ -1087,9 +1137,10 @@ voice of the thesis and with the academic-humanizer rules (item 50).
 - Open in the draft (marked `%% TODO`): title; acknowledgements; AI
   declaration; measurement uncertainty from Kelley et al.; Millar 1983;
   comparison of the exponent tables with De Smedt and Van Bladel.
-- Length: 41 pages in the 12 pt preprint format (`main.pdf`), **25 pages in
-  the journal's own layout** (`main_3p.pdf`, rebuilt after item 56; float
-  placement relaxed in the preamble so that figures share pages with text). The author's target is 25, which the journal layout
+- Length: 42 pages in the 12 pt preprint format (`main.pdf`), **26 pages in
+  the journal's own layout** (`main_3p.pdf`, rebuilt after item 57; float
+  placement relaxed in the preamble so that figures share pages with text).
+  The two-wavelength subsection (item 57) added about two thirds of a page. The author's target is 25, which the journal layout
   meets. If the preprint format must come down too, in the order I would
   try: (1) the three cost tables of sphere, torus and almond duplicate
   their figures; `validation/fig_cost_all.pdf` is one four-panel figure
