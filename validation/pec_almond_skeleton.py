@@ -30,7 +30,7 @@ import numpy as np
 from numba import njit, prange
 from scipy.linalg import lstsq, qr, solve_triangular
 
-from lsq import qr_solve
+from lsq import factor
 
 from pec_almond import L, T0, T1, semi_axes
 from pec_sphere_convergence import fibonacci_sphere, tangent_basis
@@ -311,12 +311,12 @@ def solve(k, y, s_col=0.35, cond=1e-13, eta_max=None, ratio=2.5):
     t0 = time.time()
     A = matrix(x, y, k, T) * np.repeat(sw, 2)[:, None]
     b = (-np.einsum("mab,mb->ma", T, incident(x, k)) * sw[:, None]).reshape(-1)
-    scale = np.linalg.norm(A, axis=0)
-    A /= scale
     t1 = time.time()
-    c, rank = qr_solve(A, b, cond)                        # Householder QR, Q never formed (lsq.py)
-    return c / scale, {"rows": len(b), "unknowns": len(scale), "rank": int(rank), "N": len(y), "s_col": float(s_col),
-                       "t_assemble": t1 - t0, "t_solve": time.time() - t1, "coef_norm": float(np.linalg.norm(c))}
+    fac = factor(A)                                       # semi-normal equations if well conditioned, else QR (lsq.py)
+    c = fac.solve(b, cond)
+    return c, {"rows": len(b), "unknowns": fac.n, "rank": fac.n, "N": len(y), "s_col": float(s_col),
+               "t_assemble": t1 - t0, "t_solve": time.time() - t1, "coef_norm": float(np.linalg.norm(c * fac.scale)),
+               "solver": type(fac).__name__}
 
 
 def boundary_residual(k, y, c, eta_max, s=0.27):

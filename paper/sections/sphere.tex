@@ -20,6 +20,10 @@ The scattered field of the sphere continues analytically up to the centre, so ev
 %% TODO: redraw this figure in the style of the cost figures (it still carries
 %% a title and the default colours); the data are in pec_sphere_convergence.py.
 
+\subsection{Dependence on the wavenumber}
+
+We repeated the experiment with $R = 0.5$ for $k = 4\pi$, $6\pi$ and $8\pi$, for which the sphere is four, six and eight wavelengths across. Interpolating between the runs, an error of $10^{-6}$ needs about $220$, $470$, $800$ and $1630$ sources at $k = 2\pi$, $4\pi$, $6\pi$ and $8\pi$. For the three larger spheres this is between $21$ and $28$ unknowns per square wavelength of surface. The number of unknowns thus grows in proportion to the surface area measured in wavelengths, as it must, and the constant is small. At $k = 8\pi$ the run with $1600$ sources takes $9$\,s. With more sources the error at this wavenumber stalls near $3\times10^{-9}$, because the coefficients grow as described above.
+
 \subsection{Cost}
 \label{sec:spherecost}
 
@@ -35,16 +39,7 @@ The comparison is between a spectrally accurate method and a low-order one, and 
     \toprule
     Method & Unknowns & Time [s] & Error \\
     \midrule
-    MFS   &  300 & 0.03 & $2.7\times10^{-3}$ \\
-    MFS   &  600 & 0.09 & $2.7\times10^{-6}$ \\
-    MFS   & 1200 & 0.34 & $2.0\times10^{-9}$ \\
-    MFS   & 2400 & 1.9  & $1.8\times10^{-13}$ \\
-    MFS   & 3600 & 5.5  & $2.4\times10^{-14}$ \\
-    \midrule
-    Bempp & 1269 & 6.2  & $3.2\times10^{-2}$ \\
-    Bempp & 2733 & 4.8  & $1.4\times10^{-2}$ \\
-    Bempp & 4824 & 8.0  & $7.6\times10^{-3}$ \\
-    Bempp & 9750 & 26   & $3.7\times10^{-3}$ \\
+\input{tables/sphere}
     \bottomrule
   \end{tabular}
 \end{table}

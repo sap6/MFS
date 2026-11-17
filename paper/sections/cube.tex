@@ -79,13 +79,7 @@ The cube and the layout are symmetric under the three mirrors $x\to-x$, $y\to-y$
     \toprule
     $J$ & Unknowns & Equations & Time [s] & Error & Optical mismatch \\
     \midrule
-    3 &  489 &  3456 &  2.0 & $1.3\times10^{-2}$ & $3.0\times10^{-3}$ \\
-    4 &  618 &  4374 &  2.8 & $5.2\times10^{-3}$ & $1.3\times10^{-3}$ \\
-    5 &  891 &  5400 &  3.9 & $2.0\times10^{-3}$ & $5.6\times10^{-4}$ \\
-    6 & 1248 &  7776 &  7.6 & $8.9\times10^{-4}$ & $2.4\times10^{-4}$ \\
-    7 & 1668 & 12150 & 16   & $3.3\times10^{-4}$ & $1.1\times10^{-4}$ \\
-    8 & 2085 & 13824 & 22   & $1.1\times10^{-4}$ & $6.4\times10^{-5}$ \\
-    9 & 2541 & 15606 & 29   & reference          & $4.0\times10^{-5}$ \\
+\input{tables/cube_mfs}
     \bottomrule
   \end{tabular}
 \end{table}
@@ -112,22 +106,7 @@ On quasi-uniform meshes Bempp converges slowly, because the edge singularity lim
     \toprule
     Mesh & Quadrature & Unknowns & Time [s] & Error \\
     \midrule
-    quasi-uniform & 4/6 &  2214 &   7 & $6.8\times10^{-3}$ \\
-    quasi-uniform & 4/6 &  4884 &  12 & $3.9\times10^{-3}$ \\
-    quasi-uniform & 4/6 &  8514 &  26 & $2.6\times10^{-3}$ \\
-    quasi-uniform & 4/6 & 13302 &  58 & $1.9\times10^{-3}$ \\
-    \midrule
-    graded & 4/6 &  2592 &   6 & $1.5\times10^{-3}$ \\
-    graded & 4/6 &  4608 &  10 & $1.1\times10^{-3}$ \\
-    graded & 4/6 & 10368 &  34 & $8.4\times10^{-4}$ \\
-    \midrule
-    graded & 6/8 &  4608 &  18 & $6.0\times10^{-4}$ \\
-    graded & 6/8 &  7200 &  33 & $3.8\times10^{-4}$ \\
-    graded & 6/8 & 10368 &  63 & $3.0\times10^{-4}$ \\
-    graded & 6/8 & 14112 & 113 & $2.6\times10^{-4}$ \\
-    \midrule
-    graded & 8/10 & 10368 & 106 & $2.2\times10^{-4}$ \\
-    graded & 8/10 & 14112 & 182 & $1.8\times10^{-4}$ \\
+\input{tables/cube_bem}
     \bottomrule
   \end{tabular}
 \end{table}
@@ -157,17 +136,7 @@ The convergence of the MFS is the same as for the standard wave, from $6.1\times
     \toprule
     Method & Unknowns & Time [s] & Error \\
     \midrule
-    MFS, $J = 4$ &  4944 &  5.4 & $6.1\times10^{-3}$ \\
-    MFS, $J = 5$ &  7128 &  8.3 & $2.7\times10^{-3}$ \\
-    MFS, $J = 6$ &  9984 & 20   & $1.0\times10^{-3}$ \\
-    MFS, $J = 7$ & 13344 & 44   & $3.9\times10^{-4}$ \\
-    MFS, $J = 8$ & 16680 & 62   & $1.1\times10^{-4}$ \\
-    \midrule
-    Bempp, quadrature 4/6 &  2592 &  5.3 & $2.1\times10^{-3}$ \\
-    Bempp, quadrature 4/6 &  4608 &  8.9 & $1.4\times10^{-3}$ \\
-    Bempp, quadrature 6/8 &  4608 & 18   & $7.7\times10^{-4}$ \\
-    Bempp, quadrature 6/8 &  7200 & 34   & $4.9\times10^{-4}$ \\
-    Bempp, quadrature 6/8 & 10368 & 62   & $3.9\times10^{-4}$ \\
+\input{tables/cube_oblique}
     \bottomrule
   \end{tabular}
 \end{table}
