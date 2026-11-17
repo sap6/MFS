@@ -12,3 +12,5 @@ paper/*.out
 paper/*.blg
 paper/*.spl
 paper/check_arxiv_report.txt
+paper/main_3p.tex
+paper/main_3p.bbl
