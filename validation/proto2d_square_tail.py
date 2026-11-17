@@ -82,9 +82,9 @@ EXP_D = (5 / 3, 2, 7 / 3, 8 / 3, 3, 10 / 3)
 
 if __name__ == "__main__":
     pol = sys.argv[1]
-    yr, cr, _ = p2.solve(pol, J=70, q=0.6, beta=0.0 if pol == "TM" else 0.5, dip=True)
+    yr, cr, _ = p2.solve(pol, J=40, q=0.6, beta=0.0 if pol == "TM" else 0.5, dip=True)   # 70 depths (down to 1e-16) break down with numpy 2.5 / scipy 1.18; 30, 40 and 50 agree to 3e-7
     ref = p2.far_field(yr, cr, True)
-    print("far-field error against the J=70, q=0.6 free solve")
+    print("far-field error against the J=40, q=0.6 free solve")
     print(" J  d_J      free     " + "  ".join(f"tail{n}m{m}d" for n, m in ((1, 0), (2, 1), (3, 1), (4, 2), (6, 4), (8, 6))))
     for J in (2, 4, 6, 8, 10, 12):
         line = f"{J:2d}  {D0 * 0.5 ** J:.1e} "

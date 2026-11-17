@@ -433,7 +433,7 @@ towards the MFS field.
     used tori) and it has no closed-form reference. Do not present the
     focal-ring statement as new before Millar 1983 has been read.
 
-### Fourth session, 2026-11-17, overnight (items 39-52)
+### Fourth session, 2026-11-17, overnight (items 39-53)
 
 39. **Bempp was run with its slow backend.** bempp-cl assembles with OpenCL
     if `pyopencl` and a CPU driver are installed and falls back to Numba
@@ -619,9 +619,8 @@ towards the MFS field.
     tail line, d_J/512, it rises again); `fig_sphere.py` (replaces the old
     six-panel PNG); `fig_cost_cube.py` now with both MFS families and graded
     Bempp at two quadrature settings.
-49. **First draft of the paper**: `paper/` (see section 6). 38 pages in
-    preprint format: 28 of text with figures and tables, 5 of appendices,
-    the rest references. `python3 make_tables.py && pdflatex main && bibtex
+49. **First draft of the paper**: `paper/` (see section 6). 40 pages in
+    preprint format, 24 in the journal's layout (`main_3p.pdf`). `python3 make_tables.py && pdflatex main && bibtex
     main && pdflatex main && pdflatex main`. Every table body is generated
     from the data files; numbers in the running text were typed from the
     same output and must be re-checked if any table is re-run
@@ -660,6 +659,24 @@ towards the MFS field.
     slightly better choice than 0.5 for the far field (not adopted: it would
     mean re-running every cube table; T24). A finer base grid (12, panels
     0.07) at J = 9 needs more than the 15 GB and was killed.
+53. **The depth ratio sets a floor in 2D too** (`proto2d_depth_ratio.py`,
+    unit square, sources on the corner bisectors with tails; far field
+    against a free solve). TE: with ratio 1/2 the error stalls at 8.4e-5 from
+    a deepest depth of 4e-3 down to 2e-5, with one tail exponent per source
+    type or with six; with ratio 2^(-1/2) it stalls at 4.7e-6, which is the
+    accuracy of the reference used (ratio 0.6: 5.8e-6 from a ratio-0.87
+    solve; ratio 2^(-1/2): 1.3e-6). TM: 1.4e-7 and 1.1e-8. Free solves with
+    ratios 0.5, 0.6, 0.71: boundary residual 3.8e-3, 4.8e-4, 9.0e-6 (TE). So
+    a fixed geometric ratio gives a fixed attainable accuracy, as the theory
+    of lightning solvers says (root-exponential convergence needs tapered
+    clustering), and the 3D family with two depths per octave will stall
+    too, probably near 1e-5. Tapered depths were not tried (T21).
+    Also found: the reference solve of `proto2d_square_tail.py` (70 depths,
+    down to 1e-16) is wrong by 85% with numpy 2.5 / scipy 1.18 (far-field
+    norm 49.75 instead of 35.95); 30, 40 and 50 depths agree to 3e-7. Both
+    2D scripts now use 40. Free solves with ratios 0.8 and above are
+    under-sampled in this prototype (more unknowns than rows) and must not
+    be used.
 
 ## 3. Current best commands
 
@@ -688,6 +705,7 @@ python3 diag_cube.py 5 "tail_n=9"                 # residual map by zone, optica
 python3 pec_almond_skeleton.py 1.19 --bem         # nose-on case only (see its header)
 python3 almond_rcs.py 1.19 6:3 10 --s=0.5         # monostatic RCS, HH and VV, compares with stored Bempp
 python3 proto2d_square.py TE ; python3 proto2d_ellipse.py ; python3 proto2d_square_tail.py TE   # 2D prototypes, seconds
+python3 proto2d_depth_ratio.py TE                 # 2D: the depth ratio sets the attainable accuracy (item 53)
 ```
 
 Costs: section 2, items 43 and 47 (everything before them is obsolete). Almond:
@@ -774,11 +792,14 @@ Open, in the order I would take them:
       Item 47 shows that two per octave do not. A rate in terms of the depth
       ratio (as for lightning solvers, where the clustering is tapered) would
       turn the observation into an argument. Tapered depths were not tried.
-- [ ] **T24 Row-weight exponent 0.7 instead of 0.5 on the cube (optional).**
-      Item 52: at J = 9 it is closer to the reference and has a smaller
-      optical mismatch. Check J = 5..8 for both families; if it is uniformly
-      better, adopt it and re-run `fig_cost_cube.py run` and
-      `cube_oblique_table.py run`.
+- [ ] **T24 Row-weight exponent for the dense cube family (optional).**
+      Tested at J = 5..8 against the reference: for two depths per octave
+      beta = 0.7 lowers the error by 1.3-1.5 and beta = 0.9 by 1.5-1.7 at
+      every level (0.81e-3 -> 0.60e-3 -> 0.53e-3 at J = 6; 1.20e-4 -> 0.82e-4
+      -> 0.71e-4 at J = 8). For one depth per octave 0.5 is right: 0.7 is
+      1.2 times better at J = 5, 6 but 2.5 times worse at J = 8, and 0.9 is
+      worse throughout. Not adopted (a third of a level; it would mean
+      re-running every cube table and the reference).
 - [ ] **T22 A boundary element code that uses the mirror symmetry**
       (optional): the one comparison the cube timings cannot answer (item 44).
 - [ ] **T15 Vertex treatment beyond the diagonal (optional).** No longer
@@ -857,6 +878,9 @@ Open, in the order I would take them:
 - Sphere against wavenumber, R = 0.5: N for 1e-6 is 224, 473, 797, 1628 at k = 2, 4, 6, 8 pi (21-28 unknowns per square wavelength from 4 pi).
 - Sphere MFS, QR against SVD solver at N = 1200: 2.35e-14 against 2.14e-14; 3.4 s against 15 s.
 - Almond with the semi-normal equations: fields equal to 1e-15; RCS against Bempp 0.023 / 0.029 dB as before; 43 s per frequency.
+- Almond against the Austin benchmark, re-run with the new solver: the four frequencies agree with the stored curves to 1e-13 dB; 66 s per frequency (361 angles, HH and VV).
+- Almond 1.19 GHz nose-on, variants of layout 8:5: spacing 0.5: 8.3e-6; finer collocation: 3.3e-6; two rows per octave: 2.7e-6.
+- Cube dense J = 9 variants: modes 6.3e-7, tail length 6.3e-7, second vertex exponent 1.7e-7, other collocation grid 9.7e-7; beta 0.3: 5.9e-5; beta 0.7: 2.1e-5.
 
 ## 6. Write-up session
 
@@ -872,13 +896,16 @@ voice of the thesis and with the academic-humanizer rules (item 50).
 - Open in the draft (marked `%% TODO`): title; acknowledgements; AI
   declaration; measurement uncertainty from Kelley et al.; Millar 1983;
   comparison of the exponent tables with De Smedt and Van Bladel.
-- Length: 38 pages in the 12 pt preprint format (28 of body). The author's
-  target is 25. Where to cut, in the order I would try: (1) the three cost
-  tables of sphere, torus and almond duplicate their figures: keep the
-  figures, or merge the four cost figures into one four-panel figure;
+- Length: 40 pages in the 12 pt preprint format (`main.pdf`), **24 pages in
+  the journal's own layout** (`main_3p.pdf`: 19 of body, 3 of appendices,
+  2 of references). The author's target is 25, which the journal layout
+  meets. If the preprint format must come down too, in the order I would
+  try: (1) the three cost tables of sphere, torus and almond duplicate
+  their figures; `validation/fig_cost_all.pdf` is one four-panel figure
+  that can replace the four cost figures and those three tables;
   (2) Appendix E (Bempp settings) and the oblique-wave table to
   supplementary material; (3) the sphere-against-wavenumber paragraph to
-  two sentences. That brings the body to about 24 pages.
+  two sentences.
 - The comparison with Bempp is now fair to both sides (items 39-41, 43, 47)
   and is stated with its two qualifications (symmetry; unknowns), item 44.
 - Decisions still open for the authors: title; how much of the Bempp cost
