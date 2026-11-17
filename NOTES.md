@@ -951,8 +951,11 @@ towards the MFS field.
       nodes with S" can be the one rule for the paper if the k = 4 pi table
       is re-run with it (not done).
     - Two or three wavenumbers are not a law: do not write "the advantage
-      grows with k". The families at S = 2, 3 were tuned in an hour and the
-      grading of the Bempp mesh was not re-tuned.
+      grows with k". The families at S = 2, 3 were tuned in an hour. The
+      grading of the Bempp mesh was checked at S = 2: g = 1.5, 2, 2.5, 3
+      give 5.5e-4, 5.1e-4, 1.1e-3, 2.5e-3 (18432 dofs, 6/8) and g = 1.5,
+      2, 2.5 give 3.4e-4, 2.4e-4, 4.6e-3 (28800 dofs, 8/10): g = 2 is
+      still Bempp's best. Not checked at S = 3.
     - **Oblique wave at k = 4 pi** (`cube_wavenumber.py 2 oblique`; eight
       classes; reference dense J = 9, 265 s, optical 1.0e-5; data
       `cube_wavenumber_k2_obl.npz`, `_obl_bem.npz`): one depth J = 5..8:
@@ -1093,8 +1096,8 @@ Open, in the order I would take them:
       (standard and oblique wave) and is in the draft. k = 6 pi converges
       with the base layout scaled with the wavelength but is untuned and
       expensive (0.09% in 32 s, 0.03% in 80 s): tune it, decide whether it
-      goes into the paper. Also open: re-tune the grading of the Bempp
-      mesh at k = 4 pi before quoting factors as a trend; re-run the
+      goes into the paper. Also open: the grading of the Bempp mesh at
+      k = 6 pi (at k = 4 pi g = 2 is confirmed as its best); re-run the
       k = 4 pi table with the single scaling rule of item 57 (tested, works)
       if the paper is to state one rule for all wavenumbers; the two-depth
       rows at k = 4 pi can use the coarser interior panels (25% faster).
@@ -1221,6 +1224,7 @@ Open, in the order I would take them:
 - 2D square, side S = 1, 2, 3, 4, 6 wavelengths, TE, ratio 2^(-1/2): S = 1 layout 8.8e-8, 8.5e-7, 1.7e-6, 1.7e-6, 1.9e-6 with |c| about 1e7; base depth / S and panels / S: 8.8e-8, 4e-8, 3.6e-7, 8e-9, 2.5e-7 with |c| 1e3 to 1e4.
 - Cube at k = 4 pi with the base at depth 0.1 and 8 / 12 points: one depth J = 5, 6, 7, 8: 1.5e-3, 5.4e-4, 2.7e-4, 3.0e-4 in 4.4, 9.0, 12.0, 17.9 s.
 - Cube at k = 6 pi, base 16 instead of 18: J = 7: 1.3e-3 in 17.6 s (panels 0.065); J = 8: 1.2e-3 to 1.4e-3 (worse than 8.6e-4 with 18).
+- Bempp grading at k = 4 pi (symmetric, 18432 dofs, 6/8): g = 1.5, 2, 2.5, 3: 5.5e-4, 5.1e-4, 1.1e-3, 2.5e-3; 28800 dofs, 8/10: g = 1.5, 2, 2.5: 3.4e-4, 2.4e-4, 4.6e-3.
 
 ## 6. Write-up session
 
