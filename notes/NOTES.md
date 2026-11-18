@@ -46,10 +46,14 @@ Done (all committed):
 - [x] thesis notebooks in `thesis/`; this log, derivations, literature, status sheet and paper helpers in `notes/`; `paper/long/`, `paper/make_tables.py` and `validation/` removed from the tree. **The research scripts are at commit 9f5a721** (`git checkout 9f5a721 -- validation`); a tag would keep them if the branch is squash-merged (ask the author before pushing a tag).
 - [x] Paper: graphicspath `../figures/`, code-availability statement describes the repository; 41 pages.
 
-Open:
-- [ ] Independent review of the code against the thesis notebooks' style (running).
-- [ ] The Colab links point to `main`: they work once this branch is merged.
-- [ ] Zenodo: archive a release and add the DOI to the paper and CITATION.cff (authors).
+- [x] Independent review (fresh agent, against the thesis notebooks): applied (commit e94e370). Real bugs it found: the Colab cell used an editable install, which a running kernel cannot import (now sys.path and absolute paths); `cube.solve` kept every group's factors alive (now freed); `data/cube_cases_k1_ref.npz` was missing. Also: `figures/cone_exponents.py` for Table A.1 (reproduces it), Bempp imported after `mfs.bem` everywhere (OpenCL memory), warm-up runs before timing, shared helpers, names, README entry-point table, data README columns, CI on Python 3.10 and 3.13 with `git diff --exit-code paper/tables`.
+- [x] Smoke tests of the `--run` paths in a scratch copy: sphere, edge residual, near field, the comparison runs for sphere, torus and almond (errors identical to the stored ones; times within the usual 20-40% drift), torus sources (identical), cube comparison on a tiny case.
+- [x] Summary for the author: `notes/code_for_readers_18nov.md`.
+
+Open (authors):
+- [ ] Merge into `main` without squashing (Colab links, CI badge and pip install point to `main`); push the local tag `research-scripts` (= 9f5a721)? Asked.
+- [ ] LICENSE holder ("Sap"); Zenodo release and DOI; whether `CLAUDE.md` and `notes/` stay public.
+- [ ] Not changed (noted by the review): the cube and almond far fields are evaluated at r = 1e6 and 1e5 m; at J = 4 the pattern changes by 9e-7 from 1e6 to 1e7, the optical mismatch by 9e-8 (Table 2 quotes 9.3e-7 at J = 12; no conclusion depends on it).
 
 ### Seventh session, part two: the humanising pass (18 Nov, READ FIRST)
 
