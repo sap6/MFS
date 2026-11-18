@@ -66,8 +66,8 @@ github.com/AIScientists-Dev/academic-humanizer.
       unchanged (short lines, no prose); captions read and left as they are.
 - [ ] H6 Wait for the author's choice among the five ideas in
       `paper/humanising_pass_18nov.md`; do not restructure before that.
-- [ ] H7 Read the whole PDF once more as a reader (not with scripts) for
-      flow between paragraphs; fix only connectives and referents.
+- [x] H7 Read for flow (comparison section, cube results): one connective
+      changed ("The picture is the same at a higher frequency").
 
 ### Seventh session, 2026-11-18 (first part)
 
@@ -159,7 +159,8 @@ best, then drop the curve without symmetry and the caveat.
 - [x] R5 Code: `cube_oblique_table.py`, `cube_wavenumber.py`,
       `cube_k3_tune.py` and their data deleted; the scans use the present
       references. (`tapered` stays: it is the record of T21.)
-- [ ] R6 Referee report, remaining: A2 (name the least-squares solver
+- [x] R6 (done 17 Nov, see the item 84 block: Kangro Thm 3(ii) and De Smedt
+      Table V read and confirmed; tabatadze2025 cited) Referee report, remaining: A2 (name the least-squares solver
       correctly, QR cross-check at J = 10); uncited references on edges
       (tabatadze2025, eisler1989, shifman1997); citations to verify
       (kangro2012 "proves", desmedt1986 for the cube corner).
