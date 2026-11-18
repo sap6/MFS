@@ -92,8 +92,8 @@ By the rule "best for both" this is R0 below: build it, compare best with
 best, then drop the curve without symmetry and the caveat.
 
 **Work list after that message (tick off here):**
-- [ ] R0 Bempp on the torus with the rotational symmetry of its mesh
-      (block-circulant: rows of one sector, one small system per order).
+- [x] R0 Bempp on the torus with the rotational symmetry of its mesh:
+      done (item 81); paper text and final timings still to follow.
 - [x] R1 A full independent reading of the paper: done, the report is
       `paper/referee_report_18nov.md` (eight points "wrong or
       unjustified", the first being that Theorem 1 does not locate
@@ -1895,6 +1895,92 @@ towards the MFS field.
     any of these." It is "The Method of Fundamental Solutions for
     Maxwell's Equations". Nineteen alternatives were offered over three
     sessions and all were declined; do not offer more.
+
+79. **Three wavelengths: the layout of the paper converges; the "limit"
+    was the scaled first depth (R2).** Since the fourth session the runs
+    at k = 6 pi had used depth0 = 0.2 / 3 (first line depth and depth of
+    the base grid scaled with the wavelength, `cube_k3_tune.py`). Tests of
+    18 Nov (`cube_k3_base.py`, one depth per octave, J = 7, 8 more modes,
+    distance from Bempp 28800 dofs): depth0 0.0667: 1.75e-3 (16, 20 or 24
+    base points per side: no change); 0.1: 1.35e-3; 0.2: 1.08e-3. With
+    depth0 = 0.2 the base grid hardly matters (8, 10, 12, 16, 20 per side:
+    fields equal to 3e-5 to 9e-5) but 12 or more make the system ill
+    conditioned (|c| 1e4 to 1e9); 8 is fine (|c| 36). So the layout at
+    three wavelengths is **the layout of the paper unchanged** (first
+    depth 0.2, 8 base points, interior panels 0.1, two depths per octave)
+    with more modes per line (`cube_k3_levels.py`):
+    - 8 more modes (the old rule 4 (S - 1)): J = 4..10: successive
+      differences 5.7e-3, 2.1e-3, 9.7e-4, 3.4e-4, 1.6e-4, 1.0e-4; times
+      10, 15, 22, 31, 45, 65, 195 s; but not converged in the modes: 8
+      against 12 more modes differ by 8.3e-4, 4.9e-4, 3.0e-4, 1.8e-4,
+      1.3e-4 at J = 5..9.
+    - **12 more modes: J = 5..9: successive differences 2.0e-3, 7.4e-4,
+      2.7e-4, 1.3e-4; against J = 9: 3.0e-3, 1.1e-3, 3.9e-4, 1.3e-4
+      (factor 2.8 to 3.0 per level); 17, 25, 37, 52, 200 s.** At J = 7,
+      12 against 16 more modes: 5.9e-5 (error there about 4e-4). Bempp
+      (28800 dofs) is 5.6e-4 from J = 9, and its own error extrapolated
+      from two meshes is about 6e-4.
+    - Rule adopted in `cube_cases.layout`: MODES = {1: 0, 2: 4, 3: 12}
+      additional modes per line. (At two wavelengths 4 are enough: 8
+      change the field by 8e-6.)
+    - Memory: with 12 more modes the levels from 9 on fall back to QR,
+      which needs three copies of a matrix; two classes together were
+      killed at 14 GB. `cube_mfs.run` now frees the previous group first
+      and `cube_cases.layout` builds one class at a time from J = 9.
+    - The old "reference" `cube_k3_ref_J9.npz` (scaled depth) is 4.3e-4
+      from the new J = 10 field with 8 more modes. Items 57 and 67 on
+      three wavelengths are superseded; `cube_k3_tune.py` is history.
+    - To do: reference `cube_cases.py k3 ref` (J = 10), Bempp scan
+      `bem_grading_scan.py k3`, timing `cube_cases.py k3 2`, third panel
+      of the figure, Section 5.5, conclusion, abstract if it mentions it.
+80. **Referee-style reading (R1): `paper/referee_report_18nov.md`.**
+    Status of its points (A = wrong or unjustified):
+    - A1 (Theorem 1 does not locate singularities; the continuation
+      through one face is regular in the whole body, the singular points
+      are the edges and vertices, the skeleton is one admissible surface):
+      **accepted and corrected** in the abstract ("where the sources can
+      be placed"), Section 4 (new paragraph after the consequences),
+      Section 5.1 ("can be placed"), conclusion. Tell the author: this
+      changes how the theorem is described, not the theorem. T20 (Timo)
+      should see it.
+    - A2 (the least-squares solver is not Bjorck's corrected semi-normal
+      equations, since R comes from Cholesky): to do: reword, and compare
+      with a QR solve at J = 10.
+    - A3, A4 (torus: "increases to", "stays of order one"): corrected; for
+      a/R = 0.5 and 0.25 the text now says the growth is gradual and does
+      not locate the bound.
+    - A5 (vertex tail "in the same way"): corrected; the appendix says the
+      assignment of exponents to dipole kinds is not derived (two
+      exponents per kind change the error by 0.2% at J = 6).
+    - A6 (root-exponential): the text now states the law in d_min (factor
+      2.5 per halving, d_min^1.3, no derivation) and that N_u grows like
+      J^2 by construction.
+    - A7 (general wave, J = 10 measured against J = 11), A8 (near-field
+      claim shown for the sphere only): to do.
+    - B, C, D, E: almond rows renamed n_mid:n_F (J is now only the cube
+      level); "nose-on" everywhere; the rest to do (t / s along the edge,
+      E for scattered and total field, H undefined in the proof, table
+      numbers A.5 / C.6, parameters needed to reproduce the torus and
+      almond runs, ARCHIE-AIM in the legend).
+81. **Torus: Bempp with the rotational symmetry of its mesh (R0).** The
+    author: "there's a case where MFS can use symmetry and BEM cannot,
+    that's an advantage and you shouldn't limit MFS". The MFS result on
+    the torus always used the rotation; what I had called impossible for
+    Bempp is not: the structured mesh is mapped to itself by the rotation
+    by one cell, so the matrix is block-circulant (`bem_mirror.Cyclic`:
+    rows of one function per orbit, one small system per order about the
+    axis, orders that the wave does not excite are skipped). Equal to the
+    full solve to 1e-14 for an axial and an oblique wave. Both codes are
+    now timed for the same work (solve and field at the test points; the
+    MFS time used to include its residual and cross-section checks, the
+    Bempp time a far field in 4609 directions). Preview (final numbers
+    after the next `time_paper.sh`): MFS 1440 / 3840 / 8064 / 21120
+    unknowns: 0.04 / 0.16 / 0.5 / 1.6 s for 5.0e-3 / 1.1e-4 / 5.0e-7 /
+    7.3e-12; Bempp 9600 / 38400 / 153600 dofs: 0.9 / 3.1 / 17 s for 8.2e-3
+    / 2.0e-3 / 5.1e-4. The curve "MFS, full matrix" leaves the figure.
+    `bem_mirror.action` (set-up of the symmetry) is vectorised, which
+    also shortens Bempp's set-up on the cube and the almond a little:
+    **all times must be measured again** (`time_paper.sh`).
 
 ## 3. Current best commands
 
