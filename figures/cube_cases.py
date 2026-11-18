@@ -37,6 +37,7 @@ def setup(case):
 
 
 def bempp_run(case, g, reg, sing, n, ref):
+    """Bempp with the symmetry of the cube: one row (g, regular and singular order, n, unknowns, time, error)"""
     from mfs import bem                         # before bempp: it lets the OpenCL driver see all of the memory
     bempp = bem.bempp
     k, d, p, pts, _ = setup(case)
@@ -58,7 +59,8 @@ if "--scan" in sys.argv or "--run" in sys.argv:
         # The reference, then the MFS levels and the Bempp runs near the lower envelope of the scan, alternately
         cube.solve(2, d, p, pts, k)                                         # warm-up: compilation is not timed
         E, t, info = cube.solve(J_REF[case], d, p, pts, k, **layout(J_REF[case]))
-        np.savez(data(f"cube_cases_{case}_ref.npz"), E=E, pts=pts, info=[J_REF[case], t, max(info["unknowns"]), info["rows"], info["optical"], info["ext"]])
+        info = [J_REF[case], t, max(info["unknowns"]), info["rows"], info["optical"], info["ext"]]
+        np.savez(data(f"cube_cases_{case}_ref.npz"), E=E, pts=pts, info=info)
         rows = [tuple(r) for r in np.load(data(f"cube_scan_{case}.npz"))["rows"]]
         bempp_run(case, 1.0, 4, 6, 4, E)
         cand = [r for r in rows if not any(q[5] <= 0.5 * r[5] and q[6] <= r[6] for q in rows)]
@@ -81,10 +83,11 @@ if "--scan" in sys.argv or "--run" in sys.argv:
 # The figure: three panels (the standard wave is panel (d) of Figure 10)
 plt.rcParams["font.size"] = 8.5
 fig, axs = plt.subplots(1, 3, figsize=(7.6, 2.9), sharey=True)
-for ax, (case, title) in zip(axs, (("k1o", "(a) one wavelength, general wave"), ("k2", "(b) two wavelengths"), ("k3", "(c) three wavelengths"))):
-    d = np.load(data(f"cube_cases_{case}.npz"))
-    ax.loglog(d["mfs"][:, 5], d["mfs"][:, 6], "-", color=BLUE, marker="o", ms=5, lw=1.5, mec="white", mew=0.7, label="MFS")
-    env = d["env"][d["env"][:, 6] < 2e-2]
+panels = (("k1o", "(a) one wavelength, general wave"), ("k2", "(b) two wavelengths"), ("k3", "(c) three wavelengths"))
+for ax, (case, title) in zip(axs, panels):
+    res = np.load(data(f"cube_cases_{case}.npz"))
+    ax.loglog(res["mfs"][:, 5], res["mfs"][:, 6], "-", color=BLUE, marker="o", ms=5, lw=1.5, mec="white", mew=0.7, label="MFS")
+    env = res["env"][res["env"][:, 6] < 2e-2]
     ax.loglog(env[:, 5], env[:, 6], linestyle=(0, (3, 1)), color=RUST, marker="X", ms=5, lw=1.5, mec="white", mew=0.7,
               label="Bempp, graded, with symmetry")
     ax.set_title(title, loc="left", fontsize=8.5)

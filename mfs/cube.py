@@ -22,7 +22,7 @@ import time
 import numpy as np
 
 from . import lines
-from .core import factor, sphere_rule
+from .core import cross_sections, dyadic, factor, magnetic, sphere_rule
 
 H = 0.5                                                          # half side length
 REFL = [np.array(r, float) for r in itertools.product((1, -1), repeat=3)]
@@ -30,7 +30,7 @@ CLASSES = [tuple(r) for r in REFL]                               # parities (sx,
 ROT = np.eye(3)[[1, 2, 0]]                                       # a third of a turn about the body diagonal
 NU, TAU = 0.45417, 0.8400                                        # smallest electric and magnetic exponents of the corner
 TAIL_E = {"e": (2 / 3, 5 / 3), "m": (4 / 3, 7 / 3)}              # edge tail exponents: (along the edge, along the bisector)
-DIRS, WEIGHTS = sphere_rule(40, 80)
+RULE = sphere_rule(40, 80)                                       # quadrature on the unit sphere, for the optical theorem
 
 
 def sign(cls, R):
@@ -67,8 +67,8 @@ def orbits(classes):
     return orbit
 
 
-def graded_nodes(levels, p, hmax=0.1):
-    """Gauss-Legendre nodes on (-H, H): p per panel, panels halving towards both ends, none longer than hmax"""
+def graded_nodes(levels, ng, hmax=0.1):
+    """Gauss-Legendre nodes on (-H, H): ng per panel, panels halving towards both ends, none longer than hmax"""
     dist = np.concatenate(([0.0], H * 0.5 ** np.arange(levels, -1, -1)))   # distance from the edge
     brk = [0.0]
     for a, b in zip(dist[:-1], dist[1:]):
@@ -76,7 +76,7 @@ def graded_nodes(levels, p, hmax=0.1):
         brk.extend(a + (b - a) * np.arange(1, n + 1) / n)
     brk = np.array(brk)
     ends = np.concatenate((-H + brk, (H - brk[::-1])[1:]))
-    g, w = np.polynomial.legendre.leggauss(p)
+    g, w = np.polynomial.legendre.leggauss(ng)
     s = np.concatenate([0.5 * (a + b) + 0.5 * (b - a) * g for a, b in zip(ends[:-1], ends[1:])])
     ws = np.concatenate([0.5 * (b - a) * w for a, b in zip(ends[:-1], ends[1:])])
     return s, ws
@@ -110,10 +110,10 @@ class Line:
         par = (-1.0) ** np.arange(self.n)[:, None]              # parity of the mode along the edge
         axis = 0 if self.tail else self.ax                       # index of the component along the edge
         sc = np.where(np.arange(3) == axis, -1.0, 1.0)[None, :] * (-1.0 if self.kind == "m" else 1.0)
-        k = cls[self.ax] * par * sc > 0
+        kept = cls[self.ax] * par * sc > 0
         if self.tail:
-            k[:, 2] = False                                      # a surface current has no normal component
-        return k
+            kept[:, 2] = False                                   # a surface current has no normal component
+        return kept
 
 
 class VertexTail:
@@ -128,7 +128,6 @@ class VertexTail:
 
     def block(self, k, x, T):
         """Field of the tied dipoles at x, tested with T: (M nc, 3)"""
-        from .core import dyadic, magnetic
         G = (magnetic if self.kind == "m" else dyadic)(x, self.pts, k)  # (M, 9, 3, 3)
         return np.einsum("mab,mtbc,t->mac", T, G, self.w).reshape(len(x) * T.shape[1], 3)
 
@@ -159,9 +158,9 @@ class Cube:
         base = np.concatenate([np.insert(np.column_stack((U, V)), ax, 0.3, axis=1) for ax in range(3)])
         vertex = H - self.depths[:, None] / np.sqrt(3) * np.ones((1, 3))
         self.pe, self.pm = np.concatenate((base, vertex)), vertex
-        self.lines = [Line(ax, d, n0 + int(np.ceil(2 * np.log(2 * H / d))), kind)
+        self.lines = [Line(ax, d, n0 + int(np.ceil(2 * np.log(2 * H / d))), kind)   # modes: n0 + ⌈2 ln(2H/d)⌉ (Appendix B)
                       for d in self.depths for ax in range(3) for kind in "em"]
-        if tails:
+        if tails:                                                # the six lines at d_min (three axes, e and m) continue as tails
             self.lines += [Line(ln.ax, ln.d, ln.n, ln.kind, tail=True) for ln in self.lines[-6:]]
             self.lines += [VertexTail(self.depths[-1], kind) for kind in "em"]
 
@@ -173,16 +172,17 @@ class Cube:
             for c in CLASSES}
         self.unknowns = {c: int(kp.sum()) for c, kp in self.keep.items()}
 
-        # Boundary points in the octant: graded tensor grids, p nodes per panel, rows weighted by sqrt(area) · (distance to the edge)^{1/2}
-        p = 4 if q > 0.6 else 3
+        # Boundary points in the octant: graded tensor grids, ng nodes per panel,
+        # rows weighted by sqrt(area) · (distance to the edge)^{1/2}
+        ng = 4 if q > 0.6 else 3
         d_min = self.depths[-1] if len(self.depths) else 0.2
         levels = max(2, int(np.ceil(np.log(d_min / (2 * H)) / np.log(0.5))) + 1)
-        s, w = graded_nodes(levels, p)
+        s, w = graded_nodes(levels, ng)
         U, V = [g.ravel() for g in np.meshgrid(s[s > 0], s[s > 0], indexing="ij")]
         W = np.outer(w[s > 0], w[s > 0]).ravel()
         self.x = np.concatenate([np.insert(np.column_stack((U, V)), ax, H, axis=1) for ax in range(3)])
         self.T = np.concatenate([np.repeat(np.delete(np.eye(3), ax, axis=0)[None], len(U), axis=0) for ax in range(3)])
-        dist = H - np.sort(np.abs(self.x), axis=1)[:, 1]
+        dist = H - np.sort(np.abs(self.x), axis=1)[:, 1]        # distance to the nearest edge
         self.rw = np.sqrt(np.tile(W, 3)) * dist ** 0.5
         self.rows = 2 * len(self.x)
 
@@ -230,7 +230,7 @@ class Cube:
         return A
 
     def solve(self, d, p, only=None):
-        """Coefficients of each class for the wave (d, p), and the relative boundary residual"""
+        """Coefficients of each class for the wave (d, p), the relative boundary residual, and |b|²"""
         coef, r2, b2 = {}, 0.0, 0.0
         for c in classes_of(self.k, d, p):
             if only is not None and c not in only:
@@ -265,11 +265,11 @@ def solve(J, d=(0, 0, -1.0), p=(0, 1.0, 0), pts=None, k=2 * np.pi, max_gb=6.0, *
     t0 = time.time()
     orbit = orbits(classes_of(k, d, p))
     todo, E, sols, info = list(orbit), 0, [], dict(unknowns=[], t_assemble=0.0, t_factor=0.0)
-    cube = None
     while todo:
-        del cube                                                 # free the previous group before the next is built
-        probe = Cube(J, k, classes=[], **layout) if len(todo) > 1 else None
-        g = len(todo) if probe is None else max(1, min(len(todo), int(max_gb * 2 ** 30 / (16.0 * probe.rows * probe.unknowns[todo[0]]))))
+        g = len(todo)
+        if g > 1:                                                # how many class matrices fit into max_gb
+            probe = Cube(J, k, classes=[], **layout)
+            g = max(1, min(g, int(max_gb * 2 ** 30 / (16.0 * probe.rows * probe.unknowns[todo[0]]))))
         cube = Cube(J, k, classes=todo[:g], **layout)
         todo = todo[g:]
         for j in range(3):                                       # the wave turned back by j thirds of a turn
@@ -283,13 +283,13 @@ def solve(J, d=(0, 0, -1.0), p=(0, 1.0, 0), pts=None, k=2 * np.pi, max_gb=6.0, *
         info["unknowns"] += [cube.unknowns[c] for c in cube.classes]
         info["t_assemble"] += cube.t_assemble
         info["t_factor"] += cube.t_factor
+        cube.fac = None                                          # the checks below need only the layout: free the factors
     t = time.time() - t0
 
     # Checks, not timed: boundary residual and the optical theorem
-    F = sum(cube.far(coef, np.vstack((d[None], DIRS)) @ Q) @ Q.T for cube, Q, coef, _, _ in sols)
+    far = lambda dirs: sum(cube.far(coef, dirs @ Q) @ Q.T for cube, Q, coef, _, _ in sols)
+    info["ext"], info["sca"] = cross_sections(far, k, d, p, RULE)
     info["residual"] = float(np.sqrt(sum(r ** 2 * b2 for *_, r, b2 in sols) / sum(s[-1] for s in sols)))
-    info["ext"] = 4 * np.pi / k * float(np.imag(np.conj(p) @ F[0]))
-    info["sca"] = float(np.sum(WEIGHTS * np.sum(np.abs(F[1:]) ** 2, axis=1)))
     info["optical"] = abs(info["ext"] - info["sca"]) / info["sca"]
     info["rows"] = cube.rows
     return E, t, info

@@ -44,7 +44,7 @@ or, to run the figure scripts and the tests as well:
 
     git clone https://github.com/sap6/MFS && cd MFS
     pip install -e ".[test]"          # add ",bempp" for the boundary element comparison
-    python -m pytest tests            # 20 seconds
+    python -m pytest tests            # about a minute, most of it compiling the kernels
 
 Then, for example, the sphere against the Mie series:
 
@@ -56,15 +56,25 @@ k = 2 * np.pi                                   # the sphere is two wavelengths 
 d, p = core.wave()                              # the plane wave: along -z, polarised along y
 y, alpha = sphere.solve(400, k, R=0.5)          # 400 dipoles on the sphere of radius 0.5
 pts = 2.0 * core.fibonacci(400)
-print(core.rel(core.field(pts, y, alpha, k), mie.scattered_field(pts, k, d, p)))   # 2.0e-09
+print(f"{core.rel(core.field(pts, y, alpha, k), mie.scattered_field(pts, k, d, p)):.1e}")   # 2.0e-09
 ```
+
+Each shape has one entry point:
+
+| Shape | Call | Returns |
+|---|---|---|
+| sphere | `sphere.solve(N, k, R)` | source points and coefficients; the field is `core.field(pts, y, alpha, k)` |
+| torus | `torus.scatter(k, d, p, n_rings, n_per_ring)` | a solution with `.field(pts)` and `.far(dirs)` |
+| cube | `cube.solve(J, d, p, pts)` | the field at `pts`, the time, and checks (unknowns, residual, optical theorem) |
+| almond | `almond.nose_on(k, n_mid, n_F, pts)`, `almond.rcs(freq_GHz)` | the field, or the radar cross-section against the azimuth |
 
 ## The figures and tables of the paper
 
 Every figure and table has a script in [`figures/`](figures). Run on its own,
 the script draws the figure in seconds from the results in [`data/`](data).
-With `--run` it computes those results again; the times below are on four
-cores.
+With `--run` it computes those results again and overwrites `data/`
+(`git checkout data` restores the paper's results); the times below are on
+four cores. The runs that involve Bempp need `pip install -e ".[bempp]"`.
 
 | In the paper | Script | To compute again |
 |---|---|---|
@@ -79,16 +89,20 @@ cores.
 | Figure 10, Table 4: comparison with Bempp | [`figures/cost.py`](figures/cost.py) | 5 to 20 minutes per shape |
 | Figure 11: the field near the surface | [`figures/nearfield.py`](figures/nearfield.py) | a few minutes |
 | Tables 2, 4, 5, C.1 | [`figures/tables.py`](figures/tables.py) | seconds |
+| Table A.1, vertex exponents | [`figures/cone_exponents.py`](figures/cone_exponents.py) | 5 minutes |
+
+Table 1 (the edge exponents) is derived in Section 5.2 and needs no code.
 
 Accuracy does not depend on the machine, but times do. For a fair comparison
-we timed both codes on the same machine with nothing else running, alternately,
-and each run keeps its smallest time.
+we ran both codes on the same machine with nothing else running; on the cube we
+ran each configuration of both codes twice, alternately, and kept the smaller
+time.
 
 ## What is where
 
 | Folder | Contents |
 |---|---|
-| [`mfs/`](mfs) | the method, one short module per shape: `sphere`, `torus`, `cube` (with the line quadrature in `lines`), `almond`; the exact solution `mie`; the exponents at a cone tip, `cone`; and the boundary element comparison, `bem` |
+| [`mfs/`](mfs) | the method, one short module per shape: `sphere`, `torus`, `cube` (with the line quadrature in `lines`), `almond`; the exact solution `mie`; the exponents at the almond tip and the cube vertex, `cone`; and the boundary element comparison, `bem` |
 | [`notebooks/`](notebooks) | the four notebooks above |
 | [`figures/`](figures) | one script per figure of the paper, and the tables |
 | [`data/`](data) | the results behind every figure and table, and the Austin benchmark data for the almond |
@@ -102,7 +116,8 @@ The scripts of every experiment in the research log are in the git history: run
 
 ## Citation
 
-If you use this code, please cite the paper (see [`CITATION.cff`](CITATION.cff)).
+If you use this code, please cite the paper (see [`CITATION.cff`](CITATION.cff);
+GitHub's "Cite this repository" button gives BibTeX).
 The almond data in [`data/austin_almond`](data/austin_almond) are those of the
 Austin RCS Benchmark Suite (Kelley et al., IEEE Antennas and Propagation
 Magazine 62(1), 2020), with their licence files.

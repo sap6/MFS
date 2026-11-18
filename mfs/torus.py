@@ -11,7 +11,7 @@ incident wave (as for acoustic scattering in Liu and Barnett 2016).
 import numpy as np
 from scipy.linalg import lstsq
 
-from .core import cross_sections, dyadic, plane_wave, sphere_rule
+from .core import cross_sections, dyadic, field, plane_wave, sphere_rule
 
 
 def circle(n, centre, radius):
@@ -34,6 +34,7 @@ def frame(ph):
 
 
 class Torus:
+    """The torus (sqrt(x² + y²) - R)² + z² = a²: boundary points and test points"""
     def __init__(self, R=1.0, a=0.5):
         self.R, self.a = R, a
 
@@ -70,11 +71,9 @@ class Solution:
     def __init__(self, y, alpha, k):
         self.y, self.alpha, self.k = y, alpha, k
 
-    def field(self, pts, batch=200):
-        out = np.empty((len(pts), 3), complex)
-        for i in range(0, len(pts), batch):
-            out[i:i + batch] = np.einsum("pnab,nb->pa", dyadic(pts[i:i + batch], self.y, self.k), self.alpha)
-        return out
+    def field(self, pts):
+        """Scattered field at pts (P, 3)"""
+        return field(pts, self.y, self.alpha, self.k)
 
     def far(self, dirs):
         """Far-field pattern F, with E ~ F e^{ikr}/r, in the directions dirs"""
@@ -85,10 +84,10 @@ class Solution:
 def solve(torus, k, rhs, ns, nphi, a_s, rings=2):
     """
     Least squares, one small problem per Fourier mode about the axis
-      rhs  : function giving the prescribed tangential field (minus the incident field)
+      rhs  : function x (M, 3) → the field to match on the boundary, (M, 3) (minus the incident field for scattering)
       ns   : number of source rings, nphi: dipoles per ring (3 ns nphi unknowns)
       a_s  : minor radius of the source torus
-      rings: boundary points on rings · ns rings of nphi points (2 rings ns nphi equations)
+      rings: boundary rings per source ring (rings · ns rings of nphi points, 2 rings ns nphi equations)
     """
     rho, z, _ = circle(ns, torus.R, a_s)
     nc = rings * ns

@@ -54,8 +54,8 @@ def magnetic(x, y, k):
       y: source points, shape (N, 3)
       Returns an array of shape (M, N, 3, 3)
     """
-    d = x[:, None] - y[None]
-    r = np.linalg.norm(d, axis=2)
+    d = x[:, None] - y[None]                       # (M, N, 3)
+    r = np.linalg.norm(d, axis=2)                  # (M, N)
     f = (1j - 1 / (k * r)) * np.exp(1j * k * r) / r
     e = d / r[..., None]
     out = np.zeros(d.shape + (3,), complex)
@@ -79,8 +79,9 @@ def fibonacci(n):
 
 def tangent_basis(n):
     """
-    n: unit normals, shape (M, 3)
-    Returns two unit tangents at each point, shape (M, 2, 3)
+    Two unit tangents t1 = n × e / |n × e|, t2 = n × t1 at each point (e = z, or x near the poles)
+      n: unit normals, shape (M, 3)
+      Returns an array of shape (M, 2, 3)
     """
     ref = np.where(np.abs(n[:, 2:3]) < 0.9, [[0.0, 0.0, 1.0]], [[1.0, 0.0, 0.0]])
     t1 = np.cross(n, ref)
@@ -94,6 +95,7 @@ def field(pts, y, alpha, k, batch=400):
       pts  : (P, 3) evaluation points
       y    : (N, 3) source points
       alpha: (N, 3) coefficients
+      Returns an array of shape (P, 3)
     """
     out = np.empty((len(pts), 3), complex)
     for i in range(0, len(pts), batch):
@@ -150,7 +152,7 @@ class CSNE:
         G /= self.scale[:, None] * self.scale[None, :]
         self.R, info = lapack.zpotrf(G, lower=0, overwrite_a=True)
         self.dR = np.abs(np.diag(self.R))
-        if info != 0 or self.dR.max() > max_cond * 1e-3 * self.dR.min():
+        if info != 0 or self.dR.max() > max_cond * 1e-3 * self.dR.min():   # the diagonal of R underestimates cond(A) by up to 1e3
             raise np.linalg.LinAlgError("too ill-conditioned for the semi-normal equations")
 
     def _normal(self, r):
@@ -159,7 +161,7 @@ class CSNE:
         s = self.scale if rhs.ndim == 1 else self.scale[:, None]
         return lapack.zpotrs(self.R, rhs / s, lower=0)[0] / s
 
-    def solve(self, b, residual=False, cond=None):
+    def solve(self, b, residual=False):
         c = self._normal(b)
         for _ in range(2):
             c = c + self._normal(b - self.A @ c)

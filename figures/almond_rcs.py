@@ -34,9 +34,9 @@ if "--run" in sys.argv:
 fig, axes = plt.subplots(2, 4, figsize=(11.0, 5.2), sharex=True, sharey=True)
 print("frequency  pol  mean |MFS - reference| [dB]")
 for j, (fx, f) in enumerate(FREQS.items()):
-    d = np.load(data(f"almond_rcs_{f}GHz.npz"))
+    res = np.load(data(f"almond_rcs_{f}GHz.npz"))
     for i, pol in enumerate(("HH", "VV")):
-        mfs = 10 * np.log10(d["sigma_" + pol])
+        mfs = 10 * np.log10(res["sigma_" + pol])
         phi, ref = austin("ref", fx, pol)
         th = ref.max() - 80.0
         print(f"{f:8.3f}   {pol}   {np.mean(np.abs(np.maximum(mfs, th) - np.maximum(ref, th))):.3f}")

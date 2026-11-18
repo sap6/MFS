@@ -17,12 +17,13 @@ import numpy as np
 from scipy.optimize import minimize_scalar
 from scipy.special import lpmv
 
-T1 = 0.583333                                     # tip of the almond, and its half-angles from Woo et al. (1993)
+T1 = 0.583333                                     # tip of the almond (units of L), and the half-angles of its cone (Woo et al. 1993)
 TAN_Y = 4.83345 * T1 / (2.08335 ** 2 * 0.96)
 TAN_Z = 1.61115 * T1 / (2.08335 ** 2 * 0.96)
 
 
 def P(nu, x):
+    """Legendre function P_nu(x)"""
     return lpmv(0, nu, x)
 
 
@@ -40,14 +41,14 @@ def unit(v):
     return v / np.linalg.norm(v, axis=-1, keepdims=True)
 
 
-def smallest_sigma(B, I):
-    """Smallest singular value of the boundary part B of an orthonormal basis of the span of [B; I]: zero at an exponent"""
-    A = np.vstack((B, I))
+def smallest_sigma(B, C):
+    """Smallest singular value of the boundary part B of an orthonormal basis of the span of [B; C]: zero at an exponent"""
+    A = np.vstack((B, C))
     U, s, _ = np.linalg.svd(A / np.linalg.norm(A, axis=0), full_matrices=False)
     return np.linalg.svd(U[:len(B), s > 1e-12 * s[0]], compute_uv=False)[-1]
 
 
-def exponents(sigma, lo, hi, step, tol=None):
+def minima(sigma, lo, hi, step, tol=None):
     """
     Local minima of sigma(nu) on a grid in (lo, hi), refined (integers are skipped);
     with tol, only those that reach below tol times the median of sigma
@@ -103,10 +104,11 @@ class EllipticCone:
         return np.column_stack(cols)
 
     def exponents(self, sy, sz, neumann=False, hi=3.6):
+        """Exponents nu (Dirichlet) or tau (neumann=True) of the class (sy, sz), below hi"""
         def sigma(nu):
             B = self.columns(nu, self.xb, sy, sz, self.nb if neumann else None)
             return smallest_sigma(B / np.sqrt(len(B)), self.columns(nu, self.xi, sy, sz) / np.sqrt(len(self.xi)))
-        return exponents(sigma, 0.02, hi + 1e-9, 0.02, tol=1e-3)
+        return minima(sigma, 0.02, hi + 1e-9, 0.02, tol=1e-3)
 
 
 class CubeVertex:
@@ -152,9 +154,10 @@ class CubeVertex:
         return np.column_stack(out)
 
     def exponents(self, neumann=False):
+        """Exponents nu (Dirichlet) or tau (neumann=True) of the vertex, below 2.6"""
         def sigma(nu):
             # Neumann rows are weighted by the distance to the corner, where the normal derivative grows like 1/distance
             wb = np.sqrt(self.wb) * (self.rho if neumann else 1.0)
             B = self.columns(nu, self.xb, self.nb if neumann else None) * wb[:, None]
             return smallest_sigma(B, self.columns(nu, self.xi) / np.sqrt(len(self.xi)))
-        return exponents(sigma, 0.06, 2.6, 0.04)
+        return minima(sigma, 0.06, 2.6, 0.04)

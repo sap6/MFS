@@ -54,11 +54,13 @@ if "--run" in sys.argv:
             t0 = time.time()
             sol = torus.scatter(K, d, p, ns, nphi)
             E, t = sol.field(pts), time.time() - t0                  # the checks below are not timed
-            rows.append((3 * ns * nphi, t, rel(E, Eref), torus.residual(sol, d, p), torus.optical(sol, d, p)[1], np.linalg.norm(sol.alpha)))
+            checks = (torus.residual(sol, d, p), torus.optical(sol, d, p)[1], np.linalg.norm(sol.alpha))
+            rows.append((3 * ns * nphi, t, rel(E, Eref), *checks))
         bems = [(N, t, rel(E, Eref)) for n in (12, 20, 28, 40, 56, 80, 112, 160, 224)
-                for (E, N, _), t in [timed(bem.torus, n, K, d, p, pts)]]
+                for (E, N), t in [timed(bem.torus, n, K, d, p, pts)]]
         ext, opt = torus.optical(ref, d, p)
-        np.savez(data("cost_torus.npz"), ref=[3 * 56 * 240, torus.residual(ref, d, p), opt, ext], mfs=np.array(rows), bem=np.array(bems))
+        np.savez(data("cost_torus.npz"), ref=[3 * 56 * 240, torus.residual(ref, d, p), opt, ext],
+                 mfs=np.array(rows), bem=np.array(bems))
     elif shape == "almond":
         # Nose-on at 1.19 GHz, 400 points on the sphere of radius 0.3 m; the layout 8:5 is the reference
         k = 2 * np.pi * 1.19e9 / almond.C0
@@ -80,32 +82,32 @@ if "--run" in sys.argv:
 plt.rcParams["font.size"] = 8.5
 fig, axs = plt.subplots(2, 2, figsize=(7.4, 5.4))
 ax = axs[0, 0]
-d = np.load(data("cost_sphere.npz"))
-curve(ax, d["mfs"][:, 1], d["mfs"][:, 2], BLUE, "o", "-", "MFS")
-curve(ax, d["bem"][:, 1], d["bem"][:, 2], ORANGE, "D", "-.", "Bempp")
+res = np.load(data("cost_sphere.npz"))
+curve(ax, res["mfs"][:, 1], res["mfs"][:, 2], BLUE, "o", "-", "MFS")
+curve(ax, res["bem"][:, 1], res["bem"][:, 2], ORANGE, "D", "-.", "Bempp")
 ax.set_title("(a) sphere, two wavelengths across (against Mie)", loc="left", fontsize=8.5)
 
 ax = axs[0, 1]
-d = np.load(data("cost_torus.npz"))
-curve(ax, d["mfs"][:, 1], d["mfs"][:, 2], BLUE, "o", "-", "MFS")
-curve(ax, d["bem"][:, 1], d["bem"][:, 2], ORANGE, "D", "-.", "Bempp, with symmetry")
+res = np.load(data("cost_torus.npz"))
+curve(ax, res["mfs"][:, 1], res["mfs"][:, 2], BLUE, "o", "-", "MFS")
+curve(ax, res["bem"][:, 1], res["bem"][:, 2], ORANGE, "D", "-.", "Bempp, with symmetry")
 ax.set_title("(b) torus", loc="left", fontsize=8.5)
 
 ax = axs[1, 0]
-d = np.load(data("cost_almond.npz"))
-ref = d[f"mfs_E{len(d['mfs']) - 1}"]
-curve(ax, d["mfs"][:-1, 2], [rel(d[f"mfs_E{i}"], ref) for i in range(len(d["mfs"]) - 1)], BLUE, "o", "-", "MFS")
-curve(ax, d["bem"][:, 1], [rel(d[f"bem_E{i}"], ref) for i in range(len(d["bem"]))], ORANGE, "D", "-.", "Bempp, with symmetry")
+res = np.load(data("cost_almond.npz"))
+ref = res[f"mfs_E{len(res['mfs']) - 1}"]
+curve(ax, res["mfs"][:-1, 2], [rel(res[f"mfs_E{i}"], ref) for i in range(len(res["mfs"]) - 1)], BLUE, "o", "-", "MFS")
+curve(ax, res["bem"][:, 1], [rel(res[f"bem_E{i}"], ref) for i in range(len(res["bem"]))], ORANGE, "D", "-.", "Bempp, with symmetry")
 ax.set_title("(c) almond, 1.19 GHz, nose-on", loc="left", fontsize=8.5)
 ax.set_xticks([2, 5, 10, 20])
 ax.xaxis.set_major_formatter(matplotlib.ticker.FuncFormatter(lambda v, pos: f"{v:g}"))
 
 ax = axs[1, 1]
-d = np.load(data("cube_convergence.npz"))
-ref, jref = d["ref_E"], int(d["ref_info"][0])
+res = np.load(data("cube_convergence.npz"))
+ref, jref = res["ref_E"], int(res["ref_info"][0])
 for key, col, mk, ls, lab in (("dense", BLUE, "o", "-", "MFS"), ("tail", NAVY, "h", (0, (6, 1.5)), "MFS, one depth per octave")):
-    rows = [r for r in d[key] if r[0] >= 4 and not (key == "dense" and int(r[0]) == jref)]
-    curve(ax, [r[1] for r in rows], [rel(d[f"{key}_E{int(r[0])}"], ref) for r in rows], col, mk, ls, lab)
+    rows = [r for r in res[key] if r[0] >= 4 and not (key == "dense" and int(r[0]) == jref)]
+    curve(ax, [r[1] for r in rows], [rel(res[f"{key}_E{int(r[0])}"], ref) for r in rows], col, mk, ls, lab)
 u = np.load(data("cube_bempp_uniform.npz"))
 keep = u["ndof"] > 1000
 curve(ax, u["t"][keep], [rel(E, ref) for E in u["E"][keep]], ORANGE, "D", "-.", "Bempp, quasi-uniform")

@@ -44,13 +44,13 @@ write("cube_mfs_short", [f"    {int(J)} & {int(unk) // 2} & {int(rows)} & {tm(t)
 s, t, a = np.load(data("cost_sphere.npz")), np.load(data("cost_torus.npz")), np.load(data("cost_almond.npz"))
 aref = a[f"mfs_E{len(a['mfs']) - 1}"]
 nb = len(a["bem"]) - 1
-write("summary", [f"    Sphere & MFS & {int(r[0])} & {tm(r[1])} & {sci(r[2])} \\\\" if i == 0 else f"     & MFS & {int(r[0])} & {tm(r[1])} & {sci(r[2])} \\\\"
-                  for i, r in enumerate(r for r in s["mfs"] if int(r[0]) in (1200, 3600))] +
-      [f"     & Bempp & {int(s['bem'][-1][0])} & {tm(s['bem'][-1][1])} & {sci(s['bem'][-1][2])} \\\\", "    \\midrule"] +
-      [f"    Torus & MFS & {int(r[0])} & {tm(r[1])} & {sci(r[2])} \\\\" for r in t["mfs"] if int(r[0]) == 21120] +
-      [f"     & Bempp & {int(t['bem'][-1][0])} & {tm(t['bem'][-1][1])} & {sci(t['bem'][-1][2])} \\\\", "    \\midrule",
-       f"    Almond & MFS $6{{:}}3$ & {int(a['mfs'][3][1])} & {tm(a['mfs'][3][2])} & {sci(rel(a['mfs_E3'], aref))} \\\\",
-       f"     & Bempp & {int(a['bem'][nb][0])} & {tm(a['bem'][nb][1])} & {sci(rel(a[f'bem_E{nb}'], aref))} \\\\"])
+row = lambda shape, method, unk, time, err: f"    {shape} & {method} & {int(unk)} & {tm(time)} & {sci(err)} \\\\"
+sphere_mfs = [r for r in s["mfs"] if int(r[0]) in (1200, 3600)]
+write("summary", [row("Sphere", "MFS", *sphere_mfs[0]), row("", "MFS", *sphere_mfs[1]), row("", "Bempp", *s["bem"][-1][:3]),
+                  "    \\midrule", *[row("Torus", "MFS", *r[:3]) for r in t["mfs"] if int(r[0]) == 21120],
+                  row("", "Bempp", *t["bem"][-1][:3]), "    \\midrule",
+                  row("Almond", "MFS $6{:}3$", a["mfs"][3][1], a["mfs"][3][2], rel(a["mfs_E3"], aref)),
+                  row("", "Bempp", a["bem"][nb][0], a["bem"][nb][1], rel(a[f"bem_E{nb}"], aref))])
 
 # Table 5: both ends of the cube comparison. Time for an error of about 1e-3 (at most 1.2e-3);
 # Bempp's most accurate run (the end of its lower envelope) and the first MFS level below it

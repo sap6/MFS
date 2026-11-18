@@ -4,21 +4,18 @@ Figures 3 and 8: the source layouts of the cube and of the almond.
     python figures/layouts.py
 """
 import numpy as np
-from style import BLUE, GREEN, HERE, INK, MUTED, ORANGE, plt
+from style import BLUE, BODY, GREEN, INK, MUTED, ORANGE, finish, plt
 
-from mfs import almond as a
-from mfs import cube as mc
-
-BODY = "#eeedea"
+from mfs import almond, cube
 
 
-def cube(J=6, fname="fig_cube_layout"):
+def cube_layout(J=6, fname="fig_cube_layout"):
     """Figure 3: the source layout of the cube at level J"""
-    H = mc.H
-    depths = 0.2 * 2.0 ** (-0.5 * np.arange(2 * J + 1))            # two depths per octave, as in cube_mfs.dense
+    H, layout = cube.H, cube.Cube(J, classes=[])                   # the layout of the paper, not assembled
+    depths = layout.depths
     tail = depths[-1] * 0.5 ** np.arange(1, 10)
     fig, axs = plt.subplots(1, 3, figsize=(7.4, 3.0), gridspec_kw=dict(width_ratios=[1, 1, 1.05]))
-    # (a) cross-section of the cube through the middle of an edge, corner region
+    # (a) Cross-section of the cube through the middle of an edge, corner region
     ax = axs[0]
     ax.fill([0, H, H, 0], [0, 0, H, H], color=BODY, lw=0)
     ax.plot([0, H, H], [H, H, 0], color=INK, lw=1.2)
@@ -30,8 +27,7 @@ def cube(J=6, fname="fig_cube_layout"):
     s = s[s > 0]
     ax.plot(s, np.full_like(s, H - 0.2), "s", color=GREEN, ms=3.5, mec="white", mew=0.4, label="base points")
     ax.plot(np.full_like(s, H - 0.2), s, "s", color=GREEN, ms=3.5, mec="white", mew=0.4)
-    nodes, _ = mc.graded_nodes(8, 4)               # four nodes per panel, hmax = 0.1
-    nodes = nodes[nodes > 0]
+    nodes = np.unique(layout.x[layout.x[:, 0] < H, 0])            # the boundary points along one face
     ax.plot(nodes, np.full_like(nodes, H), "|", color=INK, ms=5, mew=0.6, label="boundary points")
     ax.plot(np.full_like(nodes, H), nodes, "_", color=INK, ms=5, mew=0.6)
     ax.text(0.085, 0.115, "bisector plane", fontsize=7.5, color=MUTED, rotation=45, rotation_mode="anchor")
@@ -39,7 +35,7 @@ def cube(J=6, fname="fig_cube_layout"):
     ax.set_title("(a) section through an edge", loc="left", fontsize=8.5)
     ax.legend(frameon=False, fontsize=7, loc="upper center", bbox_to_anchor=(0.5, -0.3), ncol=2, handletextpad=0.3,
               columnspacing=0.8)
-    # (b) the same on a logarithmic scale of the depth
+    # (b) The same on a logarithmic scale of the depth
     ax = axs[1]
     ax.plot(depths, np.zeros_like(depths), "o", color=BLUE, ms=4.5, mec="white", mew=0.5)
     ax.plot(tail, np.zeros_like(tail), "o", mfc="white", mec=ORANGE, ms=3.5, mew=0.8)
@@ -51,7 +47,7 @@ def cube(J=6, fname="fig_cube_layout"):
     ax.set(xscale="log", xlim=(3e-6, 0.5), ylim=(-0.5, 0.5), yticks=[], xlabel="depth below the edge")
     ax.spines["left"].set_visible(False)
     ax.set_title("(b) depths on the bisector", loc="left", fontsize=8.5)
-    # (c) stretched variable along a line
+    # (c) The stretched variable along a line
     ax = axs[2]
     u = np.linspace(-1, 1, 400)
     for d, ls, col in ((0.2, "-", GREEN), (0.2 / 16, "--", BLUE), (0.2 / 256, "-.", ORANGE)):
@@ -62,31 +58,26 @@ def cube(J=6, fname="fig_cube_layout"):
     ax.axhline(-H, color=MUTED, lw=0.5, ls=":")
     ax.legend(frameon=False, fontsize=7, loc="lower right", handlelength=1.8)
     ax.set_title("(c) parameter of a line", loc="left", fontsize=8.5)
-    for ax in axs:
-        for sp in ("top", "right"):
-            ax.spines[sp].set_visible(False)
-    fig.tight_layout(w_pad=1.0)
-    for ext in ("pdf", "png"):
-        fig.savefig(f"{HERE}/{fname}.{ext}", dpi=200, bbox_inches="tight")
+    finish(fig, axs, fname, grid=False, tight="tight")
 
 
-def almond(n_mid=6, J=3, fname="fig_almond_layout"):
+def almond_layout(n_mid=6, n_F=3, fname="fig_almond_layout"):
     """Figure 8: the source layout of the almond, n_mid:n_F = 6:3"""
-    y = a.source_rows(n_mid, J)
-    tpts, row, rr = a.tip_tail(n_mid, J)
-    L = a.L
+    y = almond.source_rows(n_mid, n_F)
+    tpts, row, rr = almond.tip_tail(n_mid, n_F)
+    L = almond.L
     # Outline of the mid-plane section: the front half from semi_axes(), the rear half an ellipse
     xf = np.linspace(0, L * 0.58333, 400)
-    af = a.semi_axes(xf)[0]
+    af = almond.semi_axes(xf)[0]
     psi = np.linspace(0, np.pi / 2, 200)
-    xr, ar = -a.A_ * np.sin(psi), a.B_ * np.cos(psi)
+    xr, ar = -almond.A_ * np.sin(psi), almond.B_ * np.cos(psi)
     X = np.concatenate((xr[::-1], xf)) * 1e3
     Y = np.concatenate((ar[::-1], af)) * 1e3
     fig, axs = plt.subplots(1, 2, figsize=(7.4, 2.5), gridspec_kw=dict(width_ratios=[2.3, 1]))
     ax = axs[0]
     ax.fill_between(X, 0, Y, color=BODY, lw=0)
     ax.plot(X, Y, color=INK, lw=1.2)
-    ax.plot(X, a.ETA_F * Y, color=ORANGE, lw=0.9, ls=(0, (4, 2)), label="focal curve")
+    ax.plot(X, almond.ETA_F * Y, color=ORANGE, lw=0.9, ls=(0, (4, 2)), label="focal curve")
     ax.plot(y[:, 0] * 1e3, y[:, 1] * 1e3, ".", color=BLUE, ms=2.2, label="sources")
     ax.set(xlabel="$x$ [mm]", ylabel="$y$ [mm]", aspect="equal", ylim=(0, 62))
     ax.legend(frameon=False, fontsize=7.5, loc="upper right", markerscale=2.5)
@@ -97,20 +88,15 @@ def almond(n_mid=6, J=3, fname="fig_almond_layout"):
     sel = X > x0 - 6.5
     ax.fill_between(X[sel] - x0, 0, Y[sel], color=BODY, lw=0)
     ax.plot(X[sel] - x0, Y[sel], color=INK, lw=1.2)
-    ax.plot(X[sel] - x0, a.ETA_F * Y[sel], color=ORANGE, lw=0.9, ls=(0, (4, 2)))
+    ax.plot(X[sel] - x0, almond.ETA_F * Y[sel], color=ORANGE, lw=0.9, ls=(0, (4, 2)))
     near = y[:, 0] * 1e3 > x0 - 6.5
     ax.plot(y[near, 0] * 1e3 - x0, y[near, 1] * 1e3, ".", color=BLUE, ms=3, label="free")
     ax.plot(tpts[:, 0] * 1e3 - x0, tpts[:, 1] * 1e3, "o", mfc="white", mec=ORANGE, ms=2.2, mew=0.5, label="tail")
     ax.set(xlabel="distance from the tip [mm]", xlim=(-6, 0.3), ylim=(0, 3.4))
     ax.legend(frameon=False, fontsize=7.5, loc="upper right", markerscale=1.6)
     ax.set_title("(b) the tip", loc="left", fontsize=8.5)
-    for ax in axs:
-        for sp in ("top", "right"):
-            ax.spines[sp].set_visible(False)
-    fig.tight_layout(w_pad=1.0)
-    for ext in ("pdf", "png"):
-        fig.savefig(f"{HERE}/{fname}.{ext}", dpi=200, bbox_inches="tight")
+    finish(fig, axs, fname, grid=False, tight="tight")
 
 
-cube()
-almond()
+cube_layout()
+almond_layout()

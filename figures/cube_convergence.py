@@ -10,7 +10,7 @@ import sys
 import time
 
 import numpy as np
-from style import BLUE, GREEN, HERE, MUTED, NAVY, ORANGE, PURPLE, RUST, data, plt, rel
+from style import BLUE, GREEN, MUTED, NAVY, ORANGE, PURPLE, RUST, data, finish, plt, rel
 
 from mfs import core, cube
 
@@ -40,12 +40,13 @@ if "--run" in sys.argv:
         t0 = time.time()
         E, N = bem.efie(bempp.shapes.cube(length=1, origin=(-0.5, -0.5, -0.5), h=h), 2 * np.pi, *core.wave(), pts)
         rows.append((N, time.time() - t0, E, h))
-    np.savez(data("cube_bempp_uniform.npz"), ndof=[r[0] for r in rows], t=[r[1] for r in rows], E=[r[2] for r in rows], h=[r[3] for r in rows])
+    ndof, t, E, h = zip(*rows)
+    np.savez(data("cube_bempp_uniform.npz"), ndof=ndof, t=t, E=E, h=h)
 
 # Errors against the reference, as a function of the unknowns of the whole cube
-d = np.load(data("cube_convergence.npz"))
-ref, jref = d["ref_E"], int(d["ref_info"][0])
-curves = {name: np.array([(4 * r[2], rel(d[f"{name}_E{int(r[0])}"], ref)) for r in d[name]
+res = np.load(data("cube_convergence.npz"))
+ref, jref = res["ref_E"], int(res["ref_info"][0])
+curves = {name: np.array([(4 * r[2], rel(res[f"{name}_E{int(r[0])}"], ref)) for r in res[name]
                           if (name not in ("tail", "dense") or r[0] >= 4) and not (name == "dense" and int(r[0]) == jref)])
           for name in ("dense", "tail", "notail", "plain")}
 u = np.load(data("cube_bempp_uniform.npz"))
@@ -65,7 +66,8 @@ print(f"error = {np.exp(p[1]):.3g} exp({p[0]:.4f} sqrt(N_u)), largest deviation 
 fig, ax = plt.subplots(figsize=(6.0, 4.4))
 xs = np.array([np.sqrt(curves["dense"][0, 0]) - 4, np.sqrt(curves["dense"][-1, 0]) + 8])
 ax.semilogy(xs, np.exp(np.polyval(p, xs)), color=MUTED, lw=0.8, zorder=1)
-ax.annotate(rf"${np.exp(p[1]):.2f}\,\exp({p[0]:.3f}\sqrt{{N_u}})$", (xs[1] - 42, np.exp(np.polyval(p, xs[1] - 42)) * 3.2), fontsize=8, color=MUTED)
+label = rf"${np.exp(p[1]):.2f}\,\exp({p[0]:.3f}\sqrt{{N_u}})$"
+ax.annotate(label, (xs[1] - 42, np.exp(np.polyval(p, xs[1] - 42)) * 3.2), fontsize=8, color=MUTED)
 for key, (col, mk, ls, label) in {"plain": (PURPLE, "^", ":", "plain MFS (inner cube)"),
                                   "notail": (GREEN, "s", "--", "MFS without the tails"),
                                   "tail": (NAVY, "h", (0, (6, 1.5)), "MFS, one depth per octave"),
@@ -73,13 +75,9 @@ for key, (col, mk, ls, label) in {"plain": (PURPLE, "^", ":", "plain MFS (inner 
                                   "uniform": (ORANGE, "D", "-.", "Bempp, quasi-uniform meshes"),
                                   "graded": (RUST, "X", (0, (3, 1)), "Bempp, graded meshes (best setting per mesh)")}.items():
     v = curves[key]
-    ax.semilogy(np.sqrt(v[:, 0]), v[:, 1], linestyle=ls, color=col, marker=mk, ms=5, lw=1.4, mec="white", mew=0.7, label=label, zorder=3)
+    ax.semilogy(np.sqrt(v[:, 0]), v[:, 1], linestyle=ls, color=col, marker=mk, ms=5, lw=1.4, mec="white", mew=0.7,
+                label=label, zorder=3)
 ax.set_xlabel(r"$\sqrt{N_u}$,  $N_u$ = number of unknowns")
 ax.set_ylabel("relative error of the scattered field")
-ax.grid(True, which="major", color="#e4e3df", lw=0.6)
-for sp in ("top", "right"):
-    ax.spines[sp].set_visible(False)
 ax.legend(frameon=False, fontsize=7.5, loc="upper center", bbox_to_anchor=(0.5, -0.17), ncol=2, columnspacing=1.2)
-fig.tight_layout()
-for ext in ("pdf", "png"):
-    fig.savefig(f"{HERE}/fig_cube_convergence.{ext}", dpi=200, bbox_inches="tight")
+finish(fig, ax, "fig_cube_convergence", tight="tight")

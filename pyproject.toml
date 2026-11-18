@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=61"]
+requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -7,9 +7,10 @@ name = "mfs-maxwell"
 version = "1.0.0"
 description = "The method of fundamental solutions for Maxwell's equations: scattering by a sphere, a torus, a cube and the NASA almond"
 readme = "README.md"
-license = {file = "LICENSE"}
+license = "MIT"
+license-files = ["LICENSE"]
 authors = [{name = "Saptarshi Bandyopadhyay"}, {name = "Timo Betcke"}]
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 dependencies = ["numpy>=1.22", "scipy>=1.8", "numba>=0.56", "matplotlib>=3.5"]
 
 [project.optional-dependencies]

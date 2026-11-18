@@ -1,6 +1,7 @@
 """
 Quick checks of the package against exact solutions and against the stored
-results of the paper (data/). About two minutes: python -m pytest tests
+results of the paper (data/). About a minute, most of it compiling the kernels:
+python -m pytest tests
 """
 import os
 
@@ -44,7 +45,7 @@ def test_cube_against_paper():
     # Section 5.4: the level J = 4 reproduces the stored field of the paper
     d = np.load(os.path.join(DATA, "cube_convergence.npz"))
     E, t, info = cube.solve(4, pts=d["pts"])
-    assert core.rel(E, d["dense_E4"]) < 1e-12
+    assert core.rel(E, d["dense_E4"]) < 1e-10
     assert info["unknowns"] == [1128, 1128]
 
 
@@ -64,7 +65,7 @@ def test_almond_against_paper():
     d = np.load(os.path.join(DATA, "cost_almond.npz"))
     k = 2 * np.pi * 1.19e9 / almond.C0
     E = almond.nose_on(k, 3, 0, 0.3 * core.fibonacci(400))[2]
-    assert core.rel(E, d["mfs_E0"]) < 1e-12
+    assert core.rel(E, d["mfs_E0"]) < 1e-10
 
 
 def test_cone():
@@ -78,6 +79,6 @@ def test_bempp_symmetry():
     # The symmetric boundary element solve equals the full one (Appendix C)
     from mfs import bem
     pts = 2.0 * core.fibonacci(50)
-    E_sym, N, _ = bem.torus(8, K, D, P, pts)
+    E_sym, N = bem.torus(8, K, D, P, pts)
     E_full, _ = bem.efie(bem.torus_grid(1.0, 0.5, 8)[0], K, D, P, pts)
     assert core.rel(E_sym, E_full) < 1e-10

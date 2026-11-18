@@ -13,15 +13,16 @@ parity classes, each solved on a quarter of the body.
 import numpy as np
 from numba import njit, prange
 
-from .core import factor, tangent_basis, sphere_rule
+from .core import cross_sections, factor, sphere_rule, tangent_basis
 
 L = 0.2524                                                  # length [m]
 T0, T1 = -0.416667, 0.58333                                 # rear end and tip, in units of L
 A_, B_, C_ = 0.416667 * L, 0.193333 * L, 0.064444 * L       # semi-axes of the rear half-ellipsoid
 ETA_F = np.sqrt(1 - (C_ / B_) ** 2)                         # focal curve, as a fraction of the half-width (0.943)
-GAP = 1 - ETA_F
+GAP = 1 - ETA_F                                             # from the focal curve to the rim, as a fraction of the half-width
 C0 = 299792458.0                                            # speed of light [m/s]
-REFL = np.array([[1.0, 1, 1], [1, -1, 1], [1, 1, -1], [1, -1, -1]])
+REFL = np.array([[1.0, 1, 1], [1, -1, 1], [1, 1, -1], [1, -1, -1]])   # the images under y → -y and z → -z
+CENTRE = np.array([0.02, 0, 0])                             # a point inside the almond, to orient the normals
 
 # Exponents of the tip cone (half-angles 34.09 and 12.71 degrees) by the parities (y, z) of the
 # potential: electric type E = ∇(r^nu Y), magnetic type H = ∇(r^tau Z) (mfs.cone, Table A.1)
@@ -175,11 +176,11 @@ def tail_matrix(x, tail, k, T, cls, n_e=2, n_m=1):
     comps, _ = parity_class(sy, sz)
     pts, row, rr = tail
     nc = 3 if T is None else 2
+    G = matrix(x, pts, k, T, cls).reshape(len(x) * nc, len(pts), 3)
     cols = []
-    for kind, exps in (("e", [v + 2 for v in CONE_NU[(sy, sz)][:n_e]]), ("m", [v + 2 for v in CONE_TAU[(-sy, -sz)][:n_m]])):
-        sel = comps < 3 if kind == "e" else comps >= 3
-        G = matrix(x, pts, k, T, cls).reshape(len(x) * nc, len(pts), 3)[:, :, sel]
-        cols += [np.einsum("mnc,n->mc", G[:, row == i], rr[row == i] ** e) for i in np.unique(row) for e in exps]
+    # H is a pseudovector, so the potential of the magnetic type has the opposite parities
+    for sel, exps in ((comps < 3, CONE_NU[(sy, sz)][:n_e]), (comps >= 3, CONE_TAU[(-sy, -sz)][:n_m])):
+        cols += [np.einsum("mnc,n->mc", G[:, row == i][:, :, sel], rr[row == i] ** (e + 2)) for i in np.unique(row) for e in exps]
     return np.concatenate(cols, axis=1)
 
 
@@ -211,7 +212,8 @@ def collocation(s=0.35, hmax=0.012, tip_cut=0.002, end_cut=0.02):
         phi += dphi
 
     # Along the body, in the front and in the rear half, with normals by finite differences
-    pts, wts, nrm, e = [], [], [], 1e-7
+    pts, wts, nrm = [], [], []
+    e = 1e-7                                                    # step of the finite differences
     for phi, dphi in zip(phis, dphis):
         for rear in (False, True):
             u, u_end = 0.0, (np.pi / 2 - end_cut) if rear else L * (T1 - tip_cut)
@@ -231,7 +233,7 @@ def collocation(s=0.35, hmax=0.012, tip_cut=0.002, end_cut=0.02):
                 nrm.append(n / np.linalg.norm(n))
                 u += du
     pts, nrm = np.array(pts), np.array(nrm)
-    nrm *= np.sign(np.sum(nrm * (pts - np.array([0.02, 0, 0])), axis=1))[:, None]
+    nrm *= np.sign(np.sum(nrm * (pts - CENTRE), axis=1))[:, None]
     return pts, np.array(wts), nrm
 
 
@@ -279,16 +281,14 @@ def nose_on(k, n_mid, n_F, pts=None):
     """
     The wave along -x (meeting the tip first), polarised along y. It has the parities
     (-1, +1), which carry no current into the tip, so no tail is needed.
-      Returns the coefficients, the field at pts, and the extinction and scattering cross-sections
+      Returns the source points, the coefficients, the field at pts, the extinction and
+      scattering cross-sections (ext, sca), and the shape of the matrix
     """
     d, p = np.array([[-1.0, 0, 0]]), np.array([[0.0, 1, 0]])
     y = source_rows(n_mid, n_F)
-    c, res, shape = solve_class(k, y, (-1, 1), d, p)
+    c, _, shape = solve_class(k, y, (-1, 1), d, p)
     E = None if pts is None else (matrix(pts, y, k) @ c[:, 0]).reshape(-1, 3)
-    dirs, w = sphere_rule(48, 96)
-    F = far(k, y, c[:, 0], np.vstack((dirs, d)), (-1, 1))
-    ext = 4 * np.pi / k * float(np.imag(p[0] @ F[-1]))
-    sca = float(np.sum(w * np.sum(np.abs(F[:-1]) ** 2, axis=1)))
+    ext, sca = cross_sections(lambda dirs: far(k, y, c[:, 0], dirs, (-1, 1)), k, d[0], p[0], sphere_rule(48, 96))
     return y, c[:, 0], E, (ext, sca), shape
 
 
@@ -307,10 +307,12 @@ def rcs(freq, n_mid=6, n_F=3, step=0.5, s=0.5, s_col=0.3):
     phi = np.radians(np.arange(0.0, 180.0 + 1e-9, step))
     d = -np.column_stack((np.cos(phi), np.sin(phi), 0 * phi))
     out = {"phi_deg": np.degrees(phi)}
-    for pol, p, sz in (("HH", np.column_stack((-np.sin(phi), np.cos(phi), 0 * phi)), 1), ("VV", np.tile([0.0, 0, 1], (len(phi), 1)), -1)):
+    p_hh = np.column_stack((-np.sin(phi), np.cos(phi), 0 * phi))     # electric field in the plane of the almond
+    p_vv = np.tile([0.0, 0, 1], (len(phi), 1))                        # electric field along z
+    for pol, p, sz in (("HH", p_hh, 1), ("VV", p_vv, -1)):
         amp = 0
         for sy in (1, -1):
-            c, res, _ = solve_class(k, y, (sy, sz), d, p, tail, s_col)
+            c, _, _ = solve_class(k, y, (sy, sz), d, p, tail, s_col)
             F = far(k, y, c, -d, (sy, sz), tail)                   # (waves, 3, waves): backscatter of wave n is F[n, :, n]
             amp = amp + np.einsum("na,nan->n", p, F)
         out["sigma_" + pol] = 4 * np.pi * np.abs(amp) ** 2

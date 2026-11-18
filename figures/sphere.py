@@ -21,8 +21,9 @@ if "--run" in sys.argv:
     u = core.fibonacci(1500)
     exact, T = mie.scattered_field(1.5 * u, K, d, p), core.tangent_basis(u)
     res = []
-    for sweep, R, N in [("N", R, N) for R in (0.3, 0.5, 0.7, 0.9) for N in (50, 100, 150, 200, 300, 400, 500, 600, 800, 1000, 1200)] + \
-                       [("R", R, 400) for R in np.round(np.linspace(0.1, 0.95, 18), 3)]:
+    Ns = (50, 100, 150, 200, 300, 400, 500, 600, 800, 1000, 1200)
+    runs = [("N", R, N) for R in (0.3, 0.5, 0.7, 0.9) for N in Ns] + [("R", R, 400) for R in np.round(np.linspace(0.1, 0.95, 18), 3)]
+    for sweep, R, N in runs:
         y, alpha = sphere.solve(N, K, R)
         bc = np.einsum("mab,mb->ma", T, core.field(u, y, alpha, K) + core.plane_wave(u, K, d, p))
         res.append(dict(k=K, sweep=sweep, R=float(R), N=N, mid=core.rel(core.field(1.5 * u, y, alpha, K), exact),
@@ -46,7 +47,8 @@ s = sorted((r for r in res if r["sweep"] == "R"), key=lambda r: r["R"])
 R = [r["R"] for r in s]
 ax2.semilogy(R, [r["mid"] for r in s], "-", color=BLUE, marker="o", ms=4.5, lw=1.4, mec="white", mew=0.6, label="error of the field")
 ax2.semilogy(R, [r["bc"] for r in s], "-.", color=ORANGE, marker="D", ms=4.5, lw=1.4, mec="white", mew=0.6, label="boundary residual")
-ax2.semilogy(R, [r["alpha_norm"] for r in s], ":", color=MUTED, marker="s", ms=4, lw=1.2, mec="white", mew=0.5, label="coefficient norm")
+ax2.semilogy(R, [r["alpha_norm"] for r in s], ":", color=MUTED, marker="s", ms=4, lw=1.2, mec="white", mew=0.5,
+             label="coefficient norm")
 ax2.set(xlabel="source radius $R_s$")
 ax2.set_title(rf"$k = 2\pi$, $N = {s[0]['N']}$: dependence on the source radius", loc="left", fontsize=8.5)
 ax2.legend(frameon=False, fontsize=7.5, loc="upper center")

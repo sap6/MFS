@@ -7,9 +7,7 @@ continuations meet on the wall of the skeleton.
 """
 import numpy as np
 from matplotlib.patches import Arc, FancyArrowPatch
-from style import BLUE, HERE, INK, MUTED, ORANGE, plt
-
-BODY = "#eeedea"
+from style import BLUE, BODY, HERE, INK, MUTED, ORANGE, plt
 
 plt.rcParams.update({"mathtext.fontset": "cm"})
 fig, ax = plt.subplots(figsize=(3.3, 3.1))

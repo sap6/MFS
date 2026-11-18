@@ -31,10 +31,10 @@ if "--run" in sys.argv:
     np.savez(data("torus_sources.npz"), **out)
 
 # The figure
-d = np.load(data("torus_sources.npz"))
+res = np.load(data("torus_sources.npz"))
 fig, axes = plt.subplots(1, 2, figsize=(9.4, 3.9))
 for a, (col, mk, ls) in TUBES.items():
-    r = d[f"a{a:g}"]
+    r = res[f"a{a:g}"]
     for ax, j in zip(axes, (1, 2)):
         ax.semilogy(r[:, 0], r[:, j], color=col, marker=mk, ls=ls, lw=1.5, ms=5, label=f"a/R = {a:g}")
         ax.axvline((1 - np.sqrt(1 - a * a)) / a, color=col, lw=0.9, ls=":")

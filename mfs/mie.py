@@ -19,7 +19,8 @@ def radial(n, rho, hankel):
 def scattered_field(pts, k, d, p, a=1.0, nmax=None):
     """
     Scattered field of the sphere
-      pts: points outside the sphere, shape (P, 3)
+      pts : points outside the sphere, shape (P, 3)
+      a   : radius of the sphere; nmax: number of terms (default ka + 4.05 (ka)^{1/3} + 25)
       Returns an array of shape (P, 3)
     """
     d, p = np.asarray(d, float), np.asarray(p, float)

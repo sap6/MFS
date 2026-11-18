@@ -27,7 +27,7 @@ LMOM = 4          # the four coarsest levels use moments (panel widths 2, 1, 1/2
 PM, NG = 12, 8    # nodes of a moment panel and of a Gauss panel, for a line of one wavelength
 LHARD = 40        # deepest level of the descent
 
-_TREES = {}
+_TREES = {}       # the tables of each line, built once by build_tree
 
 
 def _lagrange(tn, t):
@@ -44,12 +44,11 @@ def _lagrange(tn, t):
 
 
 def nodes(k, H):
-    """Nodes per panel (moment panels, Gauss panels) for wavenumber k and
-    lines of length up to 2 H. A panel is accepted when its length is at most
-    its distance from the target, so the kernel phase varies along the coarsest
-    panels in proportion to k H, and the rule must grow with it: 12 / 8 nodes
-    are converged (1e-8 in the cube fields) at one wavelength, but give an
-    error of 5e-3 at three wavelengths, where 20 / 10 are needed."""
+    """
+    Nodes per panel (moment panels, Gauss panels) for wavenumber k and lines of length up to 2H.
+    The kernel phase along the coarsest panels grows like kH: 12 / 8 nodes at one wavelength
+    (the cube fields change by 1e-8 with more), 20 / 10 at two and 28 / 12 at three (Appendix B)
+    """
     s = max(0.0, k * 2 * H / (2 * np.pi) - 1.0)          # wavelengths per edge, minus one
     return int(np.ceil(PM + 8 * s)), int(np.ceil(NG + 2 * s))
 
@@ -60,19 +59,19 @@ def build_tree(lam, d, n, H, k):
     tabulated down to panels of length about d in the middle of the line
     """
     ltab = int(min(max(LMOM + 2, np.ceil(np.log2(lam / (2.0 * d)))), 12))
-    PM, NG = nodes(k, H)
-    key = (round(lam, 12), round(d, 15), n, ltab, PM, NG)
+    pm, ng = nodes(k, H)
+    key = (round(lam, 12), round(d, 15), n, ltab, pm, ng)
     if key in _TREES:
         return _TREES[key]
     leg = np.polynomial.legendre
-    gm, gwm = leg.leggauss(PM)
-    gg, gwg = leg.leggauss(NG)
-    gf, gwf = leg.leggauss(16)
+    gm, _ = leg.leggauss(pm)
+    gg, gwg = leg.leggauss(ng)
+    gf, gwf = leg.leggauss(16)                           # fine rule for the exact moments
     npan = 2 ** (ltab + 1) - 1
     off = np.zeros(npan + 1, np.int64)
     tlo, thi = np.empty(npan), np.empty(npan)
     ts, Ws = [], []
-    p = 0
+    p = 0                                                # index of the first panel of the level
     for lev in range(ltab + 1):
         m = 2 ** lev
         ulo = -1.0 + 2.0 * np.arange(m) / m
@@ -80,24 +79,26 @@ def build_tree(lam, d, n, H, k):
         a, b = H * np.tanh(0.5 * lam * ulo), H * np.tanh(0.5 * lam * uhi)
         tlo[p:p + m], thi[p:p + m] = a, b
         if lev < LMOM:
+            # Moment panels: pm Gauss nodes in t, weights = moments of the Lagrange polynomials against the modes
             for i in range(m):
                 tn = 0.5 * (a[i] + b[i]) + 0.5 * (b[i] - a[i]) * gm
-                nsub = max(8, int(np.ceil((uhi[i] - ulo[i]) / 0.03125)))
+                nsub = max(8, int(np.ceil((uhi[i] - ulo[i]) / 0.03125)))   # sub-intervals of width at most 1/32 in u
                 e = np.linspace(ulo[i], uhi[i], nsub + 1)
                 u = (0.5 * (e[:-1] + e[1:])[:, None] + 0.5 * (e[1:] - e[:-1])[:, None] * gf).ravel()
                 w = (0.5 * (e[1:] - e[:-1])[:, None] * gwf).ravel()
                 w = w * H * 0.5 * lam / np.cosh(0.5 * lam * u) ** 2 / d
-                L = _lagrange(tn, H * np.tanh(0.5 * lam * u))                 # (fine, PM)
+                L = _lagrange(tn, H * np.tanh(0.5 * lam * u))                 # (fine, pm)
                 V = leg.legvander(u, n - 1)                                   # (fine, n)
                 ts.append(tn)
                 Ws.append(L.T @ (V * w[:, None]))
-                off[p + i + 1] = off[p + i] + PM
+                off[p + i + 1] = off[p + i] + pm
         else:
-            u = 0.5 * (ulo + uhi)[:, None] + 0.5 * (uhi - ulo)[:, None] * gg  # (m, NG)
+            # Gauss panels: ng nodes in u, weights = the modes times dt/du
+            u = 0.5 * (ulo + uhi)[:, None] + 0.5 * (uhi - ulo)[:, None] * gg  # (m, ng)
             w = 0.5 * (uhi - ulo)[:, None] * gwg * H * 0.5 * lam / np.cosh(0.5 * lam * u) ** 2 / d
             ts.append((H * np.tanh(0.5 * lam * u)).ravel())
             Ws.append(leg.legvander(u.ravel(), n - 1) * w.ravel()[:, None])
-            off[p + 1:p + m + 1] = off[p] + NG * np.arange(1, m + 1)
+            off[p + 1:p + m + 1] = off[p] + ng * np.arange(1, m + 1)
         p += m
     out = (np.ascontiguousarray(np.concatenate(ts)), np.ascontiguousarray(np.vstack(Ws)), off, tlo, thi, ltab, gg, gwg)
     _TREES[key] = out
