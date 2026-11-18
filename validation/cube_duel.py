@@ -32,7 +32,7 @@ if __name__ == "__main__":
     mfs = [("tail", int(r[0]), "balanced") for r in d["tail"]] + [("dense", int(r[0]), "dense") for r in d["dense"] if int(r[0]) != jref]
     fin = np.load("bem_grading_scan_k1_final.npz")
     rows = [tuple(r) for r in fin["all"]]
-    cand = [r for r in rows if r[6] < 2.5e-3 and not any(q[5] <= 0.8 * r[5] and q[6] <= r[6] for q in rows)]
+    cand = [r for r in rows if r[6] < 2.5e-3 and not any(q[5] <= 0.5 * r[5] and q[6] <= r[6] for q in rows)]
     for N in sorted({r[4] for r in rows}):              # and the most accurate run on each mesh (fig_cube_convergence.py)
         best = min((r for r in rows if r[4] == N), key=lambda r: r[6])
         if best not in cand:

@@ -28,125 +28,57 @@ tangential E_sc = -tangential E_inc on the surface, least-squares collocation.
 - Nothing was ever pushed to `sap6/mfs-paper`; it is still the thesis text
   (commit 4f8731f).
 
-### Seventh session, starting 2026-11-18 (READ THIS FIRST, then act on it)
+### Seventh session, 2026-11-18 (READ THIS FIRST)
 
-The author cleared the conversation after the sixth session and said:
-"save my answers somewhere accessible and continue after the /clear".
-Nothing is running; everything is committed and pushed (last commit of
-the sixth session: "Notes: instructions for the seventh session"). The
-paper is `paper/main.tex` (37 preprint pages, 22 in the journal layout),
-state in items 64-70 below.
+**Standing instruction (the author, verbatim, 17 Nov):** "don't stop unless
+I explicitly say, as I'm working on other projects this week. [...] You can
+always keep improving and polishing the paper/code/results/etc. or
+simplifying things that are too complex." Do not end a turn to report or
+to ask. A wake-up message cannot be scheduled in this session, so wait for
+long jobs inside the turn (`timeout 590 sh -c 'while pgrep -f ...; do
+sleep 15; done'`). The author reads on a phone, where only the last
+message of a turn is shown in full: send PDFs and lists as files.
 
-**Standing instruction (the author, verbatim):** "you stopped, and I said
-'don't stop unless I explicitly say, as I'm working on other projects this
-week'. Please follow this next time. You can always keep improving and
-polishing the paper/code/results/etc. or simplifying things that are too
-complex." So: do not end a turn to report or to ask. Work through the
-plan below, then keep polishing and simplifying. Keep this block and the
-task list current as you go, commit and push often. A wake-up message cannot be
-scheduled for this session (tried on 18 Nov: refused), so the only way to
-keep going is not to end the turn: wait for long jobs inside the turn
-(`timeout 590 sh -c 'while pgrep -f ...; do sleep 15; done'`) and go on
-to the next item of the plan. The author
-reads on a phone, where only the last message of a turn is shown in
-full: send PDFs and anything with a list as a file.
+**The author's message that opened this session (18 Nov, verbatim):**
+"continue. when you say you can make MFS better there and utilise
+symmetry, make sure it's not something that you're not doing for BEM. The
+idea is that we're comparing the best for both. Otherwise we'd be in a
+cycle of making MFS better, then making it fair to BEM by optimising
+that, etc etc. titles: think about it, we can change later. shapes: if
+they're easy to mesh, that's not really what I want. I want to show
+clearly a geometry where it's vastly advantageous to use a meshless method
+rather than a mesh based one like BEM. If a popular geometry like that
+exists."
 
-**The author's answers of 18 Nov (verbatim), and what each means:**
+**The rule that follows (keep it): every symmetry or speed-up goes into
+both codes or into neither.** State of it after this session (items
+71-72): on the cube both use the three mirror planes and the rotation
+about the body diagonal; on the torus and the almond Bempp now uses the
+mirror planes too (`bem_mirror.py`); the torus MFS also uses the
+rotational symmetry, which Bempp cannot, and the figure shows the MFS
+without it as a second curve; the sphere uses no symmetry in either.
+T26 (the 48 symmetries of the cube in the assembly) stays untouched in
+both.
 
-1. "'Cube, wave from a general direction: Bempp is faster at every
-   accuracy where I ran both.' This stood out to me, I think this
-   weakens our paper. Can we not do anything to improve this?"
-   -> **Plan A.** The MFS pays for eight factorisations. Six of the eight
-   parity classes are images of two others under the rotation about a
-   body diagonal (the cyclic permutation of the axes): (+,+,-), (+,-,+),
-   (-,+,+) are one triple and (+,-,-), (-,+,-), (-,-,+) another, so only
-   FOUR different matrices exist: (+,+,+), (-,-,-) and one of each
-   triple. No bookkeeping of permuted unknowns is needed: if c' = R(c),
-   the c'-part of the wave (d, p) is R applied to the c-part of the wave
-   (R^T d, R^T p), so E_sc^{c'}(x) = R E_sc^{c}[wave (R^T d, R^T p)](R^T x):
-   solve class c with the rotated wave, evaluate at the rotated points,
-   rotate the vector back. In `cube_mfs.run` this is a loop over at most
-   four classes with up to three right-hand sides each (about 20 lines);
-   check against the direct eight-class solve at J = 4 (fields equal to
-   1e-10). Expected: J = 8, general wave, 94.5 s -> about 55 s (four
-   factorisations, and the four matrices fit in memory together, so the
-   kernel work is not repeated), which would be level with Bempp (57 s
-   for 1.44e-4). One sentence in the paper. Then `python3 cube_cases.py
-   k1o 2`, figures, tables, Sections 5.5 and 7.2. Bempp's symmetric
-   solve is dominated by assembly, so it gains little from the same
-   trick; say so if it is used only on our side, or test it.
-2. "'a shape that is hard to mesh is also hard for the MFS' Are you
-   sure? Then what's the advantage of it being mesh-free? Does BEM
-   struggle with ogive, cone-sphere, etc.? Can give it a try? If we get
-   great results, could show them."
-   -> **Plan D.** Try the EMCC ogive first (Woo et al. 1993, the paper
-   of the NASA almond). From memory, verify before quoting: single
-   ogive, half-angle 22.62 deg, half-length 5 in, largest radius 1 in;
-   radius f(t) = [sqrt(1 - (t/5)^2 sin^2(22.62 deg)) - cos(22.62 deg)] /
-   (1 - cos(22.62 deg)) inches for |t| < 5 in, i.e. a circular arc of
-   radius 13 in rotated about its chord; benchmark frequencies 1.18 and
-   9 GHz. Idea: it is a body of revolution, so generalise the torus
-   solver (`pec_torus.py`: rings of dipoles, solved mode by mode about
-   the axis) to any meridian curve; source rings on an inner surface at
-   a fraction eta of the local radius, spaced in proportion to the
-   distance from the nearer tip, and a tail at each tip with the
-   exponents of the circular cone (`cone_exponents.py` reproduces them
-   to eight digits). Where the continued field is singular: probably
-   only at the tips and on the axis between them (continuation through
-   a circular arc is regular in the whole lens in 2D); test in 2D first
-   (a lens of two circular arcs) as the rules ask. Reference: Bempp and
-   self-convergence (no digitised measurements are in the repository).
-   If the result is as clear as for the almond, add a short section and
-   cut elsewhere; the cone-sphere (cone half-angle 7 deg, sphere cap)
-   only if the ogive works. Also give the author a straight answer on
-   "what is the advantage of mesh-free": no mesh and no singular
-   integrals, spectral accuracy, the field can be evaluated up to the
-   surface; the price is that one must know where the continued field
-   is singular, which is possible for bodies made of analytic pieces
-   (sphere, torus, ogive, almond, polyhedra) and not for an arbitrary
-   CAD shape.
-3. "arxiv shouldn't be blocked, I didn't change anything regarding
-   that." -> True: `curl https://arxiv.org/abs/...` returns 200; only
-   the page-fetch tool fails. **Plan F**: fetch arXiv 1309.2042
-   (Khavinson and Lundberg) with curl, check the sentence in Section 4.2
-   against it, remove the TODO, update `LITERATURE.md` section 11.
-4. "appendices are fine."
-5. "title needs work" -> **Plan E**: the current title ("The Method of
-   Fundamental Solutions for Maxwell's Equations") is accepted only as
-   "fine, if a bit basic". Thirteen candidates were offered so far (item
-   64); the least disliked were plain. Offer a new, better set in the
-   final message or as an image (lists sent mid-turn do not reach the
-   phone). Directions not yet tried: "mesh-free", "to high accuracy",
-   the question form ("Where should the sources go?"), "smooth bodies,
-   edges and tips" without a colon.
-6. "three wavelengths: if it can be explained easily, then maybe worth
-   doing? maybe see if the results are good first?" -> **Plan C** = T30:
-   prototype a line parametrisation that is linear in the middle of the
-   edge and logarithmic only near the vertices (or plain polynomials in
-   t added to the stretched ones); adopt only if the result is good AND
-   the description stays one or two sentences.
-7. "one number doesn't seem too important to keep a whole old cube
-   solver path, right?" -> **Plan B** = T23: delete the old path
-   (`SymSources`, `solve`, `cross_sections`, `test_residual`, `load_bem`,
-   `main` in `pec_cube_lightning3d.py`; `line_kernel.py`) and the
-   scripts that only it serves (`check_tail_exponents.py`, `diag_cube.py`,
-   `cube_speed.py`, `cube_residual_map.py`, `cube_general.py`; check each
-   with grep first). `check_tail_exponents.py` backs the sentence "adding
-   the next term changes the error by less than 1%, lowering two
-   exponents gives 65%" in Section 5.4: either reproduce it with
-   `cube_mfs` (Cube keywords tail_e, tail_er, tail_m, tail_mr) or drop
-   the sentence. `test_line_tree.py` compares the fast quadrature with
-   the adaptive rule: keep it if it does not need the old solver.
-   Regression test after any change of the solver: `cube_duel.py`
-   asserts the stored fields to 1e-9, or run J = 4 and compare with
-   `dense_E4` in `fig_cost_cube.npz`.
+**Done in this session** (details in items 71-76):
+- Plan A: the general wave needs four class matrices instead of eight, in
+  the MFS and in Bempp alike (item 71).
+- Fairness audit: Bempp with mirror symmetry on the torus and the almond;
+  Bempp's fold compiled (item 72).
+- Plan B: the old cube solver path is deleted (item 73).
+- Plan F: Khavinson and Lundberg read from arXiv; sentence corrected, TODO
+  removed (item 74).
+- Shapes: literature search and a prototype on the "cruller"; answer for
+  the author: no popular shape is hard to mesh and easy for the MFS (item
+  75). The ogive of the old Plan D was not tried: it is easy to mesh, which
+  the author ruled out.
+- Plan C / T30: polynomials in t added to the line modes do not cure three
+  wavelengths (item 76).
+- All timings of the paper re-measured on one machine (item 77).
 
-**Order**: A (quick, removes the weak sentence), B, F, then D and C
-(research; D is what the author is most curious about), E in the final
-message, then polish. After every change to the cube solver or its
-timings: `sh time_paper.sh` parts as needed, figures, `make_tables.py`,
-rebuild, and re-read the sentences of Sections 5.5 and 7.2 against the
-data (item 70 lists what a number check found last time).
+**Still open**: title (Plan E, candidates in item 78); the author's pass
+over the text; T20 (Timo); final timing on a fixed machine; copy to
+`sap6/mfs-paper` (ask first).
 
 ### Sixth session, 2026-11-17, evening
 

@@ -89,7 +89,7 @@ if __name__ == "__main__":
     import bempp_cl.api as bempp
     b.K = m.K
     rows = [tuple(r) for r in np.load(f"bem_grading_scan_{case}.npz")["rows"]]
-    cand = [r for r in rows if not any(q[5] <= 0.75 * r[5] and q[6] <= r[6] for q in rows)]
+    cand = [r for r in rows if not any(q[5] <= 0.5 * r[5] and q[6] <= r[6] for q in rows)]      # generous: the scan was timed before the fold was compiled
     cand.sort(key=lambda r: (r[1], r[5]))
     if "CUBE_CASES_TEST" in os.environ:                    # smoke test: two runs of each code
         runs, cand = runs[:2], cand[:2]
