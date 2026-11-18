@@ -61,19 +61,11 @@ def nodes(k, H):
     return int(np.ceil(PM + 8 * s)), int(np.ceil(NG + 2 * s))
 
 
-def modes(u, t, n, n_plain, H):
-    """Values of the n density modes: Legendre polynomials of degree 0 .. n - n_plain - 1 in the
-    stretched variable u, then of degree 1 .. n_plain in t / H (NOTES.md item 71)."""
-    leg = np.polynomial.legendre
-    V = leg.legvander(u, n - n_plain - 1)
-    return np.hstack((V, leg.legvander(t / H, n_plain)[:, 1:])) if n_plain else V
-
-
-def build_tree(lam, d, n, H, ltab, k=2 * np.pi, n_plain=0):
+def build_tree(lam, d, n, H, ltab, k=2 * np.pi):
     """Node positions t, weights W (nodes, n) and panel table of one line
     parametrisation. Panels are stored level by level (heap order)."""
     PM, NG = nodes(k, H)
-    key = (round(lam, 12), round(d, 15), n, n_plain, ltab, PM, NG)
+    key = (round(lam, 12), round(d, 15), n, ltab, PM, NG)
     if key in _TREES:
         return _TREES[key]
     leg = np.polynomial.legendre
@@ -100,7 +92,7 @@ def build_tree(lam, d, n, H, ltab, k=2 * np.pi, n_plain=0):
                 w = (0.5 * (e[1:] - e[:-1])[:, None] * gwf).ravel()
                 w = w * H * 0.5 * lam / np.cosh(0.5 * lam * u) ** 2 / d
                 L = _lagrange(tn, H * np.tanh(0.5 * lam * u))                 # (fine, PM)
-                V = modes(u, H * np.tanh(0.5 * lam * u), n, n_plain, H)       # (fine, n)
+                V = leg.legvander(u, n - 1)                                   # (fine, n)
                 ts.append(tn)
                 Ws.append(L.T @ (V * w[:, None]))
                 off[p + i + 1] = off[p + i] + PM
@@ -108,7 +100,7 @@ def build_tree(lam, d, n, H, ltab, k=2 * np.pi, n_plain=0):
             u = 0.5 * (ulo + uhi)[:, None] + 0.5 * (uhi - ulo)[:, None] * gg  # (m, NG)
             w = 0.5 * (uhi - ulo)[:, None] * gwg * H * 0.5 * lam / np.cosh(0.5 * lam * u) ** 2 / d
             ts.append((H * np.tanh(0.5 * lam * u)).ravel())
-            Ws.append(modes(u.ravel(), ts[-1], n, n_plain, H) * w.ravel()[:, None])
+            Ws.append(leg.legvander(u.ravel(), n - 1) * w.ravel()[:, None])
             off[p + 1:p + m + 1] = off[p] + NG * np.arange(1, m + 1)
         p += m
     out = (np.ascontiguousarray(np.concatenate(ts)), np.ascontiguousarray(np.vstack(Ws)), off, tlo, thi, gg, gwg)
@@ -118,7 +110,7 @@ def build_tree(lam, d, n, H, ltab, k=2 * np.pi, n_plain=0):
 
 @njit(parallel=True, fastmath=True, cache=True)
 def _tree_kernel(x, T, refl, ax, b, c, pos, rot, we, wm, do_e, do_m, tq, W, off, tlo, thi, ltab, lmom,
-                 alpha_m, alpha_g, lhard, g, gw, lam, d, n, nu, k, H, A_e, cmap_e, A_m, cmap_m, sgn):
+                 alpha_m, alpha_g, lhard, g, gw, lam, d, n, k, H, A_e, cmap_e, A_m, cmap_m, sgn):
     """For every target x[m], every image R = refl[r] (a vector of signs) and
     every class s, adds
         sgn[s, r] * (row vectors T[m] * R) . (field at x[m] * R of column j)
@@ -200,16 +192,10 @@ def _tree_kernel(x, T, refl, ax, b, c, pos, rot, we, wm, do_e, do_m, tq, W, off,
                         t = H * (ex - 1.0) / (ex + 1.0)
                         wt = 0.5 * wid * gw[iq] * H * 2.0 * lam * ex / ((ex + 1.0) * (ex + 1.0)) / d
                         Wq[0] = wt
-                        if nu > 1:
+                        if n > 1:
                             Wq[1] = wt * u
-                        for kk in range(2, nu):
+                        for kk in range(2, n):
                             Wq[kk] = ((2 * kk - 1) * u * Wq[kk - 1] - (kk - 1) * Wq[kk - 2]) / kk
-                        if n > nu:                                   # Legendre polynomials of degree 1 .. n - nu in t / H
-                            pa, pb = wt, wt * t / H
-                            Wq[nu] = pb
-                            for kk in range(2, n - nu + 1):
-                                pa, pb = pb, ((2 * kk - 1) * t / H * pb - (kk - 1) * pa) / kk
-                                Wq[nu + kk - 1] = pb
                     for ie in range(nse):
                         for a in range(nc):
                             for cc in range(3):
@@ -314,7 +300,7 @@ def _ltab(lam, d):
     return int(min(max(LMOM + 2, np.ceil(np.log2(lam / (2.0 * d)))), 12))
 
 
-def tree_add(x, T, refl, ax, b, c, pos, lam, d, n, k, H, A, cmap_e, cmap_m, sgn, rot=None, we=None, wm=None, n_plain=0):
+def tree_add(x, T, refl, ax, b, c, pos, lam, d, n, k, H, A, cmap_e, cmap_m, sgn, rot=None, we=None, wm=None):
     """Adds the fields of the electric (cmap_e given) and/or magnetic (cmap_m
     given) line distributions at the positions `pos` ((npos, 2): coordinates
     b, c), all with the parametrisation (lam, d, n), to the class matrices
@@ -327,24 +313,24 @@ def tree_add(x, T, refl, ax, b, c, pos, lam, d, n, k, H, A, cmap_e, cmap_m, sgn,
     (1, nc, 3) row vectors."""
     pos = np.ascontiguousarray(np.atleast_2d(pos), dtype=float)
     ltab = _ltab(lam, d)
-    tq, W, off, tlo, thi, g, gw = build_tree(lam, d, n, H, ltab, k, n_plain)
+    tq, W, off, tlo, thi, g, gw = build_tree(lam, d, n, H, ltab, k)
     do_e, do_m = cmap_e is not None, cmap_m is not None
     one = np.ones((1, pos.shape[0], 3))
     return _tree_kernel(np.ascontiguousarray(x), np.ascontiguousarray(T), refl, ax, b, c, pos,
                         _EYE if rot is None else np.ascontiguousarray(rot),
                         np.ascontiguousarray(we) if we is not None else one,
                         np.ascontiguousarray(wm) if wm is not None else one,
-                        do_e, do_m, tq, W, off, tlo, thi, ltab, LMOM, ALPHA_M, ALPHA_G, LHARD, g, gw, lam, d, n, n - n_plain, k, H,
+                        do_e, do_m, tq, W, off, tlo, thi, ltab, LMOM, ALPHA_M, ALPHA_G, LHARD, g, gw, lam, d, n, k, H,
                         A, cmap_e if do_e else _NOMAP, A, cmap_m if do_m else _NOMAP, sgn)
 
 
-def tree_block(x, T, ax, b, c, pos, lam, d, n, k, H, rot=None, we=None, wm=None, n_plain=0):
+def tree_block(x, T, ax, b, c, pos, lam, d, n, k, H, rot=None, we=None, wm=None):
     """Field blocks of the electric (we given) and/or magnetic (wm given)
     line distributions; see tree_add. Returns (out_e, out_m), each
     (M, nc, slots * n, 3) or None."""
     pos = np.ascontiguousarray(np.atleast_2d(pos), dtype=float)
     ltab = _ltab(lam, d)
-    tq, W, off, tlo, thi, g, gw = build_tree(lam, d, n, H, ltab, k, n_plain)
+    tq, W, off, tlo, thi, g, gw = build_tree(lam, d, n, H, ltab, k)
     Tm = np.eye(3)[None] if T is None else np.ascontiguousarray(T)
     nc = Tm.shape[1]
     do_e, do_m = we is not None, wm is not None
@@ -352,7 +338,7 @@ def tree_block(x, T, ax, b, c, pos, lam, d, n, k, H, rot=None, we=None, wm=None,
     out_m = np.zeros((1, len(x) * nc, wm.shape[0] * n * 3), complex) if do_m else _DUMMY
     _tree_kernel(np.ascontiguousarray(x), Tm, _ID, ax, b, c, pos, _EYE if rot is None else np.ascontiguousarray(rot),
                  np.ascontiguousarray(we) if do_e else _ONE, np.ascontiguousarray(wm) if do_m else _ONE,
-                 do_e, do_m, tq, W, off, tlo, thi, ltab, LMOM, ALPHA_M, ALPHA_G, LHARD, g, gw, lam, d, n, n - n_plain, k, H,
+                 do_e, do_m, tq, W, off, tlo, thi, ltab, LMOM, ALPHA_M, ALPHA_G, LHARD, g, gw, lam, d, n, k, H,
                  out_e, np.arange(out_e.shape[2])[None, :] if do_e else _NOMAP,
                  out_m, np.arange(out_m.shape[2])[None, :] if do_m else _NOMAP, _PLUS)
     return (out_e.reshape(len(x), nc, -1, 3) if do_e else None), (out_m.reshape(len(x), nc, -1, 3) if do_m else None)

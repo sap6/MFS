@@ -197,7 +197,7 @@ class Cube:
                         A, None if mag else cm_first, cm_first if mag else cm_mate, sgn,
                         rot=ln.rot if tail else None,
                         we=ln.w if tail and not mag else None,
-                        wm=(mate.w if pair else ln.w) if tail and (pair or mag) else None, n_plain=b.n_plain)
+                        wm=(mate.w if pair else ln.w) if tail and (pair or mag) else None)
             i += 2 if pair else 1
         return A
 
