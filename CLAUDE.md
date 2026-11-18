@@ -63,5 +63,6 @@ above for as long as the paper is being finished.
 pip install numpy scipy matplotlib numba bempp-cl gmsh meshio pyopencl pocl-binary-distribution   # the last two give Bempp its fast (OpenCL) backend
 apt-get install -y libglu1-mesa libxcursor1 libxinerama1 libxft2 libxrender1 libgl1   # for gmsh
 cd validation && python3 mie.py        # self-check, should print errors ~1e-14
+sh run_checks.sh                       # all self-tests, five minutes (in validation/)
 apt-get install -y --no-install-recommends texlive-latex-base texlive-latex-recommended texlive-latex-extra texlive-fonts-recommended texlive-science latexmk cm-super   # only to build paper/main.pdf
 ```
