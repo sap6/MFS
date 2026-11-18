@@ -1,6 +1,7 @@
 \appendix
 
 \section{Exponents at a conical point}
+\setcounter{table}{0}
 \label{app:cone}
 
 The tails at the vertices of the cube and at the tip of the almond need the exponents of the field at a conical point. Near the vertex of a perfectly conducting cone the field is a sum of terms of two types \cite{vanbladel1996,desmedt1986,costabel2000},
@@ -34,6 +35,7 @@ We compute the eigenvalues by the method of particular solutions in its stable f
 \emph{From exponents to weights.} The tail sources lie on rows that run into the conical point with a spacing proportional to the distance $r$. Dipoles of strength $r^{e}$ on such a row produce a field that scales like $r^{e-3}$. A field $r^{\nu-1}$ therefore needs electric dipoles with $e = \nu+2$, and the magnetic type needs magnetic dipoles with $e = \tau+2$. That each type is carried by the dipoles of its own kind is the simplest assignment and is not derived. For the cube a vertex tail with two exponents for each kind of dipole changes the error at $J = 6$ by less than $1\%$.
 
 \section{Evaluation of the line sources}
+\setcounter{table}{0}
 \label{app:lines}
 
 A line source of the cube at depth $d$ carries a polynomial density in the stretched variable $u$, with $n = n_0 + \lceil 2\ln(1/d)\rceil$ Legendre modes for each of its three components, where $n_0 = \max(4, 2J-4)$. Each matrix entry is the integral of a dipole field against one mode. The integrand varies on the scale of the distance between the target and the line, which ranges from a fraction of $d$ to the size of the cube. We organise the quadrature so that most of the work is shared between the targets.
@@ -45,6 +47,7 @@ The kernel values are shared between the electric and the magnetic line at the s
 With $20$ and $10$ nodes in place of $12$ and $8$ the fields of \autoref{tab:cube} change by less than $10^{-6}$, and by less than $10^{-7}$ up to $J = 10$. These node numbers are for a side of one wavelength. They must grow with the wavenumber, because the phase of the kernel varies along a panel in proportion to $k$. At two wavelengths we use $20$ and $10$ nodes, which changes the fields by less than $10^{-10}$ against $32$ and $14$, whereas with $12$ and $8$ the fields there are wrong by up to $2\times10^{-4}$.
 
 \section{Boundary element settings}
+\setcounter{table}{0}
 \label{app:bempp}
 
 We used Bempp-cl version 0.4.2 \cite{betcke2021}. The electric field integral equation is discretised with Rao--Wilton--Glisson functions as trial functions and scaled N\'ed\'elec functions as test functions. The dense matrix is assembled in double precision, and the system is solved by LU factorisation with LAPACK.
