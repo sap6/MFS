@@ -223,11 +223,10 @@ class Cube:
                     B = ln.block(self.k, x * R, np.broadcast_to(T * R, (len(x), nc, 3)))
                     for j in range(len(classes)):
                         A[j][:, cmap[j, lo]:cmap[j, lo] + 3] += sgn[j, r] * B
-            elif ln.kind == "e":
-                hi = lo + 3 * ln.n
+            elif ln.kind == "e":                                 # the magnetic twin follows in the next 3 n columns
+                w = None if ln.w is None else np.stack((ln.w, self.lines[i + 1].w))
                 lines.tree_add(x, T, refl, ln.ax, ln.b, ln.c, ln.pos, ln.lam, ln.d, ln.n, self.k, H, A,
-                               np.ascontiguousarray(cmap[:, lo:hi]), np.ascontiguousarray(cmap[:, hi:hi + 3 * ln.n]),
-                               sgn, rot=ln.rot, we=ln.w, wm=self.lines[i + 1].w)
+                               cmap[:, lo:lo + 6 * ln.n], sgn, rot=ln.rot, w=w)
         return A
 
     def solve(self, d, p, only=None):
