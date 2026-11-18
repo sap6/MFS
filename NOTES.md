@@ -80,11 +80,31 @@ below is done, write the next list here and go on. Send files as they
 become ready (the author sees files), keep the notes current, commit and
 push after every step.
 
+**The author's third message (18 Nov, mid-turn, verbatim):** "also, you
+said there's a case where MFS can use symmetry and BEM cannot, that's an
+advantage and you shouldn't limit MFS in this case by not using symmetry."
+-> The MFS keeps the rotational symmetry of the torus as its result
+(it always did; the "full matrix" curve was an extra). **But "BEM cannot"
+was my overstatement and the author was told so: the Bempp library does
+not offer it, yet the structured torus mesh repeats around the axis, so
+the trick of `bem_mirror.py` gives Bempp the discrete rotation as well.**
+By the rule "best for both" this is R0 below: build it, compare best with
+best, then drop the curve without symmetry and the caveat.
+
 **Work list after that message (tick off here):**
-- [ ] R1 A full independent reading of the paper (text and PDF) by a
-      fresh agent; correct what is wrong.
-- [ ] R2 Three wavelengths: find what limits the layout (one knob at a
-      time against a common yardstick; item 79).
+- [ ] R0 Bempp on the torus with the rotational symmetry of its mesh
+      (block-circulant: rows of one sector, one small system per order).
+- [x] R1 A full independent reading of the paper: done, the report is
+      `paper/referee_report_18nov.md` (eight points "wrong or
+      unjustified", the first being that Theorem 1 does not locate
+      singularities). **Work through it: item 80.**
+- [ ] R2 Three wavelengths (item 79). **Found on 18 Nov: with the first
+      depth left at 0.2 (not scaled by the wavelength) and 12 base points
+      per side the layout converges**: two depths per octave, J = 5..8,
+      successive differences 2.1e-3, 9.7e-4, 3.4e-4 (`cube_k3_base.py`).
+      To do: J = 9 (running), a clean reference, Bempp check, then replace
+      the "limit" paragraph of Section 5.5 and the conclusion; times
+      against Bempp need a Bempp scan at k = 6 pi.
 - [ ] R3 Notation: J is the level of the cube, the current and the
       number of almond rows (flagged in items 64 and 70).
 - [ ] R4 A sketch of the wedge for the edge derivation (item 70).
