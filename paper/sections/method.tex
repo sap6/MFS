@@ -60,12 +60,12 @@ For the sphere the Mie series \cite{mie1908,bohren1998} gives the exact scattere
   \varepsilon = \Bigl(\sum\nolimits_{l}|\bE_N(\mathbf{z}_l)-\bE(\mathbf{z}_l)|^2\Bigr)^{1/2}\Big/\Bigl(\sum\nolimits_{l}|\bE(\mathbf{z}_l)|^2\Bigr)^{1/2}
   \label{eq:fielderror}
 \end{equation}
-at points $\mathbf{z}_l$ on a sphere that encloses the body, $400$ points on the sphere of radius $2$ for the unit sphere and the unit cube. For the other shapes no exact solution exists, and we use \eqref{eq:fielderror} with a reference field in place of $\bE$, always stating which. We also report the boundary residual, which is the square root of \eqref{eq:leastsquares} relative to its value for the incident field alone, and we use two further checks. The first is the optical theorem. A perfect conductor absorbs no energy, so the extinction and scattering cross-sections
+at points $\mathbf{z}_l$ on a sphere that encloses the body: $400$ points on the sphere of radius $2$ for the unit sphere and the unit cube, $200$ points on the sphere of radius $2.5$ for the torus, and $400$ points on the sphere of radius $0.3$\,m for the almond. For the other shapes no exact solution exists, and we use \eqref{eq:fielderror} with a reference field in place of $\bE$, always stating which. We also report the boundary residual, which is the square root of \eqref{eq:leastsquares} relative to its value for the incident field alone, and we use two further checks. The first is the optical theorem. A perfect conductor absorbs no energy, so the extinction and scattering cross-sections
 \begin{equation}
   \sext = \frac{4\pi}{k}\,\operatorname{Im}\bigl(\bar\bp\cdot\bF(\bd)\bigr), \qquad
   \ssca = \int_{S^2}|\bF(\hat\bx)|^2\,\mathrm{d}s(\hat\bx)
   \label{eq:optical}
 \end{equation}
-are equal for the exact solution, and the quantity $|\sext-\ssca|/\ssca$, which we call the optical mismatch, is an error indicator that needs no reference. It is an indicator and not a bound, as an example in \autoref{sec:cubepoints} shows.
+are equal for the exact solution. We evaluate the integral with a Gauss--Legendre rule in the polar angle and the trapezoidal rule in the azimuth. The quantity $|\sext-\ssca|/\ssca$, which we call the optical mismatch, is an error indicator that needs no reference. It is not a bound, as an example in \autoref{sec:cubepoints} shows.
 
 The second check is an independent solver. We use the boundary element library Bempp-cl \cite{betcke2021,scroggs2017}, which solves the electric field integral equation with Rao--Wilton--Glisson elements \cite{rao1982} on a triangular mesh. It serves both as a reference and as a yardstick for the computing time, and its settings are given in \ref{app:bempp}. All timings in this paper were measured on one machine, with four cores of an Intel Xeon processor at $2.1$\,GHz and $15$\,GB of memory, and include assembly, solution and the evaluation of the field.

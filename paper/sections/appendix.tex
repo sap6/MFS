@@ -50,7 +50,7 @@ With $20$ and $10$ nodes in place of $12$ and $8$ the fields of \autoref{tab:cub
 \setcounter{table}{0}
 \label{app:bempp}
 
-We used Bempp-cl version 0.4.2 \cite{betcke2021}. The electric field integral equation is discretised with Rao--Wilton--Glisson functions as trial functions and scaled N\'ed\'elec functions as test functions. The dense matrix is assembled in double precision, and the system is solved by LU factorisation with LAPACK.
+We used Bempp-cl version 0.4.2 \cite{betcke2021}. The electric field integral equation is discretised with Rao--Wilton--Glisson functions as trial functions and scaled N\'ed\'elec functions as test functions. The dense matrix is assembled in double precision, and the system is solved by LU factorisation with LAPACK. The sphere is meshed by the mesh generator of the library with a prescribed element size. The torus and the almond have structured meshes: a grid in the two parameters of the surface, with $n$ cells around the tube of the torus and $2n$ around its axis, and each cell is cut into two triangles.
 
 \emph{Backend.} Bempp-cl has two assembly backends. We ran the OpenCL backend on the processor through the PoCL driver. It assembled the matrices of this paper about twenty times faster than the Numba backend, with identical results.
 
