@@ -11,9 +11,9 @@ tangential E_sc = -tangential E_inc on the surface, least-squares collocation.
 - Everything is committed and pushed on branch `ccr-116c520c-fts35f`. No
   pull request exists. Nothing was ever pushed to `sap6/mfs-paper`; it is
   still the thesis text (commit 4f8731f).
-- The paper is `paper/main.tex` (one document, 40 preprint pages, 23 in
+- The paper is `paper/main.tex` (one document, 41 preprint pages, 24 in
   the journal layout). Its numbers are those of items 65, 68, 79 (errors)
-  and 83 (times). Section 6 lists what the paper may and may not claim.
+  and 83, 84 (times). Section 6 lists what the paper may and may not claim.
 - The blocks below are in reverse order of time. The newest one is
   authoritative; older blocks are kept as the record and are superseded
   where they disagree with it (in particular every time and every
@@ -121,8 +121,15 @@ best, then drop the curve without symmetry and the caveat.
       cost section, conclusion, appendix).
 - [x] R8 Torus with rotational symmetry in both codes is in the paper.
 - [x] R9 `time_paper.sh` run again (item 83), figures, tables, text.
-- [ ] R10 Independent number check and consistency read of the edited
-      text (two agents, started 10:35 UTC); apply what they find.
+- [x] R10 Independent number check and consistency read: done and
+      applied (item 84).
+- [ ] R11 A two-page status sheet for the authors (what changed in
+      substance, what Timo should check), sent as a PDF.
+- [ ] R12 Highlights and `PAPER_OUTLINE.md` brought up to date or
+      marked as superseded; `explainer/` likewise.
+- [ ] R13 Next weakest point: look for it after R11-R12 (candidates:
+      the paper is at the upper end of the length target; the almond has
+      a cost comparison at one frequency only; a fourth cube size).
 
 **Still open for the authors**: the author's pass over the text; T20
 (Timo); final timing on a fixed machine; copy to `sap6/mfs-paper` (ask
@@ -2078,6 +2085,47 @@ towards the MFS field.
       6:3: about 1.7, 2.3, 3.3 s for 4.0e-3, 2.8e-4, 5.6e-5; Bempp 2268
       ... 27324 dofs up to 22 s for 1.0e-3; the curves cross at 4.9e-3.
       Quasi-uniform Bempp on the cube: 1.9e-3 after 46 s.
+
+84. **Second round of independent checks (R10), and what was changed**
+    (reports in `paper/referee_report_18nov.md`, second part).
+    - Number check: every table entry and quoted error matches the data.
+      **The comparative sentences no longer use interpolated crossings**
+      (the curves are discrete runs; between the MFS levels 8 and 9 an
+      interpolated "lead" does not exist). The cost section now names
+      runs: standard wave: level near 1.5e-4 (MFS 1.4e-4 in 24 s; Bempp
+      1.5e-4 in 20 s, 1.15e-4 in 30 s), MFS ahead below about 1e-4
+      (5.6e-5 in 38 s, 2e-5 in 54 s; Bempp 8e-5 in 61 s). Two
+      wavelengths: Bempp 3.5e-4 / 2.3e-4 / 1.9e-4 in 14 / 35 / 61 s, MFS
+      3.8e-4 / 1.5e-4 in 24 / 36 s. Three wavelengths: Bempp 6.0e-4 /
+      5.2e-4 in 13 / 35 s, MFS 4.5e-4 / 1.9e-4 in 35 / 53 s. "The error
+      below which the MFS is ahead grows with the size: about 1e-4, 2e-4,
+      5e-4" (not "doubles").
+    - **General wave re-timed (10:41-11:33 UTC, same machine, both codes
+      alternately)** with the four matrices of J = 9 held together
+      (`cube_cases.layout`: max_gb = 8.5 for this case; peak memory 12
+      GB). The machine was about 10% slower than in the morning for both
+      codes. MFS J = 4..10: 6.9, 12.1, 17.9, 28.0, 40.8, 66.0, 124 s.
+      Bempp: 1.6 s 1.07e-3; 8.8 s 3.3e-4; 19.6 s 2.1e-4; 34.2 s 1.51e-4;
+      40.9 s 1.44e-4; 71.5 s 1.06e-4. **Level near 1.5e-4 (41 s each);
+      the MFS reaches 6e-5 in 66 s, before Bempp reaches its smallest
+      error 1.06e-4 (72 s).** (With the matrices in two groups J = 9 took
+      74 s against Bempp's 65 s for 1.08e-4.)
+    - Torus: "extrapolation agrees to about 1e-6" (2e-7 from the last two
+      meshes was fortuitous: the pair before gives 1.2e-6).
+    - Summary table: Bempp rows chosen as the fastest run that reaches
+      1e-3, 3.5e-4, 1.55e-4, 1.2e-4, and the most accurate run.
+    - Consistency read: the rule is now stated everywhere as "the sources
+      must enclose the singularities of the continued field, or reach them
+      where they lie on the surface" (abstract, Section 4, conclusion);
+      Section 4 is called "Where to place the sources"; introduction and
+      roadmap no longer say that the theorem locates singularities; the
+      focal-curve sentence and the base-point sentence reworded; captions
+      say "symmetry of the cube"; "changes its result by less than its
+      error".
+    - LaTeX: no overfull lines, appendix table links fixed (`\theHtable`),
+      the dyadic Green's function on two lines, "Figures 7 and 10".
+    - The paper is 41 preprint pages, 24 in the journal layout (the upper
+      end of the target).
 
 ## 3. Current best commands
 
