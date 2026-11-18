@@ -55,14 +55,19 @@ github.com/AIScientists-Dev/academic-humanizer.
       pass; three small meaning corrections (abstract: torus 7e-12 is the
       difference from the finest run; conclusion: almond curve "we
       expect"; introduction: "a lower bound for its radius").
-- [ ] H4 Rebuild, export for Overleaf, send PDF and
+- [x] H4 Rebuild (42 preprint pages, 24 journal), export for Overleaf, send PDF and
       `paper/humanising_pass_18nov.md` (before/after, and ideas for
       presenting the results, NOT done: headline table "MFS time at
       Bempp's best accuracy" (sphere 0.10 s vs 86 s, torus 0.16 vs 71,
       almond 2.5 vs 22, cube 37 vs 131, 66 vs 133, 66 vs 137, 53 vs 132),
       swap the halves of Table 5, lighter Bempp markers in the cube
       panels, optional cuts of about three pages).
-- [ ] H5 Status sheet and highlights in the same voice.
+- [x] H5 Status sheet updated (42 pages; the pass is noted); highlights
+      unchanged (short lines, no prose); captions read and left as they are.
+- [ ] H6 Wait for the author's choice among the five ideas in
+      `paper/humanising_pass_18nov.md`; do not restructure before that.
+- [ ] H7 Read the whole PDF once more as a reader (not with scripts) for
+      flow between paragraphs; fix only connectives and referents.
 
 ### Seventh session, 2026-11-18 (first part)
 
