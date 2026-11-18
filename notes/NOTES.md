@@ -8,6 +8,10 @@ tangential E_sc = -tangential E_inc on the surface, least-squares collocation.
 
 ## Start here
 
+- **Since 18 Nov the repository has a new layout** (see the "part three"
+  block below and `../CLAUDE.md`): `mfs/`, `figures/`, `data/`, `notebooks/`,
+  `tests/`, `paper/`, `thesis/`, `notes/`. Script names in the items below
+  (`validation/...`) refer to commit 9f5a721.
 - Everything is committed and pushed on branch `ccr-116c520c-fts35f`. No
   pull request exists. Nothing was ever pushed to `sap6/mfs-paper`; it is
   still the thesis text (commit 4f8731f).
@@ -32,7 +36,20 @@ Done so far:
 - New package `mfs/` (core, mie, sphere, torus, cube + lines, almond, cone, bem), comment style of the thesis notebooks (docstring: formula, then arguments with shapes; "# Form matrix A" block comments). Each module reproduces the stored paper results: sphere errors identical; torus field identical; cube fields 1e-14 (J = 4, 5, 6, one depth per octave, general wave, two wavelengths); almond fields 1e-15, RCS 1e-13 dB; cone exponents as in Table A.1; Bempp cube, torus, almond identical to the old code.
 - **Found while porting:** Bempp's default quadrature in bempp-cl 0.4.2 is 4/4, not 4/6 as Appendix C said. The cube runs set 4/6, 6/8, 8/10 explicitly; the sphere, torus and almond used 4/4. Test: on those three, 4/6 and 6/8 change Bempp's error by less than 1% (sphere h = 0.1: 7.58e-3 for all three; torus n = 56: 4.18e-3; almond 60x56: 2.79e-3 to 2.81e-3). Appendix C corrected.
 
-Plan (tick off): package [x]; tests; figures/ with one script per figure (replots from data/, `--run` recomputes); notebooks/ (Colab, one per shape); thesis notebooks to thesis/; README, pyproject, CITATION.cff, CI; research scripts out of the main tree (`validation/` stays in git history; last commit with it to be recorded here); paper paths and code-availability statement.
+Done (all committed):
+- [x] `mfs/` 1855 lines (was about 7300 in `validation/`): core 203, mie 56, sphere 34, torus 132, cube 292, lines 265 (the line kernel rewritten: dipole fields in closed form, electric and magnetic in one pass; same fields to 1e-13 and same speed, J = 8 in 25-27 s against 25-29 s in alternating runs), almond 317, cone 160, bem 377.
+- [x] `tests/test_mfs.py`: 7 checks in 20 s (Mie, sphere 2.0e-9, torus known solution, cube J = 4 against the stored field, the rotation against all eight classes, almond 3:0 against the stored field, the tip exponent; Bempp symmetry with MFS_TEST_BEMPP=1).
+- [x] `figures/`: one script per figure, replot in seconds from `data/`; `--run` recomputes with the package (cube_cases also `--scan`); `tables.py` writes the four table bodies of the paper (identical to the old ones). Figures 1, 3, 4, 5, 7, 8, 10, 11 are pixel-identical to the old ones; Figures 2, 6, 9 differ only in grid lines and labels.
+- [x] `data/`: the results behind every figure and table (1.6 MB), with `data/README.md`; the standard cube case is now `cube_cases_k1.npz` like the others.
+- [x] `notebooks/` 1_sphere (20 s), 2_torus (10 s), 3_cube (3.5 min), 4_almond (70 s), executed with outputs; the first cell clones the repository on Colab.
+- [x] README (landing page: figure, Colab table, install, figure-to-script table, layout), pyproject.toml (`pip install -e ".[test,bempp]"`), CITATION.cff, `.github/workflows/tests.yml` (tests and every figure script).
+- [x] thesis notebooks in `thesis/`; this log, derivations, literature, status sheet and paper helpers in `notes/`; `paper/long/`, `paper/make_tables.py` and `validation/` removed from the tree. **The research scripts are at commit 9f5a721** (`git checkout 9f5a721 -- validation`); a tag would keep them if the branch is squash-merged (ask the author before pushing a tag).
+- [x] Paper: graphicspath `../figures/`, code-availability statement describes the repository; 41 pages.
+
+Open:
+- [ ] Independent review of the code against the thesis notebooks' style (running).
+- [ ] The Colab links point to `main`: they work once this branch is merged.
+- [ ] Zenodo: archive a release and add the DOI to the paper and CITATION.cff (authors).
 
 ### Seventh session, part two: the humanising pass (18 Nov, READ FIRST)
 

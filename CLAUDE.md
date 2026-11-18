@@ -5,19 +5,29 @@ Maxwell's Equations" into a JCP paper (authors: the repo owner and their
 supervisor Timo). Code lives here; the manuscript lives in `sap6/mfs-paper`
 (synced with Overleaf).
 
-**Read `NOTES.md` before doing anything.** It holds what works, what failed,
-the current best parameters and the task list. Do not re-derive or re-test
-anything recorded there.
+**Read `notes/NOTES.md` before doing anything.** It holds what works, what
+failed, the current best parameters and the task list. Do not re-derive or
+re-test anything recorded there.
+
+**Layout (since 18 November 2026).** The repository is the one readers of the
+paper visit: `mfs/` (the method, one module per shape), `figures/` (one
+script per figure of the paper, and `tables.py`; each replots from `data/`,
+`--run` recomputes), `data/`, `notebooks/` (one per shape, run on Colab),
+`tests/` (`python -m pytest tests`, 20 s), `paper/`, `thesis/` (the MSci
+notebooks), `notes/` (this research log). The old research scripts
+(`validation/`, named throughout `notes/NOTES.md`) are no longer in the tree:
+`git checkout 9f5a721 -- validation` restores them. New experiments go in a
+scratch folder or `notes/`, not in the package; the package stays short.
 
 ## Rules for every session
 
-1. One task per session, taken from the task list in `NOTES.md`.
-2. Prototype in 2D first (`validation/proto2d_*.py` run in seconds); use 3D
-   runs only to confirm.
+1. One task per session, taken from the task list in `notes/NOTES.md`.
+2. Prototype in 2D first (the `proto2d_*.py` scripts at commit 9f5a721 run in
+   seconds); use 3D runs only to confirm.
 3. Run one heavy job at a time. The container has 4 cores and 15 GB shared by
    all processes; a 3D solve can take 4-7 GB.
 4. Pipe long output through `tail`; never print full matrices or logs.
-5. Before ending: add one line per experiment to the log in `NOTES.md`
+5. Before ending: add one line per experiment to the log in `notes/NOTES.md`
    (what was run, the number, the conclusion), update the task list, commit
    and push.
 6. Report failures and stalls as plainly as successes. Every accuracy claim
@@ -35,14 +45,14 @@ above for as long as the paper is being finished.
   this week." "You can always keep improving and polishing the
   paper/code/results/etc. or simplifying things that are too complex."
   Do not end a turn to report or to ask; work through the work list at the top
-  of `NOTES.md` ("Seventh session"), keep it current, commit and push
+  of `notes/NOTES.md`, keep it current, commit and push
   often. A wake-up message cannot be scheduled in this
   session, so wait for long jobs inside the turn and go on to the next
   item instead of ending it.
 - 18 November, after a turn that ended with a report once its plan was
   finished: "Again you stopped even though I said multiple times not to
   stop." A finished plan is not a reason to end the turn: write the next
-  work list at the top of `NOTES.md` and continue. Send files as they
+  work list at the top of `notes/NOTES.md` and continue. Send files as they
   become ready.
 - "Make sure it's not something that you're not doing for BEM. The idea
   is that we're comparing the best for both." Every symmetry or speed-up
@@ -56,13 +66,26 @@ above for as long as the paper is being finished.
   figures and lists as files.
 - arXiv is reachable with `curl` from the shell even when the page-fetch
   tool fails.
+- Writing (18 November): "make the paper more natural and use my wording from
+  the thesis where it's accurate"; then "Don't rewrite the paper, just do a
+  humanising pass. Use my thesis to get my style of writing." The profile is
+  `notes/style_profile.md`.
+- Code (18 November): "make the codebase simple and easy to read, with as few
+  lines as possible (still readable and clear)", "the best way to share
+  Python code in a GitHub repository accompanying a paper", "a repo that
+  people visit and interact with from the paper", and "use comments in a very
+  similar way to the way I used comments in my original repo" (the thesis
+  notebooks in `thesis/`): docstrings that start with the formula or purpose
+  and list the arguments with their shapes, indented two spaces; short block
+  comments such as `# Form matrix A`, `# Solve for alpha`; aligned inline
+  comments on constants and shapes. Every module must keep reproducing the
+  stored results (`tests/`).
 
 ## Setup (fresh container)
 
 ```
-pip install numpy scipy matplotlib numba bempp-cl gmsh meshio pyopencl pocl-binary-distribution   # the last two give Bempp its fast (OpenCL) backend
-apt-get install -y libglu1-mesa libxcursor1 libxinerama1 libxft2 libxrender1 libgl1   # for gmsh
-cd validation && python3 mie.py        # self-check, should print errors ~1e-14
-sh run_checks.sh                       # all self-tests, five minutes (in validation/)
+pip install -e ".[test,bempp]"         # the package, pytest, and Bempp with its fast (OpenCL) backend
+python -m pytest tests                 # 20 s; MFS_TEST_BEMPP=1 also checks Bempp with symmetry
+for f in figures/*.py; do python $f; done   # every figure and table from data/
 apt-get install -y --no-install-recommends texlive-latex-base texlive-latex-recommended texlive-latex-extra texlive-fonts-recommended texlive-science latexmk cm-super   # only to build paper/main.pdf
 ```
