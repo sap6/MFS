@@ -5,7 +5,6 @@ with the quadrature orders and the mesh size, using the mirror symmetry
     python3 bem_grading_scan.py k1          # k = 2 pi, standard wave
     python3 bem_grading_scan.py k1o         # k = 2 pi, oblique wave
     python3 bem_grading_scan.py k2          # k = 4 pi, standard wave
-    python3 bem_grading_scan.py k2o         # k = 4 pi, oblique wave
     python3 bem_grading_scan.py k3          # k = 6 pi, standard wave
     python3 bem_grading_scan.py report      # lower envelopes of all cases
     python3 bem_grading_scan.py retime k1   # re-time the runs near the envelope on a quiet machine (best of two);
@@ -24,17 +23,13 @@ QUAD = ((4, 6, (12, 16, 20, 24, 28, 32, 40)), (6, 8, (12, 16, 20, 24, 28, 32, 40
 
 
 def reference(case):
+    """Wavenumber, reference field and wave (None: the standard wave) of a case."""
     if case == "k1":
         return 2 * np.pi, np.load("fig_cost_cube.npz")["ref_E"], None
     if case == "k1o":
-        d = np.load("cube_oblique.npz")
-        return 2 * np.pi, d["Eref"], (d["d"], d["p"])
-    if case == "k2":
-        return 4 * np.pi, np.load("cube_wavenumber_k2.npz")["dense_E10"], None
-    if case == "k3":
-        return 6 * np.pi, np.load("cube_cases_k3_ref.npz")["E"], None   # cube_cases.py k3 ref
-    d = np.load("cube_wavenumber_k2_obl.npz")
-    return 4 * np.pi, d["dense_E9"], (d["d"], d["p"])
+        from cube_mfs import wave
+        return 2 * np.pi, np.load("cube_cases_k1o_ref.npz")["E"], wave(60.0, 25.0, 35.0)
+    return {"k2": 4 * np.pi, "k3": 6 * np.pi}[case], np.load(f"cube_cases_{case}_ref.npz")["E"], None   # cube_cases.py <case> ref
 
 
 def envelope(rows):
@@ -106,7 +101,7 @@ def retime(case):
 
 
 def report():
-    for case in ("k1", "k1o", "k2", "k2o", "k3"):
+    for case in ("k1", "k1o", "k2", "k3"):
         f = f"bem_grading_scan_{case}.npz"
         if not os.path.exists(f):
             continue

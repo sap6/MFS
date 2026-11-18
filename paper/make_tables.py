@@ -126,57 +126,6 @@ def cube():
           f"{s3 + (s3 - s2) * n3 ** -p / (n2 ** -p - n3 ** -p):.6f}")
 
 
-def cube_oblique():
-    r = np.load(os.path.join(V, "cube_oblique.npz"))
-    ref = r["Eref"]
-    rows = []
-    for fam, Js, label in (("", (4, 5, 6, 7, 8, 9), "one depth"), ("dense", (6, 7, 8), "two depths")):
-        for J in Js:
-            if f"E{fam}{J}" in r:
-                t, unk = r[f"info{fam}{J}"][:2]
-                rows.append(f"    MFS, {label}, $J = {J}$ & {int(unk)} & {tm(t)} & {sci(rel(r[f'E{fam}{J}'], ref))} \\\\")
-        rows.append("    \\midrule")
-    print("    oblique reference:", r["inforef"])
-    files = sorted(glob.glob(os.path.join(V, "bem_cube_graded_*_obl.npz")), key=lambda f: ("_q" in f, int(np.load(f)["ndof"])))
-    for f in files:
-        b = np.load(f)
-        if np.allclose(b["d"], r["d"]) and np.allclose(b["p"], r["p"]):
-            q = os.path.basename(f).split("_q")[1].split("_obl")[0].replace("_", "/") if "_q" in f else "4/6"
-            if (q, int(b["ndof"])) in (("4/6", 4608), ("6/8", 7200), ("6/8", 10368)):
-                rows.append(f"    Bempp, quadrature {q} & {int(b['ndof'])} & {tm(float(b['t_solve']))} & {sci(rel(b['E'], ref))} \\\\")
-    rows.append("    \\midrule")
-    files = sorted(glob.glob(os.path.join(V, "bem_cube_sym_n*_g2*_obl.npz")), key=lambda f: (f.split("_g2")[1], int(np.load(f)["ndof"])))
-    for f in files:
-        b = np.load(f)
-        if np.allclose(b["d"], r["d"]) and np.allclose(b["p"], r["p"]):
-            q = os.path.basename(f).split("_q")[1].split("_obl")[0].replace("_", "/") if "_q" in f else "4/6"
-            print(f"    oblique symmetric {q} dofs={int(b['ndof'])} t={float(b['t_solve']):.1f} err={rel(b['E'], ref):.2e}")
-            if (q, int(b["ndof"])) in (("4/6", 2592), ("4/6", 4608), ("6/8", 4608), ("6/8", 7200), ("6/8", 10368), ("8/10", 10368), ("8/10", 14112), ("8/10", 18432), ("8/10", 28800)):
-                rows.append(f"    Bempp with symmetry, quadrature {q} & {int(b['ndof'])} & {tm(float(b['t_solve']))} & {sci(rel(b['E'], ref))} \\\\")
-    write("cube_oblique", rows)
-
-
-def cube_k2():
-    d = np.load(os.path.join(V, "cube_wavenumber_k2.npz"))
-    ref = d["dense_E10"]
-    rows = []
-    for fam, label, Js in (("balanced", "one depth", (5, 6, 7, 8)), ("dense", "two depths", (7, 8, 9, 10))):
-        for J in Js:
-            t, unk = d[f"{fam}_info{J}"][:2]
-            err = "reference" if (fam, J) == ("dense", 10) else sci(rel(d[f"{fam}_E{J}"], ref))
-            rows.append(f"    MFS, {label}, $J = {J}$ & {int(unk)} & {tm(t)} & {err} \\\\")
-        rows.append("    \\midrule")
-    for k in ("balanced", "dense"):
-        print(f"    k = 4 pi, {k}:", [(J, f"{d[f'{k}_info{J}'][0]:.1f}s", int(d[f'{k}_info{J}'][1]), f"{rel(d[f'{k}_E{J}'], ref):.2e}", f"{d[f'{k}_info{J}'][3]:.1e}")
-                                     for J in range(4, 11) if f"{k}_E{J}" in d])
-    b = np.load(os.path.join(V, "cube_wavenumber_k2_bem.npz"))["rows"]
-    for reg, sing, n, N, t, err in b:
-        print(f"    k = 4 pi, Bempp with symmetry {int(reg)}/{int(sing)} dofs={int(N)} t={t:.1f} err={err:.2e}")
-        if (int(reg), int(N)) in ((4, 4608), (4, 10368), (6, 10368), (6, 18432), (6, 28800), (8, 18432), (8, 28800)):
-            rows.append(f"    Bempp with symmetry, quadrature {int(reg)}/{int(sing)} & {int(N)} & {tm(t)} & {sci(err)} \\\\")
-    write("cube_k2", rows)
-
-
 def cube_bem_env():
     """Bempp with symmetry at its best: the re-timed lower envelope of the scan over grading,
     quadrature and mesh size (../validation/bem_grading_scan.py)."""
@@ -282,5 +231,4 @@ if __name__ == "__main__":
     cube()
     summary(cube_bem_env())
     cube_cases()
-    # cube_oblique() and cube_k2() made the tables of the supplement of the second draft (g = 2 only);
     # they are superseded by cube_cases() and their data are no longer re-timed.

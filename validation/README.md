@@ -30,7 +30,7 @@ Self-check of a fresh installation: `python3 mie.py` (errors near 1e-14).
 | Fig. 3, 7 layouts | `fig_layouts.py` | none |
 | Fig. 4 residual near an edge | `fig_edge_residual.py` | `fig_edge_residual.npz` |
 | Table 2, Fig. 5 cube convergence | `fig_cost_cube.py run`, `fig_cube_convergence.py` | `fig_cost_cube.npz` |
-| Fig. 6 cube, general wave and two wavelengths | `cube_cases.py`, `fig_cube_cases.py` | `cube_cases_*.npz` |
+| Fig. 6 cube, general wave, two and three wavelengths | `cube_cases.py`, `fig_cube_cases.py` | `cube_cases_*.npz` |
 | Table 3, Fig. 8 almond benchmark | `fig_almond_benchmark.py` | `fig_almond_benchmark_*.npz`, `austin_almond/` |
 | Fig. 9, Table 4 cost comparison; Fig. 10 near the surface (`sphere_nearfield.py`) | `fig_cost_sphere.py`, `fig_cost_torus.py`, `fig_cost_almond.py`, `cube_duel.py`, `fig_cost_all.py` | `fig_cost_*.npz` |
 | Appendix A exponents | `cone_exponents.py` | none |
@@ -46,8 +46,9 @@ two hours; run nothing else meanwhile) and the figure scripts and
 ## Boundary element side (Bempp-cl)
 
 `bem_env.py` (OpenCL set-up), `bem_reference.py` (EFIE solve for any mesh),
-`bem_mirror.py` (the same using the mirror planes of the body: the cube,
-the torus and the almond are all solved this way, as in the MFS),
+`bem_mirror.py` (the same using the symmetry of the body, as the MFS does:
+mirror planes for the cube and the almond, the rotation of the mesh about
+the axis for the torus),
 `bem_cube_sym.py` (cube, meshes graded to the edges, three mirror planes
 and the rotation about the body diagonal), `bem_optical.py` (cube,
 quasi-uniform meshes, no symmetry), `bem_cube_graded.py` (graded, no
@@ -57,8 +58,9 @@ symmetry), `bem_torus.py`, `bem_almond_rcs.py`.
 
 Experiments that settled a question recorded in `../NOTES.md` and are not
 needed to reproduce the paper: `proto2d_*.py` (two-dimensional prototypes),
-`cube_floor.py`, `cube_k3_tune.py`, `cube_wavenumber.py`,
-`cube_oblique_table.py`, `cube_residual_map.py`, `check_tail_exponents.py`,
+`cube_floor.py`, `cube_k3_base.py` and `cube_k3_levels.py` (three wavelengths:
+what the first depth, the base grid and the number of modes do),
+`proto_line_modes.py`, `cube_residual_map.py`, `check_tail_exponents.py`,
 `torus_singularities.py`, `pec_cruller.py` (a wavy torus on which the plain
 MFS converges slowly), `sphere_scaling.py`, `almond_floor.py`,
 `almond_null.py`, `bem_backend.py`, `bem_overhead.py`, `test_line_tree.py`,

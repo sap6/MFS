@@ -2,7 +2,7 @@
 (NOTES.md item 79.) One level of the family with one depth per octave, with
 the first depth d0 (which is also the depth of the base grid below the
 faces) and the number of base points per side varied. Printed: difference
-from Bempp (28800 unknowns) and from the stored J = 9 field, optical
+from Bempp (28800 unknowns) and from the reference of cube_cases.py, optical
 mismatch, size of the coefficients.
 
     python3 cube_k3_base.py J d0:n,n,... d0:n,...       e.g.  7 0.0667:16,20,24 0.2:12,16,20
@@ -27,7 +27,7 @@ if __name__ == "__main__":
     hmax = float(os.environ.get("HMAX", "0.065"))
     pts = np.load("bem_cube_h0.05.npz")["pts"]
     bem = np.load("cube_k3_t_bem_n40.npy")
-    ref = np.load("cube_k3_ref_J9.npz")["E"]
+    ref = np.load("cube_cases_k3_ref.npz")["E"]
     store = dict(np.load("cube_k3_t_base.npz")) if os.path.exists("cube_k3_t_base.npz") else {}
     rel = lambda a, b: np.linalg.norm(a - b) / np.linalg.norm(b)
     c.run(2, pts=pts)
@@ -42,4 +42,4 @@ if __name__ == "__main__":
             store[name] = E
             np.savez("cube_k3_t_base.npz", **store)
             print(f"{name}: unknowns/class {max(info['per_class'])} rows {info['rows']} t = {t:5.1f} s  from Bempp {rel(E, bem):.2e}  "
-                  f"from J9 ref {rel(E, ref):.2e}  optical {info['optical']:.1e}  |c| {info['coef_norm']:.1f}", flush=True)
+                  f"from the reference {rel(E, ref):.2e}  optical {info['optical']:.1e}  |c| {info['coef_norm']:.1f}", flush=True)

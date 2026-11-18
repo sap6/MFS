@@ -24,10 +24,10 @@ import numpy as np
 
 import pec_cube_lightning3d as m
 
-SIDE = {"k1o": 1, "k2": 2, "k2o": 2, "k3": 3}
+SIDE = {"k1o": 1, "k2": 2, "k3": 3}
 OBLIQUE = (60.0, 25.0, 35.0)
-LEVELS = {"k1o": range(4, 11), "k2": range(4, 9), "k2o": range(5, 9), "k3": range(4, 9)}     # two depths per octave
-J_REFS = {"k1o": 11, "k2": 10, "k2o": 10, "k3": 10}                      # level of the reference field
+LEVELS = {"k1o": range(4, 11), "k2": range(4, 9), "k3": range(4, 9)}     # two depths per octave
+J_REFS = {"k1o": 11, "k2": 10, "k3": 10}                                 # level of the reference field
 MODES = {1: 0, 2: 4, 3: 12}                                              # additional modes per line at S wavelengths per side
 
 
