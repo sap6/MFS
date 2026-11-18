@@ -141,15 +141,19 @@ class Cube:
       q          : ratio of the depths, 2^{-1/2} (two per octave, the paper's layout) or 1/2
       extra_modes: modes added to every line (4 at two wavelengths, 12 at three)
       tails      : with or without the singular tails
+      J = None gives the usual layout that fails: only the base grid, n_base × n_base per face
     """
-    def __init__(self, J, k=2 * np.pi, q=2 ** -0.5, extra_modes=0, tails=True, classes=CLASSES):
+    def __init__(self, J, k=2 * np.pi, q=2 ** -0.5, extra_modes=0, tails=True, classes=CLASSES, n_base=8):
         self.k, self.classes = k, [tuple(c) for c in classes]
-        nd = int(round(J * np.log(0.5) / np.log(q)))             # number of depths below the first
-        self.depths = 0.2 * q ** np.arange(nd + 1)
-        n0 = max(4, 2 * J - 4) + extra_modes
+        if J is None:
+            self.depths, tails, q = np.zeros(0), False, 0.5
+        else:
+            nd = int(round(J * np.log(0.5) / np.log(q)))         # number of depths below the first
+            self.depths = 0.2 * q ** np.arange(nd + 1)
+            n0 = max(4, 2 * J - 4) + extra_modes
 
         # Sources in the octant x, y, z > 0
-        s = (np.arange(8) + 0.5) / 8 * 0.6 - 0.3                 # base grid on the faces of the inner cube, side 0.6
+        s = (np.arange(n_base) + 0.5) / n_base * 0.6 - 0.3       # base grid on the faces of the inner cube, side 0.6
         s = s[s > 0]
         U, V = [g.ravel() for g in np.meshgrid(s, s, indexing="ij")]
         base = np.concatenate([np.insert(np.column_stack((U, V)), ax, 0.3, axis=1) for ax in range(3)])
@@ -171,7 +175,8 @@ class Cube:
 
         # Boundary points in the octant: graded tensor grids, p nodes per panel, rows weighted by sqrt(area) · (distance to the edge)^{1/2}
         p = 4 if q > 0.6 else 3
-        levels = max(2, int(np.ceil(np.log(self.depths[-1] / (2 * H)) / np.log(0.5))) + 1)
+        d_min = self.depths[-1] if len(self.depths) else 0.2
+        levels = max(2, int(np.ceil(np.log(d_min / (2 * H)) / np.log(0.5))) + 1)
         s, w = graded_nodes(levels, p)
         U, V = [g.ravel() for g in np.meshgrid(s[s > 0], s[s > 0], indexing="ij")]
         W = np.outer(w[s > 0], w[s > 0]).ravel()

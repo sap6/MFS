@@ -82,16 +82,16 @@ class Solution:
         return s - dirs * np.sum(dirs * s, axis=1, keepdims=True)
 
 
-def solve(torus, k, rhs, ns, nphi, a_s):
+def solve(torus, k, rhs, ns, nphi, a_s, rings=2):
     """
     Least squares, one small problem per Fourier mode about the axis
       rhs  : function giving the prescribed tangential field (minus the incident field)
       ns   : number of source rings, nphi: dipoles per ring (3 ns nphi unknowns)
       a_s  : minor radius of the source torus
-      Boundary points: 2 ns rings of nphi points (4 ns nphi equations)
+      rings: boundary points on rings · ns rings of nphi points (2 rings ns nphi equations)
     """
     rho, z, _ = circle(ns, torus.R, a_s)
-    nc = 2 * ns
+    nc = rings * ns
     x, T, w = torus.surface(nc, nphi)
     sw = np.sqrt(w)
 
@@ -112,10 +112,10 @@ def solve(torus, k, rhs, ns, nphi, a_s):
     return Solution(y.reshape(-1, 3), alpha.reshape(-1, 3), k)
 
 
-def scatter(k, d, p, ns, nphi, R=1.0, a=0.5, a_s=None):
+def scatter(k, d, p, ns, nphi, R=1.0, a=0.5, a_s=None, rings=2):
     """Plane-wave scattering with sources on the inner torus of minor radius a_s (default a / 2)"""
     torus = Torus(R, a)
-    return solve(torus, k, lambda x: -plane_wave(x, k, d, p), ns, nphi, 0.5 * a if a_s is None else a_s)
+    return solve(torus, k, lambda x: -plane_wave(x, k, d, p), ns, nphi, 0.5 * a if a_s is None else a_s, rings)
 
 
 def residual(sol, d, p, R=1.0, a=0.5, n=1500):
