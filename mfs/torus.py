@@ -20,7 +20,7 @@ def circle(n, centre, radius):
     return centre + radius * np.cos(t), radius * np.sin(t), t
 
 
-def rings(rho, z, nphi):
+def ring_points(rho, z, nphi):
     """Rings of nphi points about the z-axis, shape (len(rho), nphi, 3), and the angles"""
     ph = 2 * np.pi * np.arange(nphi) / nphi
     x = np.stack((rho[:, None] * np.cos(ph), rho[:, None] * np.sin(ph), z[:, None] + 0 * ph), axis=2)
@@ -43,7 +43,7 @@ class Torus:
           Returns points (ntheta, nphi, 3), tangents (ntheta, nphi, 2, 3) and area weights (ntheta,)
         """
         rho, z, t = circle(ntheta, self.R, self.a)
-        x, ph = rings(rho, z, nphi)
+        x, ph = ring_points(rho, z, nphi)
         F = frame(ph)
         t_pol = -np.sin(t)[:, None, None] * F[None, :, 0] + np.cos(t)[:, None, None] * F[None, :, 2]
         t_tor = np.broadcast_to(F[None, :, 1], t_pol.shape)
@@ -107,7 +107,7 @@ def solve(torus, k, rhs, ns, nphi, a_s, rings=2):
                    for m in range(nphi)])
 
     # Back to the dipoles: alpha_q = (1/nphi) Σ_m ah_m e^{2πi mq/nphi}, from cylindrical to Cartesian components
-    y, ph = rings(rho, z, nphi)
+    y, ph = ring_points(rho, z, nphi)
     alpha = np.einsum("qjc,qca->jqa", np.fft.ifft(ah, axis=0), frame(ph))
     return Solution(y.reshape(-1, 3), alpha.reshape(-1, 3), k)
 

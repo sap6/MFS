@@ -75,7 +75,7 @@ def almond(n_mid=6, J=3, fname="fig_almond_layout"):
     y = a.source_rows(n_mid, J)
     tpts, row, rr = a.tip_tail(n_mid, J)
     L = a.L
-    # outline of the mid-plane section: front part from ab(), rear part an ellipse
+    # Outline of the mid-plane section: the front half from semi_axes(), the rear half an ellipse
     xf = np.linspace(0, L * 0.58333, 400)
     af = a.semi_axes(xf)[0]
     psi = np.linspace(0, np.pi / 2, 200)

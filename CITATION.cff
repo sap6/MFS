@@ -1,0 +1,23 @@
+cff-version: 1.2.0
+message: "If you use this code, please cite the paper."
+title: "The Method of Fundamental Solutions for Maxwell's Equations (code)"
+authors:
+  - family-names: Bandyopadhyay
+    given-names: Saptarshi
+    affiliation: University College London
+  - family-names: Betcke
+    given-names: Timo
+    affiliation: University College London
+license: MIT
+repository-code: "https://github.com/sap6/MFS"
+version: 1.0.0
+preferred-citation:
+  type: article
+  title: "The Method of Fundamental Solutions for Maxwell's Equations"
+  authors:
+    - family-names: Bandyopadhyay
+      given-names: Saptarshi
+    - family-names: Betcke
+      given-names: Timo
+  journal: "Journal of Computational Physics"
+  notes: "Submitted"

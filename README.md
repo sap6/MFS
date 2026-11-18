@@ -1,80 +1,108 @@
-# Supplementary Code for MFS Paper
+# The Method of Fundamental Solutions for Maxwell's Equations
 
-This repository contains the code and notebooks supporting my MSci research project, "Using the Method of Fundamental Solutions to Solve Maxwell’s Equations". The materials showcase implementations and visualisations for 2D and 3D Helmholtz problems, as well as Maxwell’s equations on various geometries.
+[![tests](https://github.com/sap6/MFS/actions/workflows/tests.yml/badge.svg)](https://github.com/sap6/MFS/actions/workflows/tests.yml)
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/sap6/MFS/blob/main/notebooks/1_sphere.ipynb)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-<div align="left">
+Code and data for the paper *The Method of Fundamental Solutions for Maxwell's
+Equations* by Saptarshi Bandyopadhyay and Timo Betcke (submitted to the
+Journal of Computational Physics). The paper grew out of the first author's
+MSci thesis, whose notebooks are kept in [`thesis/`](thesis).
 
-  <!-- Images wrapped in hyperlinks -->
-  <a href="./MFS_MaxwellExterior.ipynb" target="_blank">
-    <img src="https://github.com/user-attachments/assets/5547c218-049f-411e-ae09-5e1fb6eeedc8" alt="MFS Maxwell Exterior" style="height: 30vh; width: auto; margin: 0 10px;">
-  </a>
+The Method of Fundamental Solutions (MFS) approximates the field scattered by a
+perfect conductor by a sum of dipoles placed inside the body. It needs no mesh
+and no integration over the surface, and it converges rapidly, but only if the
+sources are in the right place. We study where to place them on four shapes: a
+sphere, a torus, a cube and the NASA almond. For the cube, the usual layout (a
+smaller copy of the surface) stalls at errors above 20%. In contrast, sources on
+the planes that bisect the edges, continued by *singular tails*, converge
+root-exponentially.
 
-  <a href="./MFS_MaxwellCube.ipynb" target="_blank">
-    <img src="https://github.com/user-attachments/assets/477610d9-1b39-4cdc-b768-c3db5d595f23" alt="MFS Maxwell Cube" style="height: 30vh; width: auto; margin: 0 10px;">
-  </a>
-  
-</div>
+![Error against wall time for the MFS and for Bempp](figures/fig_cost_all.png)
 
----
+*Error of the scattered field against computing time for the MFS and for the
+boundary element library Bempp, both using the same symmetries of the body
+(Figure 10 of the paper).*
 
-> **Paper in preparation.** The work towards the journal version (exterior
-> scattering by perfect conductors, validated against Mie, Bempp and published
-> benchmark data) is in [`validation/`](./validation); start from
-> [`NOTES.md`](./NOTES.md), [`DERIVATIONS.md`](./DERIVATIONS.md),
-> [`LITERATURE.md`](./LITERATURE.md) and [`PAPER_OUTLINE.md`](./PAPER_OUTLINE.md).
-> The current draft of the paper is in [`paper/`](./paper) (`main.pdf`), and
-> [`validation/README.md`](./validation/README.md) says which script makes which figure.
-> The notebooks below are the MSci project as submitted.
+## Try it in the browser
 
-## Table of Contents
+Each notebook runs in a few minutes on Colab, with no installation. Click the
+badge at the top of each notebook, or below.
 
-- [Overview](#overview)
-- [Notebooks](#notebooks)
-- [Usage](#usage)
-- [Licence](#licence)
-- [Contact](#contact)
+| Notebook | What it shows | Time |
+|---|---|---|
+| [1. The sphere](notebooks/1_sphere.ipynb) [![Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/sap6/MFS/blob/main/notebooks/1_sphere.ipynb) | one solve against the Mie series, convergence like exp(-c√N), the field near the surface | under a minute |
+| [2. The torus](notebooks/2_torus.ipynb) [![Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/sap6/MFS/blob/main/notebooks/2_torus.ipynb) | mode-by-mode solve, the optical theorem, how thin the source torus may be | under a minute |
+| [3. The cube](notebooks/3_cube.ipynb) [![Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/sap6/MFS/blob/main/notebooks/3_cube.ipynb) | why the usual layout stalls, sources on the skeleton, the singular tails, any incident wave | about four minutes |
+| [4. The NASA almond](notebooks/4_almond.ipynb) [![Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/sap6/MFS/blob/main/notebooks/4_almond.ipynb) | sources on the mid-plane, the tip tail, radar cross-section against the Austin benchmark | about two minutes |
 
----
+## Install
 
-## Overview
+    pip install git+https://github.com/sap6/MFS
 
-The project applies the Method of Fundamental Solutions (MFS) to:
+or, to run the figure scripts and the tests as well:
 
-- **2D problems:** Interior and exterior Helmholtz problems on a disc.
-- **3D problems:** Implementation on a sphere.
-- **Maxwell’s equations:** Applications on a sphere, cube, and the NASA almond.
+    git clone https://github.com/sap6/MFS && cd MFS
+    pip install -e ".[test]"          # add ",bempp" for the boundary element comparison
+    python -m pytest tests            # 20 seconds
 
----
+Then, for example, the sphere against the Mie series:
 
-## Notebooks
+```python
+import numpy as np
+from mfs import core, mie, sphere
 
-Each notebook is self-contained with all the necessary code and explanations to reproduce the results and visualisations:
+k = 2 * np.pi                                   # the sphere is two wavelengths across
+d, p = core.wave()                              # the plane wave: along -z, polarised along y
+y, alpha = sphere.solve(400, k, R=0.5)          # 400 dipoles on the sphere of radius 0.5
+pts = 2.0 * core.fibonacci(400)
+print(core.rel(core.field(pts, y, alpha, k), mie.scattered_field(pts, k, d, p)))   # 2.0e-09
+```
 
-- [MFS_UnitDisc.ipynb](./MFS_UnitDisc.ipynb)
-- [MFS_UnitDiscExterior.ipynb](./MFS_UnitDiscExterior.ipynb)
-- [MFS_UnitSphere.ipynb](./MFS_UnitSphere.ipynb)
-- [MFS_Maxwell.ipynb](./MFS_Maxwell.ipynb)
-- [MFS_MaxwellExterior.ipynb](./MFS_MaxwellExterior.ipynb)
-- [MFS_MaxwellCube.ipynb](./MFS_MaxwellCube.ipynb)
-- [MFS_MaxwellNasaAlmond.ipynb](./MFS_MaxwellNasaAlmond.ipynb)
+## The figures and tables of the paper
 
----
+Every figure and table has a script in [`figures/`](figures). Run on its own,
+the script draws the figure in seconds from the results in [`data/`](data).
+With `--run` it computes those results again; the times below are on four
+cores.
 
-## Usage
+| In the paper | Script | To compute again |
+|---|---|---|
+| Figure 1: the sphere | [`figures/sphere.py`](figures/sphere.py) | 2 minutes |
+| Figure 2: the source torus | [`figures/torus_sources.py`](figures/torus_sources.py) | 5 minutes |
+| Figures 3 and 8: source layouts | [`figures/layouts.py`](figures/layouts.py) | (a drawing) |
+| Figure 4: the wedge at an edge | [`figures/wedge.py`](figures/wedge.py) | (a sketch) |
+| Figure 5: the residual near an edge | [`figures/edge_residual.py`](figures/edge_residual.py) | 1 minute |
+| Figure 6, Table 2: convergence on the cube | [`figures/cube_convergence.py`](figures/cube_convergence.py) | 15 minutes, Bempp 30 more |
+| Figure 7, Table 5: other waves and larger cubes | [`figures/cube_cases.py`](figures/cube_cases.py) | hours (`--scan`, `--run`) |
+| Figure 9, Table 3: almond radar cross-section | [`figures/almond_rcs.py`](figures/almond_rcs.py) | 10 minutes |
+| Figure 10, Table 4: comparison with Bempp | [`figures/cost.py`](figures/cost.py) | 5 to 20 minutes per shape |
+| Figure 11: the field near the surface | [`figures/nearfield.py`](figures/nearfield.py) | a few minutes |
+| Tables 2, 4, 5, C.1 | [`figures/tables.py`](figures/tables.py) | seconds |
 
-1. Clone the repository to your local machine.
-2. Open the desired notebook with [Jupyter Notebook](https://jupyter.org) or [JupyterLab](https://jupyterlab.readthedocs.io/).
-3. Install any required packages as specified in the notebooks.
-4. Run the cells to generate the results and visualisations.
+Accuracy does not depend on the machine, but times do. For a fair comparison
+we timed both codes on the same machine with nothing else running, alternately,
+and each run keeps its smallest time.
 
----
+## What is where
 
-## Licence
+| Folder | Contents |
+|---|---|
+| [`mfs/`](mfs) | the method, one short module per shape: `sphere`, `torus`, `cube` (with the line quadrature in `lines`), `almond`; the exact solution `mie`; the exponents at a cone tip, `cone`; and the boundary element comparison, `bem` |
+| [`notebooks/`](notebooks) | the four notebooks above |
+| [`figures/`](figures) | one script per figure of the paper, and the tables |
+| [`data/`](data) | the results behind every figure and table, and the Austin benchmark data for the almond |
+| [`tests/`](tests) | checks against exact solutions and against the stored results of the paper |
+| [`paper/`](paper) | the manuscript in LaTeX |
+| [`thesis/`](thesis) | the notebooks of the MSci thesis, as submitted |
+| [`notes/`](notes) | our research log: what was tried, what failed, derivations, literature |
 
-This project is licensed under the [MIT Licence](LICENSE).
+The scripts of every experiment in the research log are in the git history: run
+`git checkout 9f5a721 -- validation` to restore the folder.
 
----
+## Citation
 
-## Contact
-
-If you have any questions or suggestions, please feel free to open an issue on GitHub.
+If you use this code, please cite the paper (see [`CITATION.cff`](CITATION.cff)).
+The almond data in [`data/austin_almond`](data/austin_almond) are those of the
+Austin RCS Benchmark Suite (Kelley et al., IEEE Antennas and Propagation
+Magazine 62(1), 2020), with their licence files.

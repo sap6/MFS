@@ -20,7 +20,7 @@ ax.plot([-L, 0], [0, 0], color=INK, lw=1.4)                                     
 ax.plot([0, 0.78], [0, 0.78], color=MUTED, lw=0.8, ls=(0, (4, 3)))              # exterior bisector, psi = 0
 ax.plot([0, -0.82], [0, -0.82], color=BLUE, lw=2.0)                             # wall of the skeleton
 ax.plot(0, 0, "o", color=INK, ms=4)
-# a point of the exterior, its radius and the two angles
+# A point of the exterior, its radius and the two angles
 ang = np.deg2rad(118.0)
 P = 0.74 * np.array([np.cos(ang), np.sin(ang)])
 ax.plot([0, P[0]], [0, P[1]], color=INK, lw=0.8)
@@ -36,7 +36,7 @@ ax.text(-0.96, 0.05, r"$\phi = 3\pi/2$", ha="left", va="bottom")
 ax.text(-0.52, -0.87, "wall of the\nskeleton,\n" + r"$\psi = \pm\pi$", color=BLUE, ha="left", va="center", fontsize=8)
 ax.text(0.45, 0.15, "exterior", color=MUTED, ha="center", va="center", fontsize=8)
 ax.text(-0.74, -0.42, "conductor", color=MUTED, ha="center", va="center", fontsize=8)
-# the two continuations into the conductor
+# The two continuations into the conductor
 for (x0, y0), (x1, y1), rad in (((0.15, -0.32), (-0.24, -0.33), 0.3), ((-0.32, 0.15), (-0.33, -0.24), -0.3)):
     ax.add_patch(FancyArrowPatch((x0, y0), (x1, y1), connectionstyle=f"arc3,rad={rad}", arrowstyle="-|>", mutation_scale=8,
                                  color=INK, lw=0.8))

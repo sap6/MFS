@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mfs-maxwell"
+version = "1.0.0"
+description = "The method of fundamental solutions for Maxwell's equations: scattering by a sphere, a torus, a cube and the NASA almond"
+readme = "README.md"
+license = {file = "LICENSE"}
+authors = [{name = "Saptarshi Bandyopadhyay"}, {name = "Timo Betcke"}]
+requires-python = ">=3.9"
+dependencies = ["numpy>=1.22", "scipy>=1.8", "numba>=0.56", "matplotlib>=3.5"]
+
+[project.optional-dependencies]
+bempp = ["bempp-cl==0.4.2", "pyopencl", "pocl-binary-distribution"]   # the boundary element comparison
+test = ["pytest"]
+
+[project.urls]
+Repository = "https://github.com/sap6/MFS"
+
+[tool.setuptools]
+packages = ["mfs"]

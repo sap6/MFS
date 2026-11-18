@@ -241,11 +241,13 @@ class Cube:
             r2, b2 = r2 + float(res) ** 2, b2 + np.linalg.norm(b) ** 2
         return coef, np.sqrt(r2 / b2), b2
 
-    def field(self, coef, pts):
-        """Scattered field at the points pts (P, 3)"""
-        cl = list(coef)
-        A = self.matrix(pts, None, cl)
-        return sum(A[i][:, :self.unknowns[c]] @ coef[c] for i, c in enumerate(cl)).reshape(-1, 3)
+    def field(self, coef, pts, batch=1000):
+        """Scattered field at the points pts (P, 3), in batches"""
+        cl, out = list(coef), []
+        for i in range(0, len(pts), batch):
+            A = self.matrix(pts[i:i + batch], None, cl)
+            out.append(sum(A[j][:, :self.unknowns[c]] @ coef[c] for j, c in enumerate(cl)).reshape(-1, 3))
+        return np.concatenate(out)
 
     def far(self, coef, dirs, rfar=1.0e6):
         """Far-field pattern F, with E ~ F e^{ikr}/r"""
