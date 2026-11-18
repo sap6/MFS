@@ -2,7 +2,7 @@
 
     python3 cube_k3_tune.py size                 # matrix sizes of the candidate references
     python3 cube_k3_tune.py ref J                # two depths per octave at level J -> cube_k3_ref_J<J>.npz
-    python3 cube_k3_tune.py try fam,J,base,hmax[,dn[,colp[,pm-ng]]] ...   # variants, errors against the best reference on disk
+    python3 cube_k3_tune.py try fam,J,base,hmax[,dn[,colp[,pm-ng[,plain]]]] ...   # variants, errors against the best reference on disk
 """
 import glob
 import sys
@@ -19,10 +19,10 @@ import line_tree as lt  # noqa: E402
 NODES = lt.nodes
 
 
-def kwargs(J, fam, base, hmax, dn=8, colp=None):
+def kwargs(J, fam, base, hmax, dn=8, colp=None, n_plain=0):
     kw = c.dense(J) if fam == "dense" else dict(zip(("kw", "hmax"), c.balanced(J)))
     kw = dict(kw)
-    kw["kw"] = dict(kw["kw"], n_base=base, n0=kw["kw"]["n0"] + dn, depth0=0.2 / S)
+    kw["kw"] = dict(kw["kw"], n_base=base, n0=kw["kw"]["n0"] + dn, depth0=0.2 / S, n_plain=n_plain)
     kw["hmax"] = hmax
     if colp is not None:
         kw["col"] = dict(kw.get("col", c.COL), col_p=colp)
@@ -73,10 +73,13 @@ if __name__ == "__main__":
                 lt.nodes = lambda k, H, pm=pm, ng=ng: (pm, ng)
             else:
                 lt.nodes = NODES
-            E, t, info = c.run(J, pts=pts, family=fam, **kwargs(J, fam, base, hmax, dn, colp))
+            npl = int(a[7]) if len(a) > 7 else 0                        # plain polynomial modes per line (item 71)
+            E, t, info = c.run(J, pts=pts, family=fam, **kwargs(J, fam, base, hmax, dn, colp, npl))
+            bem = np.load("cube_k3_t_bem_n40.npy") if os.path.exists("cube_k3_t_bem_n40.npy") else None
             print(f"{fam:8s} J = {J:2d} base {base} hmax {hmax} dn {dn} colp {colp} nodes {a[6] if len(a) > 6 else 'rule'}: unknowns/class {max(info['per_class'])} rows {info['rows']} "
                   f"t = {t:5.1f} s (assembly {info['t_assemble']:.1f}, factor {info['t_factor']:.1f})  error {np.linalg.norm(E - ref) / np.linalg.norm(ref):.2e} "
-                  f"optical {info['optical']:.1e} |c| {info['coef_norm']:.1f}", flush=True)
+                  f"optical {info['optical']:.1e} |c| {info['coef_norm']:.1f} plain {npl}"
+                  + (f" from Bempp {np.linalg.norm(E - bem) / np.linalg.norm(ref):.2e}" if bem is not None else ""), flush=True)
             store[spec] = E
             np.savez("cube_k3_t_tries.npz", **store)
         print("reference:", fref)

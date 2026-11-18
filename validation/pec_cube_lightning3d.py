@@ -153,8 +153,10 @@ def edge_dist(x):
 class Line:
     """Line dipole distribution parallel to coordinate axis `ax`."""
 
-    def __init__(self, ax, s1, s2, d, n_modes, angle=0.0, kind="e", ng=12, cap=0.17):
-        self.ax, self.d, self.n, self.ng, self.cap = ax, d, n_modes, ng, cap
+    def __init__(self, ax, s1, s2, d, n_modes, angle=0.0, kind="e", ng=12, cap=0.17, n_plain=0):
+        self.ax, self.d, self.n, self.ng, self.cap = ax, d, n_modes + n_plain, ng, cap
+        self.n_plain = n_plain                                   # the last n_plain modes are polynomials in t (line_tree.modes)
+        self.deg = np.concatenate((np.arange(n_modes), np.arange(1, n_plain + 1)))    # degree of each mode (its parity along the edge)
         self.kernel = dyadic_pairs if kind == "e" else magnetic_pairs
         self.b, self.c = [i for i in range(3) if i != ax]
         # position in the cross-section: distance d from the edge, at `angle`
@@ -202,7 +204,7 @@ class Line:
         if TREE:
             mag = self.kernel is magnetic_pairs
             Be, Bm = tree_block(x, T, self.ax, self.b, self.c, (self.yb, self.yc), self.lam, self.d, self.n, K, H,
-                                we=None if mag else _W1, wm=_W1 if mag else None)
+                                we=None if mag else _W1, wm=_W1 if mag else None, n_plain=self.n_plain)
             return Bm if mag else Be
         if FAST:
             out = np.empty((len(x), 3 if T is None else 2, self.n, 3), complex)
@@ -264,7 +266,7 @@ class TailLine:
         self.ax, self.yb, self.yc, self.kernel = base.ax, base.yb, base.yc, base.kernel
         ns = max(len(exps_axis), len(exps_radial))
         self.nm, self.n = base.n, base.n * ns
-        self.deg = np.tile(np.arange(base.n), ns)
+        self.deg = np.tile(base.deg, ns)
         self.axis_index = 0
         ecomp = np.full((ns, 3), np.nan)
         ecomp[:len(exps_axis), 0] = exps_axis
@@ -289,7 +291,7 @@ class TailLine:
         if TREE and not self.taper:
             mag = b.kernel is magnetic_pairs
             Be, Bm = tree_block(x, T, b.ax, b.b, b.c, np.array(self.pos), b.lam, b.d, b.n, K, H, rot=self.rot,
-                                we=None if mag else self.w, wm=self.w if mag else None)
+                                we=None if mag else self.w, wm=self.w if mag else None, n_plain=b.n_plain)
             return Bm if mag else Be
         ns = self.n // self.nm
         out = np.zeros((len(x), 3 if T is None else 2, self.n, 3), complex)
@@ -349,14 +351,14 @@ def pair_block(l1, l2, x, T=None):
     """Blocks of an electric line (or tail) and of its magnetic twin."""
     if isinstance(l1, TailLine):
         b = l1.base
-        return tree_block(x, T, b.ax, b.b, b.c, np.array(l1.pos), b.lam, b.d, b.n, K, H, rot=l1.rot, we=l1.w, wm=l2.w)
-    return tree_block(x, T, l1.ax, l1.b, l1.c, (l1.yb, l1.yc), l1.lam, l1.d, l1.n, K, H, we=_W1, wm=_W1)
+        return tree_block(x, T, b.ax, b.b, b.c, np.array(l1.pos), b.lam, b.d, b.n, K, H, rot=l1.rot, we=l1.w, wm=l2.w, n_plain=b.n_plain)
+    return tree_block(x, T, l1.ax, l1.b, l1.c, (l1.yb, l1.yc), l1.lam, l1.d, l1.n, K, H, we=_W1, wm=_W1, n_plain=l1.n_plain)
 
 
 class Sources:
     def __init__(self, J, n_base=6, depth0=0.2, q=0.25, gamma=2.0, n0=4, angles=(0.0,), kinds="e", vrays=1,
                  tail_n=0, tail_q=0.5, tail_e=(2 / 3,), tail_m=(4 / 3,), tail_normal=0,
-                 tail_er=(5 / 3,), tail_mr=(7 / 3,), vtail_n=0, vtail_exp=1, depths=None):
+                 tail_er=(5 / 3,), tail_mr=(7 / 3,), vtail_n=0, vtail_exp=1, depths=None, n_plain=0):
         self.depths = depth0 * q ** np.arange(J + 1) if J >= 0 else np.array([])
         if depths is not None and J >= 0:                    # any decreasing list of depths (cube_mfs.tapered)
             self.depths = np.asarray(depths, float)
@@ -381,7 +383,7 @@ class Sources:
                 for s1, s2 in itertools.product((-1, 1), repeat=2):
                     for ang in angles:
                         for kind in kinds:
-                            self.lines.append(Line(ax, s1, s2, d, n_modes, np.deg2rad(ang), kind))
+                            self.lines.append(Line(ax, s1, s2, d, n_modes, np.deg2rad(ang), kind, n_plain=n_plain))
         if tail_n and J >= 0:
             deepest = [ln for ln in self.lines if ln.d == self.depths[-1]]
             for ln in deepest:
