@@ -12,7 +12,7 @@ It lives here, next to the code that produces its numbers, and is not yet in
   hold the cone exponents, the line quadrature and the Bempp settings.
   Lines starting with `%% TODO` are open points for the authors. The title
   is a placeholder.
-- Length: the target is 22-24 pages in the journal's layout (at present 22, and 38 in the
+- Length: the target is 22-24 pages in the journal's layout (at present 23, and 38 in the
   12 pt preprint layout). To count them,
   build `main.tex` with `\documentclass[final,3p,times]{elsarticle}`
   (`sed 's/\[preprint,12pt\]/[final,3p,times]/' main.tex > main_3p.tex`).

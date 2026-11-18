@@ -11,7 +11,7 @@ tangential E_sc = -tangential E_inc on the surface, least-squares collocation.
 - Everything is committed and pushed on branch `ccr-116c520c-fts35f`. No
   pull request exists. Nothing was ever pushed to `sap6/mfs-paper`; it is
   still the thesis text (commit 4f8731f).
-- The paper is `paper/main.tex` (one document, 38 preprint pages, 22 in
+- The paper is `paper/main.tex` (one document, 38 preprint pages, 23 in
   the journal layout). Its numbers are those of items 65, 68 (errors) and
   77 (times). Section 6 lists what the paper may and may not claim.
 - The blocks below are in reverse order of time. The newest one is
@@ -1846,7 +1846,7 @@ towards the MFS field.
       for the general wave, 21 at two wavelengths, timed in the same
       session and merged. One of them enters an envelope (standard wave:
       g = 1.6, 4/6, 28800 dofs, 16.2 s, 1.94e-4); no crossover changes.
-      After any future `time_paper.sh`, run it for the three cases.
+      `time_paper.sh` now runs it for the three cases.
 78. **Titles (Plan E).** The author: "think about it, we can change
     later". The working title stays "The Method of Fundamental Solutions
     for Maxwell's Equations". Candidates offered in the final message of
@@ -1973,7 +1973,7 @@ cube (**T22**), and the cube at two and three wavelengths (item 57).
 Open, in the order I would take them:
 
 - [ ] **T13 Write-up, continued** (the author leads). The paper is one
-      document (`paper/main.tex`, 38 preprint pages, 22 in the journal
+      document (`paper/main.tex`, 38 preprint pages, 23 in the journal
       layout; items 64-78). To do: the author's pass over every section;
       abstract and highlights; the title (item 78); acknowledgements and
       the AI declaration; a final

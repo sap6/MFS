@@ -12,6 +12,7 @@ set -x
 python3 -W ignore cube_duel.py 2 > time_paper_t_cube.txt 2>&1                 # cube, standard wave: MFS and best Bempp runs
 python3 -W ignore cube_cases.py k1o 2 > time_paper_t_k1o.txt 2>&1             # general wave
 python3 -W ignore cube_cases.py k2 2 > time_paper_t_k2.txt 2>&1               # two wavelengths
+for c in k1 k1o k2; do python3 -W ignore bem_retime_extra.py $c 2 > time_paper_t_extra_$c.txt 2>&1; done   # Bempp runs the scan had excluded on old times
 python3 -W ignore fig_cost_sphere.py run > time_paper_t_sphere.txt 2>&1
 python3 -W ignore fig_cost_torus.py run > time_paper_t_torus.txt 2>&1
 python3 -W ignore fig_cost_almond.py run > time_paper_t_almond.txt 2>&1

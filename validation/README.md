@@ -34,7 +34,7 @@ Self-check of a fresh installation: `python3 mie.py` (errors near 1e-14).
 | Table 3, Fig. 8 almond benchmark | `fig_almond_benchmark.py` | `fig_almond_benchmark_*.npz`, `austin_almond/` |
 | Fig. 9, Table 4 cost comparison; Fig. 10 near the surface (`sphere_nearfield.py`) | `fig_cost_sphere.py`, `fig_cost_torus.py`, `fig_cost_almond.py`, `cube_duel.py`, `fig_cost_all.py` | `fig_cost_*.npz` |
 | Appendix A exponents | `cone_exponents.py` | none |
-| Table C.6 best Bempp runs | `bem_grading_scan.py`, `cube_duel.py` | `bem_grading_scan_*.npz` |
+| Table C.6 best Bempp runs | `bem_grading_scan.py`, `cube_duel.py`, `bem_retime_extra.py` | `bem_grading_scan_*.npz` |
 
 All table bodies are written by `../paper/make_tables.py`.
 
