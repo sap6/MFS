@@ -67,7 +67,7 @@ if __name__ == "__main__":
     ax.grid(True, which="major", color="#e4e3df", lw=0.6)
     for sp in ("top", "right"):
         ax.spines[sp].set_visible(False)
-    ax.legend(frameon=False, fontsize=8, loc="center right", bbox_to_anchor=(1.0, 0.36))
+    ax.legend(frameon=False, fontsize=8, loc="center", bbox_to_anchor=(0.5, 0.24), ncol=2)
     fig.tight_layout()
     fig.savefig("fig_sphere_nearfield.pdf")
     fig.savefig("fig_sphere_nearfield.png", dpi=200)
