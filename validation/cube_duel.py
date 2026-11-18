@@ -28,7 +28,7 @@ if __name__ == "__main__":
     d = dict(np.load("fig_cost_cube.npz"))
     pts = d["pts"]
     ref = d["ref_E"]                                    # reference field: J = 12 with the finer interior grid
-    jref = int(d["ref_info"][0])                        # the reference level is not timed again (4 minutes, 5 GB)
+    jref = int(d["ref_info"][0])                        # the reference level is timed once, at the end
     mfs = [("tail", int(r[0]), "balanced") for r in d["tail"]] + [("dense", int(r[0]), "dense") for r in d["dense"] if int(r[0]) != jref]
     fin = np.load("bem_grading_scan_k1_final.npz")
     rows = [tuple(r) for r in fin["all"]]
@@ -70,6 +70,14 @@ if __name__ == "__main__":
         np.savez("fig_cost_cube.npz", **d)
         out = [(r[0], r[1], r[2], r[3], r[4], min(t_bem[r]), e_bem[r]) for r in cand]
         np.savez("bem_grading_scan_k1_final.npz", rows=np.array(scan.envelope(out)), all=np.array(out))
+    E, t, unk, nrow, opt = fc.run_mfs(jref, pts, family="dense")           # the reference level, once: only its time is stored
+    assert np.linalg.norm(E - ref) <= 1e-9 * np.linalg.norm(ref)
+    d["ref_info"][1] = t
+    a = d["dense"].copy()
+    a[[int(r[0]) for r in a].index(jref), 1] = t
+    d["dense"] = a
+    np.savez("fig_cost_cube.npz", **d)
+    print(f"reference level J = {jref}: {t:.0f} s")
     print("MFS: family, J, times of the repetitions, smallest, error")
     for m in mfs:
         e = np.linalg.norm(d[f"{m[0]}_E{m[1]}"] - ref) / np.linalg.norm(ref)
