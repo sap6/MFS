@@ -4,7 +4,8 @@ electric and magnetic dipoles, points on a sphere, tangent bases, the
 least-squares solver and the far field.
 """
 import numpy as np
-from scipy.linalg import blas, lapack, solve_triangular
+import scipy.linalg as sla
+from scipy.linalg import blas, lapack
 
 
 def plane_wave(x, k, d, p):
@@ -58,11 +59,7 @@ def magnetic(x, y, k):
     r = np.linalg.norm(d, axis=2)                  # (M, N)
     f = (1j - 1 / (k * r)) * np.exp(1j * k * r) / r
     e = d / r[..., None]
-    out = np.zeros(d.shape + (3,), complex)
-    out[..., 0, 1], out[..., 0, 2] = -e[..., 2], e[..., 1]
-    out[..., 1, 0], out[..., 1, 2] = e[..., 2], -e[..., 0]
-    out[..., 2, 0], out[..., 2, 1] = -e[..., 1], e[..., 0]
-    return f[..., None, None] * out
+    return f[..., None, None] * np.cross(np.eye(3), e[..., None, :])   # the matrix of β → e × β
 
 
 def fibonacci(n):
@@ -140,23 +137,21 @@ def classes_of(k, d, p, refl):
 # Least squares
 
 class QR:
-    """Householder QR of A with its columns scaled to unit norm, without forming Q (LAPACK geqrf and unmqr)"""
+    """Householder QR of A with its columns scaled to unit norm; Q is kept as its reflectors, not formed"""
     def __init__(self, A):
         A = np.array(A, dtype=complex, order="F")       # a copy that LAPACK may overwrite
         self.scale = np.linalg.norm(A, axis=0)
         A /= self.scale
-        self.n = A.shape[1]
-        lwork = int(lapack.zgeqrf_lwork(*A.shape)[0].real)
-        self.qr, self.tau, _, _ = lapack.zgeqrf(A, lwork=lwork, overwrite_a=True)
+        (self.qr, self.tau), self.R = sla.qr(A, mode="raw", overwrite_a=True, check_finite=False)
 
     def solve(self, b, residual=False):
         """Minimiser of |A c - b| (and the norm of the residual, if asked for)"""
         B = np.array(b.reshape(len(b), -1), dtype=complex, order="F")
         lwork = int(lapack.zunmqr("L", "C", self.qr, self.tau, B, -1)[1][0].real)
         y = lapack.zunmqr("L", "C", self.qr, self.tau, B, lwork, overwrite_c=True)[0].reshape(b.shape)   # Q^H b
-        c = solve_triangular(self.qr[:self.n], y[:self.n])                                               # R c = Q^H b
-        c = c / (self.scale if c.ndim == 1 else self.scale[:, None])
-        return (c, np.linalg.norm(y[self.n:], axis=0)) if residual else c
+        n = len(self.R)
+        c = sla.solve_triangular(self.R, y[:n]) / (self.scale if y.ndim == 1 else self.scale[:, None])  # R c = Q^H b
+        return (c, np.linalg.norm(y[n:], axis=0)) if residual else c
 
 
 class CSNE:
@@ -167,20 +162,20 @@ class CSNE:
     accurate while cond(A)² is well below 1/eps. Raises LinAlgError otherwise.
     """
     def __init__(self, A, max_cond=1e7):
-        self.A, self.n = A, A.shape[1]
-        G = np.conj(blas.zherk(1.0, A.T, trans=0, lower=0))    # upper triangle of A^H A
+        self.A = A
+        G = np.conj(blas.zherk(1.0, A.T, trans=0, lower=0))    # upper triangle of A^H A, without copying A
         self.scale = np.sqrt(np.real(np.diag(G)))              # column norms
         G /= self.scale[:, None] * self.scale[None, :]
-        self.R, info = lapack.zpotrf(G, lower=0, overwrite_a=True)
-        self.dR = np.abs(np.diag(self.R))
-        if info != 0 or self.dR.max() > max_cond * 1e-3 * self.dR.min():   # the diagonal of R underestimates cond(A) by up to 1e3
+        self.R = sla.cho_factor(G, overwrite_a=True, check_finite=False)   # raises LinAlgError if not positive definite
+        dR = np.abs(np.diag(self.R[0]))
+        if dR.max() > max_cond * 1e-3 * dR.min():             # the diagonal of R underestimates cond(A) by up to 1e3
             raise np.linalg.LinAlgError("too ill-conditioned for the semi-normal equations")
 
     def _normal(self, r):
         # (A^H A)^{-1} A^H r, with the column scaling undone
         rhs = np.conj(self.A.T @ np.conj(r))
         s = self.scale if rhs.ndim == 1 else self.scale[:, None]
-        return lapack.zpotrs(self.R, rhs / s, lower=0)[0] / s
+        return sla.cho_solve(self.R, rhs / s, check_finite=False) / s
 
     def solve(self, b, residual=False):
         c = self._normal(b)

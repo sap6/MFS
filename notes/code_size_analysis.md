@@ -2,7 +2,9 @@
 
 ## Outcome
 
-**B is done. D is not done, on purpose (see below).**
+**B is done. D is not done, on purpose (see below).** A later pass that used
+library functions where they are as fast (`notes/simplicity_pass_18nov.md`)
+brought the package to 1767 lines.
 
 | | before B | after B |
 |---|---|---|

@@ -88,7 +88,7 @@ def build_tree(lam, d, n, H, k):
 
 
 @njit(fastmath=True, cache=True, inline="always")
-def _dipoles(Tm, e, k, r, out_e, out_m):
+def dipoles(Tm, e, k, r, out_e, out_m):
     """
     Tested fields of unit electric and magnetic dipoles at distance r in the direction e:
       out_e[a, c] = Tm[a] · G e_c   with G = fI I - fR e e^T,
@@ -170,7 +170,7 @@ def _tree_kernel(x, T, refl, ax, b, c, pos, rot, w, tq, W, off, tlo, thi, ltab, 
                         e[ax], e[b], e[c] = xm[ax] - t, xm[b] - pos[i, 0], xm[c] - pos[i, 1]
                         rr = np.sqrt(e[0] * e[0] + e[1] * e[1] + e[2] * e[2])
                         e /= rr
-                        _dipoles(Tm, e, k, rr, Ge, Gm)
+                        dipoles(Tm, e, k, rr, Ge, Gm)
                         for a in range(nc):
                             for cc in range(3):
                                 le = Ge[a, 0] * rot[cc, 0] + Ge[a, 1] * rot[cc, 1] + Ge[a, 2] * rot[cc, 2]
@@ -241,7 +241,7 @@ def points_add(x, T, refl, pe, pm, k, A, col0, sgn):
                         Tm[a, q] = T[m * tmul, a, q] * refl[r, q]
                 rr = np.sqrt(e[0] * e[0] + e[1] * e[1] + e[2] * e[2])
                 e /= rr
-                _dipoles(Tm, e, k, rr, Ge, Gm)
+                dipoles(Tm, e, k, rr, Ge, Gm)
                 for s in range(ncls):
                     for a in range(nc):
                         for cc in range(3):

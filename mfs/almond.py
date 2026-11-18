@@ -14,6 +14,7 @@ import numpy as np
 from numba import njit, prange
 
 from .core import class_part, cross_sections, factor, sphere_rule, tangent_basis
+from .lines import dipoles
 
 L = 0.2524                                                  # length [m]
 T0, T1 = -0.416667, 0.58333                                 # rear end and tip, in units of L
@@ -49,43 +50,26 @@ def parity_class(sy, sz):
 
 
 @njit(parallel=True, fastmath=True, cache=True)
-def _block(x, T, use_T, y, comps, sig, k, out):
-    """out[m, a, n, i]: component a (or tangent a) at x[m] of dipole comps[i] at y[n], summed over the images"""
+def _block(x, T, y, comps, sig, k, out):
+    """out[m, a, n, i]: row a of T[m] against the field of dipole comps[i] at y[n], summed over the images"""
+    nc, tmul = T.shape[1], 1 if T.shape[0] > 1 else 0
     for m in prange(x.shape[0]):
-        v = np.empty(3, np.complex128)
+        Ge, Gm = np.empty((nc, 3), np.complex128), np.empty((nc, 3), np.complex128)
+        Tm, e = np.empty((nc, 3)), np.empty(3)
         out[m] = 0.0
         for g in range(4):
-            r0, r1, r2 = x[m, 0], x[m, 1] * (1 - 2 * (g % 2)), x[m, 2] * (1 - 2 * (g // 2))
+            for q in range(3):
+                for a in range(nc):
+                    Tm[a, q] = T[m * tmul, a, q] * REFL[g, q]
             for n in range(y.shape[0]):
-                d0, d1, d2 = r0 - y[n, 0], r1 - y[n, 1], r2 - y[n, 2]
-                r = np.sqrt(d0 * d0 + d1 * d1 + d2 * d2)
-                kr = k * r
-                ph = (np.cos(kr) + 1j * np.sin(kr)) / r
-                e0, e1, e2 = d0 / r, d1 / r, d2 / r
-                fI = (1.0 + 1j / kr - 1.0 / (kr * kr)) * ph
-                fR = (1.0 + 3j / kr - 3.0 / (kr * kr)) * ph
-                fm = (1j - 1.0 / kr) * ph
+                for q in range(3):
+                    e[q] = x[m, q] * REFL[g, q] - y[n, q]
+                r = np.sqrt(e[0] * e[0] + e[1] * e[1] + e[2] * e[2])
+                e /= r
+                dipoles(Tm, e, k, r, Ge, Gm)
                 for i in range(comps.shape[0]):
-                    c = comps[i]
-                    if c < 3:                                   # electric dipole along e_c
-                        ec = e0 if c == 0 else (e1 if c == 1 else e2)
-                        v[0], v[1], v[2] = -fR * e0 * ec, -fR * e1 * ec, -fR * e2 * ec
-                        v[c] += fI
-                    elif c == 3:                                # magnetic dipoles: fm e × e_c
-                        v[0], v[1], v[2] = 0.0, fm * e2, -fm * e1
-                    elif c == 4:
-                        v[0], v[1], v[2] = -fm * e2, 0.0, fm * e0
-                    else:
-                        v[0], v[1], v[2] = fm * e1, -fm * e0, 0.0
-                    s = sig[g]
-                    v1, v2 = v[1] * (1 - 2 * (g % 2)), v[2] * (1 - 2 * (g // 2))
-                    if use_T:
-                        for a in range(2):
-                            out[m, a, n, i] += s * (T[m, a, 0] * v[0] + T[m, a, 1] * v1 + T[m, a, 2] * v2)
-                    else:
-                        out[m, 0, n, i] += s * v[0]
-                        out[m, 1, n, i] += s * v1
-                        out[m, 2, n, i] += s * v2
+                    for a in range(nc):
+                        out[m, a, n, i] += sig[g] * (Ge[a, comps[i]] if comps[i] < 3 else Gm[a, comps[i] - 3])
 
 
 def matrix(x, y, k, T=None, cls=(-1, 1)):
@@ -95,11 +79,10 @@ def matrix(x, y, k, T=None, cls=(-1, 1)):
       Returns an array (M nc, N · 3)
     """
     comps, sig = parity_class(*cls)
-    nc = 3 if T is None else 2
-    out = np.empty((len(x), nc, len(y), len(comps)), complex)
-    _block(np.ascontiguousarray(x), np.zeros((1, 2, 3)) if T is None else np.ascontiguousarray(T),
-           T is not None, np.ascontiguousarray(y), comps, sig, k, out)
-    return out.reshape(len(x) * nc, -1)
+    T = np.eye(3)[None] if T is None else np.ascontiguousarray(T)
+    out = np.empty((len(x), T.shape[1], len(y), len(comps)), complex)
+    _block(np.ascontiguousarray(x), T, np.ascontiguousarray(y), comps, sig, k, out)
+    return out.reshape(len(x) * T.shape[1], -1)
 
 
 # Sources on the mid-plane

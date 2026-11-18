@@ -14,6 +14,7 @@ exponent when a combination of them vanishes on the boundary of the cone
 without vanishing inside. This is again a method of fundamental solutions.
 """
 import numpy as np
+from scipy.linalg import orth
 from scipy.optimize import minimize_scalar
 from scipy.special import lpmv
 
@@ -44,8 +45,8 @@ def unit(v):
 def smallest_sigma(B, C):
     """Smallest singular value of the boundary part B of an orthonormal basis of the span of [B; C]: zero at an exponent"""
     A = np.vstack((B, C))
-    U, s, _ = np.linalg.svd(A / np.linalg.norm(A, axis=0), full_matrices=False)
-    return np.linalg.svd(U[:len(B), s > 1e-12 * s[0]], compute_uv=False)[-1]
+    U = orth(A / np.linalg.norm(A, axis=0), rcond=1e-12)
+    return np.linalg.svd(U[:len(B)], compute_uv=False)[-1]
 
 
 def minima(sigma, lo, hi, step, tol=None):

@@ -44,7 +44,7 @@ def efie(grid, k, d, p, pts):
     A = np.asarray(bempp.operators.boundary.maxwell.electric_field(div, div, curl, k).weak_form().to_dense())
     par = np.concatenate(([k], d, p))
     b = bempp.GridFunction(div, fun=plane_wave_trace, dual_space=curl, function_parameters=par).projections(curl)
-    J = sla.lu_solve(sla.lu_factor(A, overwrite_a=True, check_finite=False), b, check_finite=False)
+    J = sla.solve(A, b, overwrite_a=True, check_finite=False)
     return field(div, J, k, pts), div.global_dof_count
 
 
