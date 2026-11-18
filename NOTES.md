@@ -1681,6 +1681,109 @@ towards the MFS field.
       current and almond rows; a sketch of the wedge for the edge
       derivation; tapered depths in 3D (T21) are not mentioned in the paper.
 
+### Seventh session, 2026-11-18 (items 71-78)
+
+71. **General wave on the cube: four class matrices instead of eight, in
+    both codes (Plan A).** The rotation by a third of a turn about a body
+    diagonal permutes the three mirrors, so the classes (+,+,-), (+,-,+),
+    (-,+,+) are rotated copies of one another, likewise (+,-,-), (-,+,-),
+    (-,-,+). If c' is c turned j times, the c'-part of the field of the
+    wave (d, p) is Q^j applied to the c-part of the field of the wave
+    turned back j times, evaluated at the points turned back
+    (`cube_mfs.diagonal_orbits`, `ROT`; in `run` a loop over j = 0, 1, 2).
+    `test_cube_rotation.py`: field equal to the direct eight-class solve
+    to 1.6e-15, standard wave equal to the stored field to 2e-15 (the
+    standard wave excites one class of each triple, so nothing changes
+    for it). Same errors as before (J = 4..8: 5.72e-3 ... 1.44e-4), about
+    half the time. Bempp got the same rotation (`bem_cube_sym.solve`,
+    `rotate=True`; its mesh is invariant under the rotation, fields equal
+    to 5e-16): it gains only a few per cent, because its time is assembly.
+72. **Fairness audit after the author's message: every symmetry in both
+    codes.** (a) Bempp's fold of the symmetry classes was a sparse-dense
+    product that took 40% of the time of a general wave on fine meshes
+    (13 of 33 s at 18432 dofs); it is now a compiled loop
+    (`bem_mirror.fold`): 21 s, identical fields. So Bempp is 20-35%
+    faster than in item 69 on fine meshes, and all cube comparisons were
+    re-timed (item 77). (b) New `bem_mirror.py`: the symmetric EFIE solve
+    for any set of coordinate mirror planes (`Mirror`, `mirror_grid`,
+    `reflections`, `class_trace`); `bem_cube_sym.py` only keeps the cube
+    mesh and the rotation. (c) Torus: `bem_torus.py --sym` (octant mesh,
+    three mirrors): 9600 dofs in 3.8 s instead of 28.8 s, same error
+    (8.2e-3); finer meshes now fit: 18816 dofs 11.7 s 4.2e-3, 38400 dofs
+    38 s 2.0e-3. (d) Almond: `pec_almond.mesh_quarter`,
+    `pec_almond_skeleton.bem_reference(sym=True)` (two mirrors): 9912
+    dofs in 4.2 s (2.8e-3) instead of 27.6 s; 18924 dofs 15 s 1.5e-3;
+    27324 dofs 33 s 1.0e-3. The error of Bempp is unchanged by the
+    symmetry in all cases. `fig_cost_torus.py` and `fig_cost_almond.py`
+    use the symmetric runs. The candidate lists for the timed Bempp runs
+    on the cube were widened (factor 0.5 instead of 0.75 / 0.8) because
+    the scan was timed with the slow fold.
+73. **Old cube solver path deleted (Plan B, T23).** Gone: `SymSources`,
+    `solve`, `cross_sections`, `test_residual`, `load_bem`, `main` of
+    `pec_cube_lightning3d.py` (now 430 lines: source classes and
+    boundary points only), `diag_cube.py`, `cube_speed.py`,
+    `cube_general.py`. Kept: `line_kernel.py` as the independent adaptive
+    quadrature for `test_line_tree.py` (worst difference 1.3e-7 at J = 5,
+    as before). `check_tail_exponents.py` now uses the layout of the
+    paper: at J = 6 / 8 the derived exponents give 8.31e-4 / 1.40e-4; the
+    next term of each expansion 7.99e-4 / 1.35e-4 (4% / 3%); the two
+    bisector exponents lowered by one 3.45e-3 / 1.33e-3 (4 and 10 times
+    worse); no vertex tail 1.33e-3 / 2.27e-4. **The sentence in Section
+    5.4 ("less than 1%", "65%") came from the old family and was wrong
+    for the layout of the paper; corrected.**
+74. **Khavinson and Lundberg (Plan F).** arXiv 1309.2042 fetched with
+    curl and read. Their "focal ellipsoid" E is the flat elliptic disc
+    bounded by the focal ellipse; the exterior potential equals that of a
+    measure on E (Corollary 2.3) and the continuation is singular on E
+    (Section 5). Sentence in Section 4.2 reworded, TODO removed,
+    `LITERATURE.md` section 10 updated.
+75. **"A geometry where a meshless method is vastly better than a
+    mesh-based one" (the author's question).** (a) Literature (a search
+    agent, arXiv full texts or abstracts): no MFS / MAS / discrete-sources
+    paper argues that its shape is hard to mesh; the stated advantage is
+    always simplicity and exponential convergence on smooth bodies. Shapes
+    that are hard for boundary elements (nearly touching bodies, cusps,
+    thin tubes, knots) are as hard or harder for the MFS; Malhotra and
+    Barnett (arXiv:2310.00889) say the MFS "suffers at least as much as
+    BIE at high aspect ratio". Best candidate named: Barnett's "cruller"
+    (torus with tube radius 0.5 + 0.1 cos(5 phi + 3 theta); Barnett,
+    Greengard, Hagstrom arXiv:1904.00076). (b) **Tried it**
+    (`pec_cruller.py`, dipoles on the surface shrunk by eta, dense least
+    squares, no symmetry). A known exterior solution converges (2e-6 with
+    3600 unknowns), **the plane wave does not converge usefully**:
+    boundary residual 15% (eta 0.5), 13% (0.6), 12% (0.7), 26% (0.8),
+    75% (0.9) with 3600 unknowns in 10 s; 5.1% (eta 0.7) and 9.4% (0.8)
+    with 7056 unknowns in 62 s. The ripples have a radius of curvature
+    near 0.15, so the singularities of the continued field lie within
+    about 0.1 of the surface and the sources cannot enclose them at an
+    affordable spacing. A flat-triangle code reaches 1% on such a body in
+    that time. (c) **Answer given to the author**: no such popular
+    geometry exists. What mesh-free buys is exact geometry and spectral
+    accuracy on smooth bodies whose singular set lies deep inside (sphere,
+    torus, ellipsoids), which the paper shows: with the mirror planes in
+    both codes the torus is 7e-12 in the MFS against 2e-3 in Bempp. A
+    wavy or thin body is where the plain MFS is weak. The ogive and the
+    cone-sphere (old Plan D) are easy to mesh and were not tried.
+76. **Three wavelengths: polynomials in t added to the line modes do not
+    help (Plan C, T30).** (a) One line alone (`proto_line_modes.py`): the
+    stretched modes fit exp(i k t) on a deep line badly (7e-3 at one
+    wavelength, 5e-2 at two, d = 0.003) and replacing 8 to 12 of them by
+    Legendre polynomials in t gains two to four orders. (b) In the solver
+    (commit 5bbec80, then removed) it does not carry over. One
+    wavelength, J = 4 and 6: the error is unchanged (5.10e-3, 8.3e-4) with
+    4 to 6 plain modes, added or exchanged, and the coefficients grow from
+    0.3 to 1e5-1e7 (the lines at other depths already span these
+    functions). Three wavelengths, one depth per octave, base 16, panels
+    0.065: J = 6: 2.18e-3 -> 6.2e-4 with 8 or 12 plain modes; J = 7:
+    1.40e-3 -> 9.1e-4 (8) and 7.3e-4 (12): the optical mismatch falls
+    tenfold (7e-4 -> 8e-5, 5e-4 -> 3e-5) but the error against the J = 9
+    reference rises from J = 6 to J = 7, the coefficients are 1e6 to 1e10
+    and the solve is three times slower (QR fallback). Distance from
+    Bempp (28800 dofs): 7.9e-4 and 1.0e-3. So the fields land in the same
+    6e-4 to 9e-4 band as every other variant of item 67: **the mode basis
+    is not the cause of the limit at three wavelengths, and the cause is
+    not known.** The paper says so (Section 5.5); T30 is closed.
+
 ## 3. Current best commands
 
 ```
