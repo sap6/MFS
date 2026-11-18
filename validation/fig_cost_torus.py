@@ -24,7 +24,7 @@ K = 2 * np.pi
 A = 0.5
 LAYOUTS = ((6, 20), (8, 28), (12, 40), (16, 52), (20, 64), (24, 80), (28, 96), (36, 128), (44, 160))
 DENSE = ((6, 20), (8, 28), (12, 40), (16, 52), (20, 64))
-BEM_N = (12, 20, 28, 40, 56, 80, 112, 160)
+BEM_N = (12, 20, 28, 40, 56, 80, 112, 160, 224)
 REF = (56, 240)
 STYLE = {"MFS": ("#2a78d6", "o", "-", "MFS, dipoles on an inner torus (mode by mode)"),
          "MFS dense": ("#1baf7a", "s", "--", "the same, full matrix (no symmetry used)"),

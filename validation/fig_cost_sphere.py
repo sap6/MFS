@@ -18,7 +18,7 @@ from pec_sphere_convergence import D, P, dyadic, evaluate, fibonacci_sphere, rel
 
 K = 2 * np.pi
 NS = (50, 100, 150, 200, 300, 400, 600, 800, 1200)
-HS = (0.2, 0.14, 0.1, 0.07)
+HS = (0.2, 0.14, 0.1, 0.07, 0.056)     # 0.056: about 15500 unknowns, the largest full matrix under the 4 GB of the OpenCL driver
 STYLE = {"MFS": ("#2a78d6", "o", "-", "MFS, dipoles on an inner sphere"), "Bempp": ("#eb6834", "D", "-.", "Bempp (EFIE, RWG)")}
 INK, MUTED = "#1f1f1e", "#6b6a64"
 

@@ -44,8 +44,8 @@ Tables and figures follow by themselves. These sentences quote times or
 ratios and have to be compared with the output of `make_tables.py` (lines
 starting with `cube_ends`) and of `python3 ../validation/crossovers.py`:
 
-- `sections/cost.tex`, "Smooth bodies and the almond": "in about five
-  seconds or less", "after about twenty seconds", the sentence on 3.5 GHz
+- `sections/cost.tex`, "Smooth bodies and the almond": "in seven
+  seconds or less", "take 20 to 90 seconds", the sentence on 3.5 GHz
   (`../validation/almond_cost_freq_3.5GHz.npz`), "three to ten times
   faster" and "ten to twenty times faster" (symmetry gains, measured by
   hand: NOTES.md item 83).
