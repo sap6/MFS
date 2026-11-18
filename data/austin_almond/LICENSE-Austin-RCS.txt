@@ -1,0 +1,12 @@
+Copyright 2023 The University of Texas at Austin
+
+Permission is hereby granted, free of charge to any person obtaining a copy of Austin RCS Benchmark Suite ("the Work"), 
+to use, copy, modify, merge, publish, sublicense, and/or distribute the Work, and to choose to permit persons to whom 
+the Work is furnished to do so, subject to the following conditions:
+
+Category 1 - The above copyright notice, the above Permission Notice, Category 1 conditions, and Category 2 conditions 
+shall be included in all copies or substantial poritons of the Work, excepting those falling under Category 2 conditions.
+
+Category 2 - If restrictions are placed on distribution of modified copies of the Work ("Restricted Derivative Works") 
+then the above copyright notice and the statement "All rights reserved" will be placed on all Restricted Derivative Works 
+and modifications thereof.
