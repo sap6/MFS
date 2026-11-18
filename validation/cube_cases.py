@@ -36,9 +36,11 @@ def layout(c, S, J, family="dense"):
     one wavelength (first depth 0.2, eight base points per side), with MODES[S]
     more modes per line (NOTES.md items 57, 68, 79). The line quadrature
     takes more nodes by itself (line_tree.nodes). At three wavelengths the
-    matrices of the two classes are built one after the other (memory)."""
+    matrices of the two classes are built one after the other from J = 9 on,
+    and for the general wave at one wavelength up to 8.5 GB of matrices are
+    held at once (peak memory 12 GB), so that J = 9 needs one assembly."""
     if S == 1:
-        return {}
+        return dict(max_gb=8.5)                 # the four matrices of a general wave at J = 9 (8 GB) are kept together
     kw = dict(c.dense(J))
     kw["kw"] = dict(kw["kw"], n0=kw["kw"]["n0"] + MODES[S])
     if S == 3 and J >= 9:
