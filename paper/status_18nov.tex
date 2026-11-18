@@ -8,7 +8,7 @@
 \begin{document}
 {\large\bfseries MFS paper: status on 18 November 2026}
 
-The paper is \texttt{paper/main.pdf}: 41 pages in the preprint layout, 24 in the journal layout. Everything is on the branch \texttt{ccr-116c520c-fts35f}. Nothing was pushed to the Overleaf repository.
+The paper is \texttt{paper/main.pdf}: 41 pages in the preprint layout, 24 in the journal layout. A self-contained copy for Overleaf is the file \texttt{mfs-paper-overleaf.zip} sent with this sheet (upload it as a new project). Everything is on the branch \texttt{ccr-116c520c-fts35f}. Nothing was pushed to the Overleaf repository.
 
 \textbf{1. What changed in substance}
 \begin{itemize}
@@ -16,7 +16,8 @@ The paper is \texttt{paper/main.pdf}: 41 pages in the preprint layout, 24 in the
 \item \textbf{Three wavelengths now converges.} The paper's cube layout works unchanged with twelve more modes per line. The ``limit'' reported before came from an earlier session that had scaled the first source depth with the wavelength.
 \item \textbf{What the theorem shows.} An independent reading pointed out that the theorem does not say the field is singular on the whole skeleton. The continuation through one face is regular inside the cube; the singular points are the edges and vertices. The theorem shows where sources \emph{can} be placed. Abstract, introduction, Sections 4 and 5 and the conclusion now say this. The theorem and its proof are unchanged.
 \item \textbf{A wrong sentence removed.} ``Adding the next term changes the error by less than 1\%, lowering two exponents gives 65\%'' came from an old layout. With the paper's layout: 3 to 4\%, and 4 to 10 times larger.
-\item \textbf{Comparisons are stated by actual runs}, not by interpolating between them.
+\item \textbf{Comparisons are stated by actual runs}, not by interpolating between them, and the cube comparison is now one small table (Table 5).
+\item \textbf{Almond at a second frequency.} At 3.5 GHz (three wavelengths long) the picture is the same: MFS $4\times10^{-5}$ in 4 s, Bempp $1\times10^{-3}$ in half a minute.
 \end{itemize}
 
 \textbf{2. Where the comparison with Bempp stands} (both at their best)
@@ -28,7 +29,7 @@ Case & Bempp ahead down to & Beyond that \\
 \midrule
 Cube, standard wave & $1.5\times10^{-4}$ & MFS $2\times10^{-5}$ in 54 s; Bempp's best is $8\times10^{-5}$ in 61 s \\
 Cube, general wave & $1.5\times10^{-4}$ & MFS $6\times10^{-5}$ in 66 s; Bempp's best is $1.1\times10^{-4}$ in 72 s \\
-Cube, two wavelengths & $2\times10^{-4}$ & MFS $1.5\times10^{-4}$ in 36 s; Bempp's best is $1.9\times10^{-4}$ in 61 s \\
+Cube, two wavelengths & $3\times10^{-4}$ & MFS $1.5\times10^{-4}$ in 36 s; Bempp's best is $1.9\times10^{-4}$ in 61 s \\
 Cube, three wavelengths & $5\times10^{-4}$ & MFS $1.9\times10^{-4}$ in 53 s; Bempp's best is $5.2\times10^{-4}$ in 35 s \\
 Almond & $5\times10^{-3}$ & MFS $6\times10^{-5}$ in 3 s; Bempp $1\times10^{-3}$ in 22 s \\
 Torus & never & MFS $7\times10^{-12}$ in 2 s; Bempp $5\times10^{-4}$ in 19 s \\
