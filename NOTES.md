@@ -1992,6 +1992,43 @@ towards the MFS field.
     also shortens Bempp's set-up on the cube and the almond a little:
     **all times must be measured again** (`time_paper.sh`).
 
+82. **More of 18 November (morning).**
+    - **Three wavelengths, reference and Bempp**: `cube_cases.py k3 ref`
+      (J = 10, 12 more modes, 7860 unknowns per class, 286 s, optical
+      1.5e-5). Errors of J = 5..9 against it: 3.07e-3, 1.15e-3, 4.49e-4,
+      1.89e-4, 6.5e-5 (factors 2.7, 2.6, 2.4, 2.9). Bempp scan
+      (`bem_grading_scan.py k3`, 140 runs): envelope 6.5 s 1.03e-3
+      (g 1.6, 4/6, 18432 dofs); 13.5 s 6.0e-4 (g 1.5, 4/6, 28800); 34 s
+      5.2e-4 (g 1.6, 6/8, 28800), its smallest error. MFS (preview): 25 s
+      1.15e-3, 37 s 4.5e-4, 52 s 1.9e-4. So Bempp is faster down to about
+      5e-4 and does not go below; the crossover error roughly doubles with
+      each wavelength (1.2e-4, 2.5e-4, 5e-4).
+    - **Least-squares solver against QR (referee A2)**: standard wave,
+      J = 8: the field of the production solver (Cholesky of the Gram
+      matrix with two refinement steps, `lsq.CSNE`) and that of
+      Householder QR differ by 9e-14; at J = 10 by 2e-15 (the production
+      solver had fallen back to QR there). The paper no longer calls it
+      "the corrected semi-normal equations" without qualification.
+    - **Torus, Bempp extrapolated**: (sigma_MFS - sigma_Bempp) N is 394.6,
+      392.3, 391.0, 390.5, 390.6 for 9600 ... 153600 dofs: the error of
+      Bempp is exactly proportional to 1/N, and extrapolation from the two
+      finest meshes gives 11.7525724 against the MFS 11.7525747: **2e-7**
+      (the paper had "less than 1e-4" from coarser meshes).
+    - Citations the referee asked to verify: Kangro 2012 (Theorem 3 (ii))
+      and De Smedt and Van Bladel 1986 (Table V, rectangular corner) were
+      read in full on 17 Nov (`LITERATURE.md` section 10): confirmed, no
+      change. The introduction now cites Tabatadze et al. 2025 (plates in
+      an auxiliary surface; abstract only read) so that "smooth or
+      rounded" is not the whole statement.
+    - Deleted: `cube_oblique_table.py`, `cube_wavenumber.py`,
+      `cube_k3_tune.py` and their data; two unused functions of
+      `make_tables.py`. `bem_grading_scan.reference` uses the fields of
+      `cube_cases.py`.
+    - Two OOM kills (the second restarted the worker): a level-9 run at
+      three wavelengths next to a Bempp test, and two classes with the QR
+      fallback in one group. One heavy job at a time, and from J = 9 at
+      three wavelengths one class at a time (`max_gb=2.5`).
+
 ## 3. Current best commands
 
 ```
