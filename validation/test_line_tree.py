@@ -15,6 +15,7 @@ import time
 import numpy as np
 
 import pec_cube_lightning3d as m
+from pec_sphere_convergence import fibonacci_sphere
 from fig_cost_cube import COL, balanced
 
 
@@ -36,7 +37,8 @@ def old_block(line, x, T, ng=12, cap=0.17):
 if __name__ == "__main__":
     J = int(sys.argv[1]) if len(sys.argv) > 1 else 5
     kw, hmax = balanced(J)
-    src = m.SymSources(J, tail_n=9, **kw)
+    src = m.Sources(J, tail_n=9, **kw)
+    src.lines = [ln for ln in src.lines if ln.yb > 0 and ln.yc > 0]      # the lines of one octant, as in cube_mfs.py
     lv = max(2, int(np.ceil(np.log(src.depths[-1] / (2 * m.H)) / np.log(COL["col_q"]))) + 1)
     x, w, T, cells, hmin = m.cube_cells(lv, COL["col_p"], COL["col_q"], hmax)
     rng = np.random.default_rng(0)
@@ -62,7 +64,7 @@ if __name__ == "__main__":
         b = line.base if isinstance(line, m.TailLine) else line
         print(f"{kind} ax={b.ax} d={b.d:.2e} n={b.n:2d}: tree-ref {e_new:.1e}  old-ref {e_old:.1e}   "
               f"time tree {t1 - t0:.2f}s old {t2 - t1:.2f}s", flush=True)
-    far = 2.0 * m.fibonacci_sphere(400)
+    far = 2.0 * fibonacci_sphere(400)
     for line in src.lines[:4]:
         new, ref = line.block(far), old_block(line, far, None, 20, 0.085)
         worst = max(worst, np.abs(new - ref).max() / np.abs(ref).max())

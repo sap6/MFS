@@ -9,7 +9,7 @@ triangles. The elements near the edges are anisotropic (long along the edge).
 
     python3 bem_cube_graded.py n1,n2,... g [regular_order] [singular_order] [--wave=theta,phi,psi]
 
---wave gives an oblique plane wave in the convention of cube_general.wave
+--wave gives an oblique plane wave in the convention of cube_mfs.wave
 (degrees); the files then end in _obl. Without it the wave travels along -z
 with E along y, as everywhere else.
 Writes bem_cube_graded_n{n}_g{g}.npz with the field at the 400 test points,
@@ -101,7 +101,7 @@ if __name__ == "__main__":
     reg = int(args[3]) if len(args) > 3 else 4
     sing = int(args[4]) if len(args) > 4 else 6
     if wave:
-        from cube_general import wave as wave_dp
+        from cube_mfs import wave as wave_dp
         d, p = wave_dp(*(float(v) for v in wave[0].split(",")))
     else:
         d, p = D, P

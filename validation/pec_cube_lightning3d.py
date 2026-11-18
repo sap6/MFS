@@ -23,24 +23,17 @@ the skeleton of the cube, which is where the continued field has its sources
 
 Rows are weighted by sqrt(area) * dist_to_edge**beta.
 
-This module is the library and the solver for the standard case (wave along
--z, E along y; SymSources with its default parity). cube_general.py solves
-any incident plane wave with the four parity classes; fig_cost_cube.py holds
-the balanced refinement family and the cost table.
+This module is the library: the source classes (Line, TailLine, VertexTail,
+Sources), their kernels and the graded boundary points. The solver is
+cube_mfs.py, which uses the three mirror planes of the cube and solves any
+incident plane wave.
 """
-import glob
 import itertools
-import json
-import sys
-import time
 
 import numpy as np
-from scipy.linalg import lstsq, qr, solve_triangular
-
-from lsq import qr_solve
 
 import mie
-from pec_sphere_convergence import dyadic, fibonacci_sphere
+from pec_sphere_convergence import dyadic
 
 K = 2 * np.pi                    # cube side = one wavelength
 D = np.array([0.0, 0.0, -1.0])   # propagation direction
@@ -324,7 +317,7 @@ class VertexTail:
     NU, TAU = (0.45417, 1.23087), (0.8400, 1.20635)
 
     def __init__(self, sg, d, n_tail, qt, n_exp, magnetic):
-        self.ax, self.yb, self.yc = 2, float(sg[0]), float(sg[1])       # so that SymSources keeps the vertices with x, y > 0
+        self.ax, self.yb, self.yc = 2, float(sg[0]), float(sg[1])       # stored like a line along z through the vertex
         self.kernel = magnetic_pairs if magnetic else dyadic_pairs
         exps = np.array((self.TAU if magnetic else self.NU)[:n_exp]) + 2.0
         self.n = len(exps)
@@ -429,202 +422,3 @@ class Sources:
                     lo += line.n
                     i += 1
         return A.reshape(len(x) * nc, self.n_unknowns)
-
-
-class SymSources(Sources):
-    """Sources reduced by the mirrors x -> -x and y -> -y. A field of parity
-    (sx, sy) satisfies E(R x) = s R E(x) for each mirror R. The default
-    (+1, -1) is the class of E_inc = y_hat exp(-ikz): even under x -> -x, odd
-    under y -> -y; a general plane wave has a part in each of the four
-    classes (cube_general.py). Only a quarter of the sources is kept; each
-    basis function is the symmetrised sum over the four images, evaluated by
-    reflecting targets."""
-
-    def __init__(self, *args, parity=(1.0, -1.0), **kw):
-        super().__init__(*args, **kw)
-        sx, sy = self.parity = (float(parity[0]), float(parity[1]))
-        self.GROUP = [(np.array([1.0, 1, 1]), 1.0), (np.array([-1.0, 1, 1]), sx),
-                      (np.array([1.0, -1, 1]), sy), (np.array([-1.0, -1, 1]), sx * sy)]
-        self.points = self.points[(self.points[:, 0] > 0) & (self.points[:, 1] > 0)]
-        self.mpoints = self.mpoints[(self.mpoints[:, 0] > 0) & (self.mpoints[:, 1] > 0)] if len(self.mpoints) else self.mpoints
-        lines, keep = [], [np.ones((len(self.points) + len(self.mpoints), 3), bool)]
-        for ln in self.lines:
-            mag = ln.kernel is magnetic_pairs
-            if ln.ax == 2:                       # z-lines: orbit of four, keep x>0, y>0
-                if ln.yb > 0 and ln.yc > 0:
-                    lines.append(ln)
-                    keep.append(getattr(ln, 'colmask', np.ones((ln.n, 3), bool)))
-                continue
-            if ln.yb < 0:                        # x-lines: b is y; y-lines: b is x
-                continue
-            sigma = sx if ln.ax == 0 else sy     # parity of the reflection that maps the line to itself
-            par = (-1.0) ** getattr(ln, 'deg', np.arange(ln.n))[:, None]
-            sc = np.where(np.arange(3) == getattr(ln, 'axis_index', ln.ax), -1.0, 1.0)[None, :] * (-1.0 if mag else 1.0)
-            lines.append(ln)
-            keep.append((sigma * par * sc > 0) & getattr(ln, 'colmask', True))
-        self.lines = lines
-        self.keep = np.concatenate(keep).reshape(-1)
-        self._n_all = 3 * (len(self.points) + len(self.mpoints) + sum(l.n for l in self.lines))
-        self.n_unknowns = int(self.keep.sum())
-
-    def matrix(self, x, T=None, batch=1200):
-        out = 0
-        n_keep, self.n_unknowns = self.n_unknowns, self._n_all
-        try:
-            for R, sig in self.GROUP:
-                if T is not None:
-                    A = Sources.matrix(self, x * R, T * R, batch)
-                else:
-                    A = Sources.matrix(self, x * R, None, batch).reshape(len(x), 3, -1)
-                    A = (A * R[None, :, None]).reshape(len(x) * 3, -1)
-                out = out + sig * A[:, self.keep]
-        finally:
-            self.n_unknowns = n_keep
-        return out
-
-
-def quarter(x):
-    return (x[:, 0] > 0) & (x[:, 1] > 0)
-
-
-def solve(src, col_levels, col_p, col_q, beta, cond=1e-12, moments=0, hmax=0.1):
-    x, w, T, cells, hmin = cube_cells(col_levels, col_p, col_q, hmax)
-    if isinstance(src, SymSources):
-        sel = quarter(x)
-        x, w, T, cells, hmin = x[sel], w[sel], T[sel], cells[sel], hmin[sel]
-        cells = np.unique(cells, return_inverse=True)[1]
-    t0 = time.time()
-    A = src.matrix(x, T)
-    b = -np.einsum("mab,mb->ma", T, incident(x)).reshape(-1)
-    if moments:
-        # test against cell averages, scaled to mimic an H^{-1/2} norm:
-        # row = sqrt(h_c / A_c) * integral over the cell
-        import scipy.sparse as sp
-        nc = cells.max() + 1
-        area = np.bincount(cells, weights=w, minlength=nc)
-        hc = np.zeros(nc)
-        hc[cells] = hmin
-        S = sp.csr_matrix((w * np.sqrt(hc / area)[cells], (cells, np.arange(len(x)))), shape=(nc, len(x)))
-        S2 = sp.kron(S, sp.identity(2), format="csr")
-        A, b = S2 @ A, S2 @ b
-    else:
-        rw = np.repeat(np.sqrt(w) * edge_dist(x) ** beta, 2)
-        A *= rw[:, None]
-        b = b * rw
-    scale = np.linalg.norm(A, axis=0)
-    A /= scale
-    t1 = time.time()
-    # plain QR is about twice as fast as rank-revealing QR; fall back to the
-    # latter only if R shows the columns to be numerically dependent
-    c, rank = qr_solve(A, b, cond)                      # Householder QR, Q never formed (lsq.py)
-    return c / scale, {"rows": len(b), "unknowns": src.n_unknowns, "rank": int(rank),
-                       "t_assemble": t1 - t0, "t_solve": time.time() - t1,
-                       "coef_norm": float(np.linalg.norm(c))}
-
-
-def cross_sections(src, c, nt=40, nphi=80, rfar=1.0e6):
-    """Extinction and scattering cross-sections of the computed field. For a
-    perfect conductor they are equal (optical theorem); the collocation
-    solution does not satisfy this by construction, so the mismatch is an
-    error measure that needs no reference solution."""
-    g, w = LEG.leggauss(nt)
-    ph = (np.arange(nphi) + 0.5) / nphi * 2 * np.pi
-    ct, phh = np.meshgrid(g, ph, indexing="ij")
-    st = np.sqrt(1 - ct ** 2)
-    dirs = np.column_stack(((st * np.cos(phh)).ravel(), (st * np.sin(phh)).ravel(), ct.ravel()))
-    wts = np.repeat(w, nphi) * 2 * np.pi / nphi
-    dirs = np.vstack((dirs, np.array([[0.0, 0.0, -1.0]])))
-    F = (src.matrix(rfar * dirs) @ c).reshape(-1, 3) * rfar * np.exp(-1j * K * rfar)
-    ext = 4 * np.pi / K * float(np.imag(F[-1, 1]))
-    sca = float(np.sum(wts * np.sum(np.abs(F[:-1]) ** 2, axis=1)))
-    return ext, sca
-
-
-def test_residual(src, c, levels, beta):
-    """Boundary residual on a grid that is not the fitting grid, in the fitting
-    norm and by distance to the nearest edge."""
-    x, w, T = cube_surface(int(levels * np.log(0.5) / np.log(0.45)) + 1, 4, 0.45)
-    if isinstance(src, SymSources):
-        sel = quarter(x)
-        x, w, T = x[sel], w[sel], T[sel]
-    rhs = -np.einsum("mab,mb->ma", T, incident(x))
-    res = (src.matrix(x, T) @ c).reshape(-1, 2) - rhs
-    m2, r2 = np.sum(np.abs(res) ** 2, axis=1), np.sum(np.abs(rhs) ** 2, axis=1)
-    rho = edge_dist(x)
-    ww = w * rho ** (2 * beta)
-    out = {"res_test": float(np.sqrt(np.sum(ww * m2) / np.sum(ww * r2)))}
-    zones = [0, 1e-4, 1e-3, 1e-2, 0.1, 0.5]
-    out["res_zones"] = [float(np.sqrt(np.sum(w[s] * m2[s]) / max(np.sum(w[s]), 1e-300)))
-                        for lo, hi in zip(zones[:-1], zones[1:]) for s in [(rho >= lo) & (rho < hi)]]
-    return out
-
-
-def load_bem():
-    files = sorted((f for f in glob.glob("bem_cube_h*.npz") if "_q" not in f),
-                   key=lambda f: float(f.split("_h")[1][:-4]))
-    return np.load(files[0]) if files else None
-
-
-def main(Js, beta=1 / 3, q=0.25, gamma=2.0, col_q=1 / 3, col_p=2, n_base=6, n0=4, tag="run", angles="0", kinds="e", moments=0,
-         col_hmax=0.1, sym=0, vrays=1, cond=1e-12, tail=0, tail_q=0.5, tail_e="0.6667", tail_m="1.3333", tail_normal=0,
-         col_extra=1, diag=0):
-    angles = tuple(float(a) for a in str(angles).split(":"))
-    te_, tm_ = (tuple(round(3 * float(a)) / 3 for a in str(t).split(":")) for t in (tail_e, tail_m))
-    bem = load_bem()
-    pts = bem["pts"] if bem is not None else 2.0 * fibonacci_sphere(400)
-    results, prev = [], None
-    for J in Js:
-        src = (SymSources if sym else Sources)(J, n_base=n_base, q=q, gamma=gamma, n0=n0, angles=angles, kinds=kinds, vrays=vrays,
-                                               tail_n=tail, tail_q=tail_q, tail_e=te_, tail_m=tm_, tail_normal=tail_normal)
-        d_min = src.depths[-1] if J >= 0 else 0.2
-        col_levels = max(2, int(np.ceil(np.log(d_min / (2 * H)) / np.log(col_q))) + col_extra)
-        c, info = solve(src, col_levels, col_p, col_q, beta, moments=moments, cond=cond, hmax=col_hmax)
-        E = (src.matrix(pts) @ c).reshape(-1, 3)
-        info.update(J=J, d_min=float(d_min), beta=beta, q=q, gamma=gamma, col_q=col_q, col_p=col_p,
-                    n_base=n_base)
-        info["sigma_ext"], info["sigma_sca"] = cross_sections(src, c)
-        info["optical"] = abs(info["sigma_ext"] - info["sigma_sca"]) / info["sigma_sca"]
-        if diag:
-            info.update(test_residual(src, c, col_levels, beta))
-        if bem is not None:
-            info["vs_bem"] = float(np.linalg.norm(E - bem["E"]) / np.linalg.norm(bem["E"]))
-        if prev is not None:
-            info["change"] = float(np.linalg.norm(E - prev) / np.linalg.norm(E))
-        prev = E
-        results.append(info)
-        print(f"J={J:2d} d_min={d_min:.1e} unk={info['unknowns']:5d} rows={info['rows']:6d} "
-              f"rank={info['rank']:5d} vs_bem={info.get('vs_bem', float('nan')):.2e} "
-              f"change={info.get('change', float('nan')):.2e} |c|={info['coef_norm']:.1e} "
-              f"asm={info['t_assemble']:.0f}s solve={info['t_solve']:.0f}s\n      sigma_ext={info['sigma_ext']:.5f} "
-              f"sigma_sca={info['sigma_sca']:.5f} optical={info['optical']:.1e}"
-              + (f" res_test={info['res_test']:.1e} zones={' '.join(f'{z:.0e}' for z in info['res_zones'])}"
-                 if diag else ""), flush=True)
-        json.dump(results, open(f"results_pec_cube_lightning3d_{tag}.json", "w"), indent=1)
-        np.save(f"cube_lightning3d_field_{tag}.npy", E)
-    return results
-
-
-if __name__ == "__main__":
-    if sys.argv[1] == "check":
-        # line quadrature against brute force
-        line = Line(0, 1, 1, 0.01, 12)
-        rng = np.random.default_rng(0)
-        x = np.column_stack((rng.uniform(-H, H, 40), np.full(40, H), H - 10 ** rng.uniform(-3, -0.4, 40)))
-        fast = line.block(x)
-        g, w = LEG.leggauss(40)
-        edges = np.linspace(-1, 1, 4001)
-        u = (0.5 * (edges[:-1] + edges[1:])[:, None] + 0.5 * np.diff(edges)[:, None] * g).ravel()
-        wu = (0.5 * np.diff(edges)[:, None] * w).ravel()
-        t = line.t_of_u(u)
-        wt = wu * H * 0.5 * line.lam / np.cosh(0.5 * u * line.lam) ** 2
-        y = np.zeros((len(t), 3))
-        y[:, 0], y[:, 1], y[:, 2] = t, line.yb, line.yc
-        V = LEG.legvander(u, line.n - 1) * (wt / line.d)[:, None]
-        slow = np.einsum("qk,mqac->makc", V, dyadic(x, y, K))
-        print("line quadrature max rel error:",
-              np.abs(fast - slow).max() / np.abs(slow).max())
-    else:
-        Js = [int(a) for a in sys.argv[1].split(",")]
-        kw = dict(a.split("=") for a in sys.argv[2:])
-        main(Js, **{k: (v if k in ("tag", "angles", "kinds", "tail_e", "tail_m") else float(v) if "." in v or "e" in v else int(v))
-                    for k, v in kw.items()})

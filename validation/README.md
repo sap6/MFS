@@ -10,13 +10,14 @@ was tried, and why the parameters are what they are, is in `../NOTES.md`.
 | Sphere | `pec_sphere_convergence.py` | 140 | dipoles on an inner sphere, least squares, Mie reference (`mie.py`) |
 | Torus | `pec_torus.py` | 270 | dipoles on an inner torus, solved mode by mode about the axis |
 | Almond | `pec_almond_skeleton.py`, `almond_rcs.py` | 500 | dipole rows on the mid-plane, tail at the tip, two mirror planes |
-| Cube | `cube_mfs.py` (layout and solver), `pec_cube_lightning3d.py` (sources and kernels), `line_tree.py` (line integrals) | 1400 | edge lines on the bisector planes, tails, three mirror planes |
+| Cube | `cube_mfs.py` (layout and solver), `pec_cube_lightning3d.py` (sources and kernels), `line_tree.py` (line integrals) | 1200 | edge lines on the bisector planes, tails, three mirror planes |
 
 `lsq.py` holds the least-squares solvers (QR and corrected semi-normal
 equations). The cube is the only solver that is long: about half of it is
 the quadrature for the line sources and the bookkeeping of the eight parity
-classes. `pec_cube_lightning3d.py` still contains the first, slower version
-of the solver (`SymSources`, `line_kernel.py`), kept as a cross-check.
+classes. `test_cube_rotation.py` checks the solver against the direct solve
+of all eight classes and against the stored fields; `test_line_tree.py`
+checks the fast line quadrature against an adaptive rule (`line_kernel.py`).
 
 Self-check of a fresh installation: `python3 mie.py` (errors near 1e-14).
 
@@ -45,17 +46,20 @@ two hours; run nothing else meanwhile) and the figure scripts and
 ## Boundary element side (Bempp-cl)
 
 `bem_env.py` (OpenCL set-up), `bem_reference.py` (EFIE solve for any mesh),
-`bem_optical.py` (cube, quasi-uniform meshes), `bem_cube_graded.py` (cube,
-meshes graded to the edges), `bem_cube_sym.py` (the same with the three
-mirror planes), `bem_torus.py`, `bem_almond_rcs.py`.
+`bem_mirror.py` (the same using the mirror planes of the body: the cube,
+the torus and the almond are all solved this way, as in the MFS),
+`bem_cube_sym.py` (cube, meshes graded to the edges, three mirror planes
+and the rotation about the body diagonal), `bem_optical.py` (cube,
+quasi-uniform meshes, no symmetry), `bem_cube_graded.py` (graded, no
+symmetry), `bem_torus.py`, `bem_almond_rcs.py`.
 
 ## Everything else
 
 Experiments that settled a question recorded in `../NOTES.md` and are not
 needed to reproduce the paper: `proto2d_*.py` (two-dimensional prototypes),
 `cube_floor.py`, `cube_k3_tune.py`, `cube_wavenumber.py`,
-`cube_oblique_table.py`, `cube_general.py`, `cube_speed.py`,
-`cube_residual_map.py`, `check_tail_exponents.py`, `diag_cube.py`,
-`torus_singularities.py`, `sphere_scaling.py`, `almond_floor.py`,
+`cube_oblique_table.py`, `cube_residual_map.py`, `check_tail_exponents.py`,
+`torus_singularities.py`, `pec_cruller.py` (a wavy torus on which the plain
+MFS converges slowly), `sphere_scaling.py`, `almond_floor.py`,
 `almond_null.py`, `bem_backend.py`, `bem_overhead.py`, `test_line_tree.py`,
 `pec_almond.py` (the first almond solver, which failed).

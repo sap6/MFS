@@ -21,8 +21,9 @@ excites two classes; a general wave excites all eight.
 runs the standard wave of the other scripts (along -z, E along y) or the wave
 arriving from (theta, phi) with polarisation angle psi, prints the time split,
 the boundary residual and the optical-theorem mismatch, and compares with the
-stored reference fields. The older solver for the standard wave with two
-mirrors (pec_cube_lightning3d.SymSources) gives the same field to rounding.
+stored reference fields. For a general wave six of the eight classes are
+images of two others under the rotation about a body diagonal, so four
+matrices suffice (diagonal_orbits; test_cube_rotation.py).
 """
 import itertools
 import sys
