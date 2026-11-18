@@ -145,7 +145,10 @@ best, then drop the curve without symmetry and the caveat.
       checklist "After a new timing run" in `paper/README.md`,
       `validation/run_checks.sh` (all self-tests, five minutes) with the
       new `test_bem_symmetry.py`.
-- [ ] R16 Look again for the weakest point; keep the status sheet
+- [x] R16 Probe at four wavelengths (item 86): the unchanged layout
+      needs more modes and six boundary nodes per panel; one sentence in
+      the conclusion, not pursued.
+- [ ] R17 Look again for the weakest point; keep the status sheet
       current when something of substance changes.
 
 **Still open for the authors**: the author's pass over the text; T20
@@ -2152,6 +2155,28 @@ towards the MFS field.
     4.3, 16.6, 29 s for 1.5e-2, 7.7e-3, 3.1e-3, 1.6e-3, 1.1e-3. The same
     picture as at 1.19 GHz, with the crossing near 3e-3. One sentence in
     Section 7.1; the script is part of `time_paper.sh`.
+
+86. **Four wavelengths: a probe, not a result** (`cube_k4_probe.py`,
+    k = 8 pi, the layout of the paper, self-convergence only).
+    - With four nodes per boundary panel (the paper's rule): 12 / 18 / 24
+      more modes per line at J = 5: the fields differ by 4.6e-3 (12
+      against 18) and 6.1e-3 (18 against 24); at J = 6 by 3.8e-3 and
+      1.5e-2. With 24 more modes the coefficients grow (|c| 4000 to
+      6000) and the optical mismatch gets worse (8e-4, 2e-3): no plateau.
+    - Base grid 12 instead of 8 and interior panels 0.065 instead of 0.1
+      change nothing (1e-5).
+    - **Six nodes per panel instead of four cure the instability**: J = 5,
+      18 against 24 more modes: 5.0e-4 (|c| 62 and 557, optical 4e-4 and
+      3e-4); with 18 more modes four and six nodes agree to 1.5e-4. So
+      the fit was under-sampled: more modes per line need more boundary
+      nodes per panel. This also explains the blow-up with 16 to 24 more
+      modes at three wavelengths in item 67 (c).
+    - Cost: J = 5 with six nodes per panel takes 155 to 190 s (QR, 36504
+      equations per class). Not pursued: it would need a rule for the
+      nodes per panel as well, and the paper is to stay simple. The
+      conclusion says "a first test at four wavelengths indicates that
+      still more modes are then needed, together with six boundary nodes
+      per panel in place of four".
 
 ## 3. Current best commands
 
