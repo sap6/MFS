@@ -2177,6 +2177,11 @@ towards the MFS field.
       conclusion says "a first test at four wavelengths indicates that
       still more modes are then needed, together with six boundary nodes
       per panel in place of four".
+    - **Cross-check at three wavelengths**: with six nodes per panel
+      instead of four (12 more modes) the fields at J = 6 and 7 change by
+      8.1e-5 and 4.6e-5, which is 7 to 10% of their errors (1.15e-3,
+      4.5e-4). The three-wavelength results of item 79 do not suffer
+      from the under-sampling.
 
 ## 3. Current best commands
 
