@@ -1,7 +1,8 @@
 """Bempp reference for the PEC torus (EFIE, RWG), structured triangle mesh.
 
 Usage: python3 bem_torus.py n1,n2,...  [a] [theta phi pol] [--sym]
---sym uses the three mirror planes of the torus (bem_mirror.py; files ..._sym.npz).
+--sym uses the three mirror planes of the torus (bem_mirror.py; files ..._sym.npz),
+--rot the rotational symmetry of the mesh (files ..._rot.npz).
 n = number of mesh cells around the tube; round(n R / a) cells around the axis.
 Writes bem_torus_a{a}_n{n}.npz: field at the test points, far field in the
 standard directions, cross-sections, time.
@@ -77,6 +78,21 @@ def solve_sym(R, a, n, d, p, points, dirs):
     return sym.field(J, points), F, sym.N
 
 
+def solve_rot(R, a, n, d, p, points, dirs):
+    """The same with the rotational symmetry of the mesh: the rotation by one
+    cell about the axis maps torus_grid to itself (bem_mirror.Cyclic)."""
+    import bem_mirror as bm
+    m = int(round(n * R / a))
+    q = np.arange(m)[:, None]
+    i, j = np.divmod(np.arange(n * m), m)
+    vmap = i[None, :] * m + (j[None, :] + q) % m                         # vertex (i, j) -> (i, j + q)
+    emap = 2 * vmap[:, np.repeat(np.arange(n * m), 2)] + np.tile(np.arange(2), n * m)[None, :]
+    sym = bm.Cyclic(torus_grid(R, a, n), vmap, emap, K)
+    J, orders = sym.solve(d, p)
+    F = sym.field(J, RFAR * dirs) * RFAR * np.exp(-1j * K * RFAR)
+    return sym.field(J, points), F, sym.N
+
+
 def solve(grid, d, p, points, dirs):
     lam, div, _ = br.efie_solve(grid, K, d, p)
 
@@ -88,8 +104,8 @@ def solve(grid, d, p, points, dirs):
 
 
 def main():
-    sym = "--sym" in sys.argv
-    args = [v for v in sys.argv if v != "--sym"]
+    sym, rot = "--sym" in sys.argv, "--rot" in sys.argv
+    args = [v for v in sys.argv if v not in ("--sym", "--rot")]
     ns = [int(v) for v in args[1].split(",")]
     a = float(args[2]) if len(args) > 2 else 0.5
     ang = [float(v) for v in args[3:6]] if len(args) > 5 else [0.0, 0.0, 90.0]
@@ -100,12 +116,17 @@ def main():
     if sym:
         tag += "_sym"
         solve_sym(1.0, a, 8, d, p, pts[:4], dirs[:4])                    # warm-up (compilation)
+    elif rot:
+        tag += "_rot"
+        solve_rot(1.0, a, 6, d, p, pts[:4], dirs[:4])
     else:
         solve(torus_grid(1.0, a, 6), d, p, pts[:4], dirs[:4])
     for n in ns:
         t0 = time.time()
         if sym:
             E, F, ndof = solve_sym(1.0, a, n, d, p, pts, np.vstack((dirs, d[None])))
+        elif rot:
+            E, F, ndof = solve_rot(1.0, a, n, d, p, pts, np.vstack((dirs, d[None])))
         else:
             E, F, ndof = solve(torus_grid(1.0, a, n), d, p, pts, np.vstack((dirs, d[None])))
         t = time.time() - t0

@@ -1,6 +1,7 @@
-"""Bempp with the mirror symmetry of the body, for any set of coordinate
-mirror planes (the cube and the torus have three, the almond two), so that
-the boundary element code uses the same symmetry as the MFS.
+"""Bempp with the symmetry of the body, so that the boundary element code
+uses the same symmetry as the MFS: any set of coordinate mirror planes
+(`Mirror`: three for the cube, two for the almond) or the rotation about
+an axis that maps a structured mesh to itself (`Cyclic`: the torus).
 
 The mesh is one fundamental piece (an octant or a quarter of the surface)
 and its mirror images. A reflection acts on the RWG coefficients as a signed
@@ -66,11 +67,12 @@ def mirror_grid(pts, tris, refl):
     return bempp.Grid(verts.T, np.concatenate(elems).T.astype(np.uint32)), vmap, len(tris)
 
 
-def reflections(space, vmap, T, refl):
-    """Signed permutations of the RWG degrees of freedom under the
-    reflections: perm[r, j], sgn[r, j] with T_R e_j = sgn * e_perm."""
+def action(space, vmap, emap):
+    """Signed permutations of the RWG degrees of freedom under symmetry
+    operations of the mesh, given as maps of the vertices (vmap[g, v]) and of
+    the elements (emap[g, e]): perm[g, j], sgn[g, j] with T_g e_j = sgn * e_perm."""
     grid = space.grid
-    ne, N, nr = grid.number_of_elements, space.global_dof_count, len(refl)
+    ne, N, ng = grid.number_of_elements, space.global_dof_count, len(vmap)
     el, vt = grid.elements.T, grid.vertices.T
     cen = vt[el].mean(axis=1)
     opp = np.zeros((ne, 3), np.int64)
@@ -86,21 +88,28 @@ def reflections(space, vmap, T, refl):
     first = np.full(N, -1)
     for e in range(ne - 1, -1, -1):
         first[l2g[e]] = e
-    ridx = {tuple(r): i for i, r in enumerate(refl)}
-    perm = np.zeros((nr, N), np.int64)
-    sgn = np.zeros((nr, N))
+    perm = np.zeros((ng, N), np.int64)
+    sgn = np.zeros((ng, N))
     j = np.arange(N)
     e = first
     l = np.argmax(l2g[e] == j[:, None], axis=1)
-    r_of = e // T                                          # reflection number of the piece the element lies in
-    for q in range(nr):
-        r2 = np.array([ridx[tuple(refl[r] * refl[q])] for r in range(nr)])[r_of]
-        e2 = e + (r2 - r_of) * T
+    for q in range(ng):
+        e2 = emap[q][e]
         p2 = vmap[q][opp[e, l]]
         l2 = np.argmax(opp[e2] == p2[:, None], axis=1)
         assert np.all(opp[e2, l2] == p2)
         perm[q], sgn[q] = l2g[e2, l2], sig[e, l] * sig[e2, l2]
     return perm, sgn
+
+
+def reflections(space, vmap, T, refl):
+    """The action of the reflections on a mesh made by mirror_grid."""
+    ne, nr = space.grid.number_of_elements, len(refl)
+    ridx = {tuple(r): i for i, r in enumerate(refl)}
+    e = np.arange(ne)
+    r_of = e // T                                          # reflection number of the piece the element lies in
+    emap = np.array([e + (np.array([ridx[tuple(refl[r] * refl[q])] for r in range(nr)])[r_of] - r_of) * T for q in range(nr)])
+    return action(space, vmap, emap)
 
 
 @bempp.callable(complex=True, parameterized=True)
@@ -208,3 +217,70 @@ class Mirror:
         """Scattered field of the current J at the points (n, 3)."""
         lam = bempp.GridFunction(self.div, coefficients=J)
         return -(bempp.operators.potential.maxwell.electric_field(self.div, np.ascontiguousarray(points.T), self.k) * lam).T
+
+
+@bempp.callable(complex=True, parameterized=True)
+def plane_wave_trace(x, n, domain_index, result, parameters):
+    """E_inc x n for E_inc = p exp(i k d.x); parameters = (k, d, p)."""
+    ph = np.exp(1j * parameters[0] * (x[0] * parameters[1] + x[1] * parameters[2] + x[2] * parameters[3]))
+    e0, e1, e2 = parameters[4] * ph, parameters[5] * ph, parameters[6] * ph
+    result[0] = e1 * n[2] - e2 * n[1]
+    result[1] = e2 * n[0] - e0 * n[2]
+    result[2] = e0 * n[1] - e1 * n[0]
+
+
+class Cyclic:
+    """EFIE on a mesh that a rotation maps to itself (a structured mesh of a
+    body of revolution: the rotation by one cell about the axis). The
+    rotations T_r, r = 0 .. G - 1, act on the RWG coefficients as signed
+    permutations, the matrix commutes with them, and the system splits into
+    G systems of size N / G, one for each order q about the axis:
+    the current of order q is sum_r conj(chi_q(r)) T_r (one function per
+    orbit), chi_q(r) = exp(2 pi i q r / G). Only the rows of one function
+    per orbit are assembled (1 / G of the work); the orders that the incident
+    wave does not excite are skipped."""
+
+    def __init__(self, grid, vmap, emap, k):
+        t0 = time.time()
+        self.k, self.G = k, len(vmap)
+        self.div = div = bempp.function_space(grid, "RWG", 0)
+        self.curl = bempp.function_space(grid, "SNC", 0)
+        self.N = N = div.global_dof_count
+        self.perm, self.sgn = action(div, vmap, emap)
+        self.rep = rep = np.nonzero(self.perm.min(axis=0) == np.arange(N))[0]       # one degree of freedom per orbit
+        assert len(rep) * self.G == N, "the rotation must not fix any degree of freedom"
+        l2g = div.local2global
+        in_rep = np.zeros(N, bool)
+        in_rep[rep] = True
+        support = np.nonzero(in_rep[l2g].any(axis=1))[0].astype(np.uint32)
+        self.test = test = bempp.function_space(grid, "SNC", 0, support_elements=support, include_boundary_dofs=False)
+        full_of = np.full(test.global_dof_count, -1)
+        tl = test.local2global[support]
+        ok = test.local_multipliers[support] != 0
+        full_of[tl[ok]] = l2g[support][ok]
+        rows = np.nonzero(in_rep[full_of])[0]
+        self.rows = rows = rows[np.argsort(full_of[rows])]
+        assert np.array_equal(full_of[rows], rep)
+        t1 = time.time()
+        efie = bempp.operators.boundary.maxwell.electric_field(div, div, test, k)
+        self.A = np.asarray(efie.weak_form().to_dense())                # (test functions, N)
+        self.t_setup, self.t_assembly = t1 - t0, time.time() - t1
+
+    def solve(self, d, p, tol=1e-10):
+        """RWG coefficients of the current for the wave p exp(i k d.x), and the orders solved."""
+        G, rep = self.G, self.rep
+        par = np.concatenate(([self.k], np.asarray(d, float), np.asarray(p, float)))
+        b = bempp.GridFunction(self.div, fun=plane_wave_trace, dual_space=self.curl, function_parameters=par).projections(self.curl)
+        inv = (G - np.arange(G)) % G
+        bq = np.fft.fft(self.sgn[inv][:, rep] * b[self.perm[inv][:, rep]], axis=0) / G      # (order, orbit): part of b of each order
+        size = np.linalg.norm(bq, axis=1)
+        J, orders = np.zeros(self.N, complex), []
+        cols = np.ascontiguousarray(self.perm[:, rep])
+        for q in np.nonzero(size > tol * size.max())[0]:
+            coef = np.exp(-2j * np.pi * q * np.arange(G) / G)[:, None] * self.sgn[:, rep]
+            y = sla.solve(fold(self.A, self.rows, cols, coef), bq[q], overwrite_a=True, check_finite=False)
+            np.add.at(J, cols, coef * y[None, :])
+            orders.append(int(q))
+        return J, orders
+
+    field = Mirror.field
