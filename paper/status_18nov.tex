@@ -1,0 +1,59 @@
+\documentclass[11pt]{article}
+\usepackage[a5paper,margin=11mm]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage{booktabs,enumitem,array}
+\setlist{itemsep=2pt,topsep=3pt,leftmargin=1.2em}
+\pagestyle{empty}
+\setlength{\parindent}{0pt}\setlength{\parskip}{5pt}
+\begin{document}
+{\large\bfseries MFS paper: status on 18 November 2026}
+
+The paper is \texttt{paper/main.pdf}: 41 pages in the preprint layout, 24 in the journal layout. Everything is on the branch \texttt{ccr-116c520c-fts35f}. Nothing was pushed to the Overleaf repository.
+
+\textbf{1. What changed in substance}
+\begin{itemize}
+\item \textbf{Same symmetry in both codes, everywhere.} Cube: three mirror planes and the rotation about the body diagonal. Almond: two mirror planes. Torus: the rotational symmetry. I had written that Bempp cannot use the rotation; it can, because its torus mesh repeats around the axis, and I built it. Sphere: neither code uses any.
+\item \textbf{Three wavelengths now converges.} The paper's cube layout works unchanged with twelve more modes per line. The ``limit'' reported before came from an earlier session that had scaled the first source depth with the wavelength.
+\item \textbf{What the theorem shows.} An independent reading pointed out that the theorem does not say the field is singular on the whole skeleton. The continuation through one face is regular inside the cube; the singular points are the edges and vertices. The theorem shows where sources \emph{can} be placed. Abstract, introduction, Sections 4 and 5 and the conclusion now say this. The theorem and its proof are unchanged.
+\item \textbf{A wrong sentence removed.} ``Adding the next term changes the error by less than 1\%, lowering two exponents gives 65\%'' came from an old layout. With the paper's layout: 3 to 4\%, and 4 to 10 times larger.
+\item \textbf{Comparisons are stated by actual runs}, not by interpolating between them.
+\end{itemize}
+
+\textbf{2. Where the comparison with Bempp stands} (both at their best)
+
+{\small
+\begin{tabular}{@{}>{\raggedright}p{2.5cm}>{\raggedright}p{2.1cm}>{\raggedright\arraybackslash}p{7.4cm}@{}}
+\toprule
+Case & Bempp ahead down to & Beyond that \\
+\midrule
+Cube, standard wave & $1.5\times10^{-4}$ & MFS $2\times10^{-5}$ in 54 s; Bempp's best is $8\times10^{-5}$ in 61 s \\
+Cube, general wave & $1.5\times10^{-4}$ & MFS $6\times10^{-5}$ in 66 s; Bempp's best is $1.1\times10^{-4}$ in 72 s \\
+Cube, two wavelengths & $2\times10^{-4}$ & MFS $1.5\times10^{-4}$ in 36 s; Bempp's best is $1.9\times10^{-4}$ in 61 s \\
+Cube, three wavelengths & $5\times10^{-4}$ & MFS $1.9\times10^{-4}$ in 53 s; Bempp's best is $5.2\times10^{-4}$ in 35 s \\
+Almond & $5\times10^{-3}$ & MFS $6\times10^{-5}$ in 3 s; Bempp $1\times10^{-3}$ in 22 s \\
+Torus & never & MFS $7\times10^{-12}$ in 2 s; Bempp $5\times10^{-4}$ in 19 s \\
+Sphere & never & MFS $2\times10^{-14}$ in 5 s; Bempp $4\times10^{-3}$ in 20 s \\
+\bottomrule
+\end{tabular}}
+
+On the cube Bempp is about ten times faster at an error of $10^{-3}$. The MFS wins on the cube only at high accuracy, and by more as the cube grows.
+
+\textbf{3. A shape that is hard to mesh but easy for the MFS}
+
+I found none, in the literature or by trying. A wavy torus that integral-equation papers use as a test shape is \emph{hard} for the plain MFS (5\% error after a minute). What mesh-free buys is exact geometry and very fast convergence on smooth bodies whose singularities lie deep inside. The torus row above is that case.
+
+\textbf{4. For Timo to check}
+\begin{itemize}
+\item Theorem 1 and its proof (Section 4.1), and the new paragraph after it on what the theorem does and does not say.
+\item The edge exponents (Section 5.2, Table 1, new sketch of the wedge) and the vertex and tip exponents (Appendix A). The assignment of exponents to electric and magnetic dipoles at a vertex is stated as not derived.
+\item The bound for the source torus (Section 3.3) is a conjecture supported by tests; for two of the three aspect ratios the tests are consistent with it but do not locate it. The text now says so.
+\end{itemize}
+
+\textbf{5. Left to the authors}
+\begin{itemize}
+\item A pass over the text. I corrected facts and wording that the checks found; the voice is yours to set.
+\item Acknowledgements and the declaration on AI tools.
+\item One final timing run on a fixed machine before submission (one script, three hours).
+\item Copying the draft to the Overleaf repository (I will not push there without being asked).
+\end{itemize}
+\end{document}
