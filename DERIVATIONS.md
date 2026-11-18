@@ -123,6 +123,14 @@ were not physical (item 2) and are dropped. Exponents one too low for the
 transverse components gave garbage in an earlier session, in line with the
 table.
 
+**Check repeated on 18 Nov 2026 with the layout of the paper** (two depths
+per octave, vertex tail, error against the J = 12 reference;
+`check_tail_exponents.py` now uses `cube_mfs.py`): derived set 8.31e-4 at
+J = 6 and 1.40e-4 at J = 8; with the second terms 7.99e-4 and 1.35e-4 (4%
+and 3% lower); with the exponents of the two components along the bisector
+lowered by one 3.45e-3 and 1.33e-3 (4 and 10 times larger); without the
+vertex tail 1.33e-3 and 2.27e-4 (1.6 times larger).
+
 ## C. Exponents of the almond's tip
 
 The tip is the vertex of an elliptic cone (half-angles 34.09 and 12.71

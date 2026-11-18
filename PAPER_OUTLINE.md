@@ -122,7 +122,7 @@ rounding edges; Gustafsson 1998 next to the skeleton theorem.
 | Exponent tables (edge, tip cone, cube vertex) | `cone_exponents.py`, DERIVATIONS | done, new |
 | Torus error against time; residual and coefficient norm against source radius | `fig_cost_torus.py`, `fig_torus_sources.py` | done, new (third session) |
 | Source-layout sketches (cube cross-section at an edge; almond mid-plane) | `explainer/make_diagrams.py` draws them from the solvers' real coordinates (SVG, for the author's explainer) | drafts exist; redraw for print |
-| Residual map near an edge with and without tail | `diag_cube.py` prints it | no figure yet |
+| Residual map near an edge with and without tail | `cube_residual_map.py` prints it | no figure yet |
 
 ## 4. What must be said plainly (limits)
 
@@ -206,7 +206,7 @@ Minor:
 | Is the cube reference independent? | Section 4, first bullet; NOTES section 2, item 29 |
 | Are the tail exponents tuned? | No: DERIVATIONS B and C; fitted sets were replaced by computed ones with no loss |
 | Is the comparison with BEM fair? | Graded meshes, timing split, symmetry statement: NOTES items 26-28 |
-| Does it work for other incidences? | Cube: `cube_general.py`; almond: all look angles in the benchmark figure |
+| Does it work for other incidences? | Cube: `cube_mfs.py`; almond: all look angles in the benchmark figure |
 | Is the almond compared with measurements? | Yes, public Austin benchmark data, four frequencies |
 | What about the vertices of the cube? | Vertex tail with computed exponents (0.454, 0.840), 12 unknowns, error down by a third to 40%: NOTES item 25 |
 | Novelty against lightning and MAS work? | LITERATURE section 1 |
