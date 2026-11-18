@@ -2085,13 +2085,14 @@ python3 fig_cost_cube.py ; python3 fig_cost_almond.py ; python3 fig_cost_sphere.
 python3 fig_almond_rcs.py ; python3 fig_almond_benchmark.py                         # almond RCS against Bempp / against the Austin benchmark
 python3 cube_mfs.py 4,5,6,7,8 [60 25 35]          # cube, the solver: standard wave, or any plane wave (from theta, phi; polarisation angle); eight parity classes
 python3 fig_cost_cube.py run                     # cube: all levels of the layout up to the reference J = 12, the one-depth variant, no tails, plain MFS (15 min, 5 GB)
-python3 cube_cases.py k1o ref ; python3 cube_cases.py k2 ref   # reference fields of the general wave (J = 11, 4 min) and of two wavelengths (J = 10, 2 min)
-python3 bem_grading_scan.py k1|k1o|k2 ; python3 bem_grading_scan.py report   # Bempp with symmetry: scan of grading x quadrature x mesh (50-60 min each), envelopes (items 60, 67)
+python3 cube_cases.py k1o ref ; python3 cube_cases.py k2 ref ; python3 cube_cases.py k3 ref   # reference fields: general wave (J = 11, 4 min), two and three wavelengths (J = 10; 2 and 5 min)
+python3 cube_k3_levels.py 5,6,7,8 dn=12 ; python3 cube_k3_base.py 7 0.0667:16 0.2:8,12   # three wavelengths: levels and modes; first depth and base grid (item 79)
+python3 crossovers.py                            # every ratio and crossing of the comparison with Bempp, from the timing data
+python3 bem_torus.py 40,80,160 0.5 --rot          # Bempp on the torus with the rotational symmetry of its mesh (bem_mirror.Cyclic)
+python3 bem_grading_scan.py k1|k1o|k2|k3 ; python3 bem_grading_scan.py report   # Bempp with symmetry: scan of grading x quadrature x mesh (50-90 min each), envelopes (items 60, 67, 82)
 sh time_paper.sh                                 # EVERY timing of the paper in one go, competing runs alternately (2.5 h); run nothing else meanwhile (items 66, 69)
 python3 fig_cost_all.py ; python3 fig_cube_cases.py   # cost figures from the saved data
 python3 sphere_nearfield.py [run]                # sphere: error against Mie as a function of the distance from the surface, MFS and Bempp
-python3 cube_k3_tune.py ref 9 | try fam,J,base,hmax[,dn[,colp[,pm-ng]]] | diff   # three wavelengths: variants and their mutual differences (item 67)
-python3 cube_oblique_table.py ; python3 cube_wavenumber.py 2   # superseded by cube_cases.py (old families, g = 2 only)
 python3 fig_cube_convergence.py                  # cube: error against sqrt(N), root-exponential fit, Bempp's best per mesh (item 61)
 python3 cube_floor.py J10 dense_p4 dense_colq     # what limits the one-depth-per-octave family (item 47)
 python3 test_line_tree.py 5                       # accuracy of the fast line quadrature against the adaptive rule
@@ -2102,7 +2103,6 @@ python3 bem_backend.py 0.14,0.1 ; python3 bem_overhead.py   # Bempp: Numba again
 cd ../paper && python3 make_tables.py && latexmk -pdf main.tex   # tables and paper
 python3 check_tail_exponents.py 6                 # edge and vertex tail variants at one level of the layout of the paper
 python3 test_cube_rotation.py 4                   # the solver against the direct eight-class solve and the stored field
-python3 bem_torus.py 40,56,80 0.5 --sym           # Bempp on the torus with its three mirror planes (bem_mirror.py)
 python3 pec_cruller.py ; python3 pec_cruller.py eta 0.6,0.7,0.8 4   # the wavy torus on which the plain MFS converges slowly (item 75)
 python3 proto_line_modes.py                       # one line: stretched modes against polynomials in t (item 76)
 python3 cone_exponents.py ; python3 cone_exponents.py cube   # tip exponents of the almond cone; vertex exponents of the cube
@@ -2115,8 +2115,8 @@ python3 proto2d_square.py TE ; python3 proto2d_ellipse.py ; python3 proto2d_squa
 python3 proto2d_tapered.py TE                     # 2D: geometric against tapered depths; the ratio sets the attainable accuracy (items 53-54)
 ```
 
-Costs: item 77 (everything before it is obsolete: other machines, other
-families, Bempp without the compiled fold). An index of the scripts is in
+Costs: item 83 (everything before it is obsolete: other machines, other
+families, Bempp without the compiled fold or the rotation on the torus). An index of the scripts is in
 `validation/README.md`.
 
 Files: `mie.py` (reference); `cube_mfs.py` (the cube solver: `Cube`, `run`;
@@ -2382,6 +2382,13 @@ Open, in the order I would take them:
 - 18 Nov. Cruller (wavy torus), plain MFS, no symmetry: residual 12% with 3600 unknowns (10 s), 5% with 7056 (62 s), best eta 0.7. Not a showcase: the singularities lie within 0.1 of the surface.
 - 18 Nov. One line, stretched modes against polynomials in t: fit of exp(ikt) improves by 2-4 orders with 8-12 plain modes. In the solver: no gain at one wavelength, no convergence at three (6e-4 to 9e-4, coefficients 1e6-1e10). T30 closed.
 - 18 Nov. Timings of the paper on one machine (item 77): standard wave crossover with Bempp at 1.2e-4; general wave, now to J = 10 against a J = 11 reference, crossover at 1.2e-4; two wavelengths level near 2.5e-4; almond MFS ahead below 5e-3.
+
+- 18 Nov. Bempp on the torus with the rotation of its mesh (block-circulant): equal to the full solve to 1e-14; 9600 dofs 18.4 s -> 0.93 s; 153600 dofs 19 s, 5.1e-4. Extrapolated sigma_ext agrees with the MFS to 2e-7.
+- 18 Nov. Three wavelengths, first depth and base grid: depth0 0.0667 / 0.1 / 0.2 give 1.75e-3 / 1.35e-3 / 1.08e-3 from Bempp at J = 7 (one depth); base points 8 to 20 make no difference at depth0 0.2. The scaled depth of the earlier sessions was the "limit".
+- 18 Nov. Three wavelengths, the layout of the paper with 12 more modes: errors against J = 10: 3.07e-3, 1.15e-3, 4.49e-4, 1.89e-4, 6.5e-5 for J = 5..9. With 8 more modes the fields differ by 3e-4 (J = 7); 12 against 16: 6e-5.
+- 18 Nov. Bempp scan at three wavelengths: 1.03e-3 in 6.2 s, 6.0e-4 in 13 s, 5.2e-4 in 35 s (smallest). MFS 4.5e-4 in 35 s, 1.9e-4 in 53 s. Crossing at 5.7e-4.
+- 18 Nov. Cube solver against Householder QR: fields equal to 9e-14 at J = 8.
+- 18 Nov. Second timing run (item 83): crossings with Bempp at 1.5e-4 (standard wave), 1.4e-4 (general wave), 3.0e-4 (two wavelengths), 5.7e-4 (three); torus MFS 7e-12 in 2 s against Bempp 5e-4 in 19 s.
 
 ## 6. Write-up session
 
