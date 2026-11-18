@@ -327,17 +327,26 @@ def boundary_residual(k, y, c, eta_max, s=0.27):
     return float(np.sqrt(np.sum(w * np.sum(np.abs(res) ** 2, 1)) / np.sum(w * np.sum(np.abs(rhs) ** 2, 1))))
 
 
-def bem_reference(k, pts, sizes=((40, 36), (60, 54))):
+def bem_reference(k, pts, sizes=((40, 36), (60, 56)), sym=True, d=D_INC, p=P_INC):
+    """Bempp (EFIE, RWG) on structured meshes with n_t x n_s cells: (unknowns,
+    field at pts, time) for each. sym: use the two mirror planes of the
+    almond, as the MFS does (n_s a multiple of 4; bem_mirror.py)."""
     import bem_env  # noqa: F401  (memory for the OpenCL driver; must come before bempp)
     import bempp_cl.api as bempp
+    import bem_mirror as bm
     import bem_reference as br
-    from pec_almond import mesh
-    br.D, br.P = D_INC, P_INC
+    from pec_almond import mesh, mesh_quarter
     out = []
     for n_t, n_s in sizes:
-        v, e = mesh(n_t, n_s)
         t0 = time.time()
-        E, ndof = br.scattered_field(bempp.Grid(v.T, e.T.astype("uint32")), k, pts)
+        if sym:
+            refl = bm.group((0, 1, 1))
+            solver = bm.Mirror(*bm.mirror_grid(*mesh_quarter(n_t, n_s), refl), refl, k)
+            E, ndof = solver.field(solver.solve(d, p)[0], pts), solver.N
+        else:
+            v, e = mesh(n_t, n_s)
+            br.D, br.P = d, p
+            E, ndof = br.scattered_field(bempp.Grid(v.T, e.T.astype("uint32")), k, pts)
         out.append((ndof, E, time.time() - t0))
     return out
 

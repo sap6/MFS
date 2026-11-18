@@ -23,10 +23,8 @@ import time
 import bem_env  # noqa: F401  (memory for the OpenCL driver; must come before bempp)
 import bempp_cl.api as bempp
 import numpy as np
-from numba import njit, prange
-import scipy.linalg as sla
-import scipy.sparse as sp
 
+import bem_mirror as bm
 import bem_reference as br
 from cube_mfs import ROT, diagonal_orbits
 
@@ -34,12 +32,7 @@ K = 2 * np.pi
 H = 0.5
 D = np.array([0.0, 0.0, -1.0])
 P = np.array([0.0, 1.0, 0.0])
-REFL = np.array(list(itertools.product((1.0, -1.0), repeat=3)))
-CLASSES = [tuple(float(v) for v in c) for c in itertools.product((1, -1), repeat=3)]
-
-
-def sign(cls, R):
-    return float(np.prod([s for s, r in zip(cls, R) if r < 0]))
+REFL = bm.group()
 
 
 def sym_grid(n, g):
@@ -63,162 +56,33 @@ def sym_grid(n, g):
             for j in range(m):
                 tris.append((idx(i, j), idx(i + 1, j), idx(i + 1, j + 1)))
                 tris.append((idx(i, j), idx(i + 1, j + 1), idx(i, j + 1)))
-    pts, tris = np.array(pts), np.array(tris)
-    key, verts, elems = {}, [], []
-    for R in REFL:
-        loc = []
-        for x in pts * R:
-            kk = tuple(np.round(x, 12) + 0.0)
-            if kk not in key:
-                key[kk] = len(verts)
-                verts.append(x)
-            loc.append(key[kk])
-        loc = np.array(loc)
-        t = loc[tris]
-        elems.append(t if np.prod(R) > 0 else t[:, ::-1])
-    verts = np.array(verts)
-    vmap = np.array([[key[tuple(np.round(x * R, 12) + 0.0)] for x in verts] for R in REFL])
-    return bempp.Grid(verts.T, np.concatenate(elems).T.astype(np.uint32)), vmap, len(tris)
-
-
-def reflections(space, vmap, T):
-    """Signed permutations of the RWG degrees of freedom under the eight
-    reflections: perm[r, j], sgn[r, j] with T_R e_j = sgn * e_perm."""
-    grid = space.grid
-    ne, N = grid.number_of_elements, space.global_dof_count
-    el, vt = grid.elements.T, grid.vertices.T
-    cen = vt[el].mean(axis=1)
-    opp = np.zeros((ne, 3), np.int64)
-    sig = np.zeros((ne, 3))
-    lc = np.array([[1.0 / 3], [1.0 / 3]])
-    for e in range(ne):                                    # which vertex each local function flows away from, and its sign
-        w = space.evaluate(e, lc)[:, :, 0].T               # (3 functions, 3 components)
-        dvec = cen[e][None, :] - vt[el[e]]                 # (3 vertices, 3)
-        cs = (w @ dvec.T) / (np.linalg.norm(w, axis=1)[:, None] * np.linalg.norm(dvec, axis=1)[None, :])
-        v = np.argmax(np.abs(cs), axis=1)
-        opp[e], sig[e] = el[e][v], np.sign(cs[np.arange(3), v])
-    l2g = space.local2global
-    first = np.full(N, -1)
-    for e in range(ne - 1, -1, -1):
-        first[l2g[e]] = e
-    rsign = REFL
-    ridx = {tuple(r): i for i, r in enumerate(rsign)}
-    perm = np.zeros((8, N), np.int64)
-    sgn = np.zeros((8, N))
-    j = np.arange(N)
-    e = first
-    l = np.argmax(l2g[e] == j[:, None], axis=1)
-    r_of = e // T                                          # reflection number of the octant the element lies in
-    for q in range(8):
-        r2 = np.array([ridx[tuple(rsign[r] * rsign[q])] for r in range(8)])[r_of]
-        e2 = e + (r2 - r_of) * T
-        p2 = vmap[q][opp[e, l]]
-        l2 = np.argmax(opp[e2] == p2[:, None], axis=1)
-        assert np.all(opp[e2, l2] == p2)
-        perm[q], sgn[q] = l2g[e2, l2], sig[e, l] * sig[e2, l2]
-    return perm, sgn
-
-
-@bempp.callable(complex=True, parameterized=True)
-def class_trace(x, n, domain_index, result, parameters):
-    """(part of p exp(i k d.x) with parity (sx, sy, sz)) x n; parameters = (k, d, p, s)."""
-    e0 = e1 = e2 = 0j
-    for a in (1.0, -1.0):
-        for b in (1.0, -1.0):
-            for c in (1.0, -1.0):
-                sg = 1.0 + 0j
-                if a < 0:
-                    sg = sg * parameters[7]
-                if b < 0:
-                    sg = sg * parameters[8]
-                if c < 0:
-                    sg = sg * parameters[9]
-                ph = sg * np.exp(1j * parameters[0] * (a * x[0] * parameters[1] + b * x[1] * parameters[2] + c * x[2] * parameters[3])) / 8
-                e0 += a * parameters[4] * ph
-                e1 += b * parameters[5] * ph
-                e2 += c * parameters[6] * ph
-    result[0] = e1 * n[2] - e2 * n[1]
-    result[1] = e2 * n[0] - e0 * n[2]
-    result[2] = e0 * n[1] - e1 * n[0]
-
-
-@njit(parallel=True, cache=True)
-def fold(A, rows, cols, coef):
-    """out[i, k] = sum over the eight images r of coef[r, k] * A[rows[i], cols[r, k]]."""
-    out = np.zeros((len(rows), cols.shape[1]), np.complex128)
-    for i in prange(len(rows)):
-        a = A[rows[i]]
-        for r in range(cols.shape[0]):
-            for k in range(cols.shape[1]):
-                out[i, k] += coef[r, k] * a[cols[r, k]]
-    return out
-
-
-def classes_of(d, p):
-    x = np.random.default_rng(0).uniform(-0.5, 0.5, (40, 3))
-    out = []
-    for c in CLASSES:
-        v = sum(sign(c, R) * (p * R)[None, :] * np.exp(1j * K * ((x * R) @ d))[:, None] for R in REFL)
-        if np.abs(v).max() > 1e-10:
-            out.append(c)
-    return out
+    return bm.mirror_grid(np.array(pts), np.array(tris), REFL)
 
 
 def solve(n, g, points, d=D, p=P, rotate=True):
     """Field at points and the times (set-up, assembly, fold and LU, evaluation)."""
     t0 = time.time()
-    grid, vmap, T = sym_grid(n, g)
-    div = bempp.function_space(grid, "RWG", 0)
-    N = div.global_dof_count
-    perm, sgn = reflections(div, vmap, T)
-    rep = np.nonzero(perm.min(axis=0) == np.arange(N))[0]            # one degree of freedom per orbit
-    l2g = div.local2global
-    in_rep = np.zeros(N, bool)
-    in_rep[rep] = True
-    support = np.nonzero(in_rep[l2g].any(axis=1))[0].astype(np.uint32)
-    test = bempp.function_space(grid, "SNC", 0, support_elements=support, include_boundary_dofs=False)
-    full_of = np.full(test.global_dof_count, -1)                    # test function -> degree of freedom of the full space
-    tl = test.local2global[support]
-    ok = test.local_multipliers[support] != 0                      # local functions that are not degrees of freedom have multiplier 0
-    full_of[tl[ok]] = l2g[support][ok]
-    rows = np.nonzero(in_rep[full_of])[0]
-    order = np.argsort(full_of[rows])
-    rows = rows[order]
-    assert np.array_equal(full_of[rows], rep)
-    t1 = time.time()
-    efie = bempp.operators.boundary.maxwell.electric_field(div, div, test, K)
-    A = np.asarray(efie.weak_form().to_dense())                     # (test functions, N)
+    sym = bm.Mirror(*sym_grid(n, g), REFL, K)
     t2 = time.time()
     # The rotation about the body diagonal permutes the mirrors (and maps the mesh to itself), so the part of
     # parity c turned j times is the solution of class c for the wave turned back j times, turned forward:
     # at most four of the eight classes are folded and factorised (cube_mfs.diagonal_orbits; rotate=False: all eight).
-    orbit = diagonal_orbits(classes_of(d, p)) if rotate else {c: [0] for c in classes_of(d, p)}
-    J = np.zeros((3, N), complex)
-    sizes = []
-    for c, turns in orbit.items():
-        sg = np.array([sign(c, R) for R in REFL])
-        B = sp.coo_matrix(((sg[:, None] * sgn[:, rep]).ravel(), (perm[:, rep].ravel(), np.tile(np.arange(len(rep)), 8))),
-                          shape=(N, len(rep))).tocsc()
-        keep = np.nonzero(np.abs(B).sum(axis=0).A1 > 1e-12)[0]      # orbits on a mirror plane drop out of some classes
-        B = B[:, keep]
-        cols = rep[keep]
-        Ac = fold(A, rows[keep], perm[:, cols], sg[:, None] * sgn[:, cols])   # A[rows[keep]] @ B
-        lu = sla.lu_factor(Ac, overwrite_a=True, check_finite=False)
-        for j in turns:
+    cl = bm.classes_of(d, p, K, REFL)
+    orbit = diagonal_orbits(cl) if rotate else {c: [0] for c in cl}
+    J, sizes = {}, []
+    for j in range(3):
+        only = [c for c in orbit if j in orbit[c]]
+        if only:
             Q = np.linalg.matrix_power(ROT, j)
-            par = np.concatenate(([K], Q.T @ d, Q.T @ p, c))
-            b = bempp.GridFunction(div, fun=class_trace, dual_space=test, function_parameters=par).projections(test)[rows][keep]
-            J[j] += B @ sla.lu_solve(lu, b, check_finite=False)
-            sizes.append(len(keep))
+            J[j], sz = sym.solve(Q.T @ d, Q.T @ p, only)
+            sizes += sz
     t3 = time.time()
     E = 0
-    for j in range(3):
-        if np.any(J[j]):
-            Q = np.linalg.matrix_power(ROT, j)
-            lam = bempp.GridFunction(div, coefficients=J[j])
-            E = E - (bempp.operators.potential.maxwell.electric_field(div, np.ascontiguousarray((points @ Q).T), K) * lam).T @ Q.T
+    for j in J:
+        Q = np.linalg.matrix_power(ROT, j)
+        E = E + sym.field(J[j], points @ Q) @ Q.T
     t4 = time.time()
-    return E, N, sizes, (t1 - t0, t2 - t1, t3 - t2, t4 - t3), grid
+    return E, sym.N, sizes, (t2 - t0 - sym.t_assembly, sym.t_assembly, t3 - t2, t4 - t3), sym.div.grid
 
 
 if __name__ == "__main__":

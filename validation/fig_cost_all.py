@@ -50,13 +50,13 @@ if __name__ == "__main__":
     d = np.load("fig_cost_torus.npz")
     curve(ax, d["mfs"][:, 1], d["mfs"][:, 2], BLUE, "o", "-", "MFS, mode by mode")
     curve(ax, d["dense"][:, 1], d["dense"][:, 2], GREEN, "s", "--", "MFS, full matrix")
-    curve(ax, d["bem"][:, 1], d["bem"][:, 2], ORANGE, "D", "-.", "Bempp")
+    curve(ax, d["bem"][:, 1], d["bem"][:, 2], ORANGE, "D", "-.", "Bempp, with symmetry")
     ax.set_title("(b) torus", loc="left", fontsize=8.5)
     ax = axs[1, 0]
     d = np.load("fig_cost_almond.npz")
     ref = d[f"mfs_E{len(d['mfs']) - 1}"]
     curve(ax, d["mfs"][:-1, 2], [rel(d[f"mfs_E{i}"], ref) for i in range(len(d["mfs"]) - 1)], BLUE, "o", "-", "MFS")
-    curve(ax, d["bem"][:, 1], [rel(d[f"bem_E{i}"], ref) for i in range(len(d["bem"]))], ORANGE, "D", "-.", "Bempp")
+    curve(ax, d["bem"][:, 1], [rel(d[f"bem_E{i}"], ref) for i in range(len(d["bem"]))], ORANGE, "D", "-.", "Bempp, with symmetry")
     ax.set_title("(c) almond, 1.19 GHz, nose-on", loc="left", fontsize=8.5)
     ax.set_xticks([2, 5, 10, 20])
     ax.xaxis.set_major_formatter(matplotlib.ticker.FuncFormatter(lambda v, pos: f"{v:g}"))

@@ -9,7 +9,8 @@ the scattered field at 200 points on |x| = 2.5 from the finest MFS run
 
 "MFS" solves mode by mode about the axis (uses the rotational symmetry of the
 body, any incident wave); "MFS, full matrix" is the same least-squares problem
-without using the symmetry; Bempp uses none. Run alone on the machine.
+without using the symmetry; Bempp uses the three mirror planes of the torus
+(bem_mirror.py). Run alone on the machine.
 """
 import sys
 import time
@@ -22,11 +23,11 @@ K = 2 * np.pi
 A = 0.5
 LAYOUTS = ((6, 20), (8, 28), (12, 40), (16, 52), (20, 64), (24, 80), (28, 96), (36, 128), (44, 160))
 DENSE = ((6, 20), (8, 28), (12, 40), (16, 52), (20, 64))
-BEM_N = (12, 20, 28, 40)
+BEM_N = (12, 20, 28, 40, 56, 80)
 REF = (56, 240)
 STYLE = {"MFS": ("#2a78d6", "o", "-", "MFS, dipoles on an inner torus (mode by mode)"),
          "MFS dense": ("#1baf7a", "s", "--", "the same, full matrix (no symmetry used)"),
-         "Bempp": ("#eb6834", "D", "-.", "Bempp (EFIE, RWG)")}
+         "Bempp": ("#eb6834", "D", "-.", "Bempp (EFIE, RWG), three mirror planes")}
 INK, MUTED = "#1f1f1e", "#6b6a64"
 
 
@@ -65,10 +66,10 @@ def run():
         print(f"MFS dense unknowns={rows[-1][0]:6d} time={t:7.2f}s error={rows[-1][2]:.2e}", flush=True)
     out["dense"] = np.array(rows)
     np.savez("fig_cost_torus.npz", **out)
-    subprocess.run([sys.executable, "-W", "ignore", "bem_torus.py", ",".join(str(n) for n in BEM_N), str(A)], check=True)
+    subprocess.run([sys.executable, "-W", "ignore", "bem_torus.py", ",".join(str(n) for n in BEM_N), str(A), "--sym"], check=True)
     rows = []
     for n in BEM_N:
-        b = np.load(f"bem_torus_a{A:g}_n{n}.npz")
+        b = np.load(f"bem_torus_a{A:g}_n{n}_sym.npz")
         rows.append((int(b["ndof"]), float(b["t"]), rel(b["E"], Eref), float(b["ext"])))
         print(f"Bempp     unknowns={rows[-1][0]:6d} time={rows[-1][1]:7.2f}s error={rows[-1][2]:.2e}", flush=True)
     out["bem"] = np.array(rows)

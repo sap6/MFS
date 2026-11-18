@@ -5,8 +5,8 @@ MFS with skeleton sources against Bempp (EFIE, RWG, dense LU).
     python3 fig_cost_almond.py        # table and figure from the saved data
 
 Times include assembly, solve and evaluation at 400 points on |x| = 0.3 m. The
-MFS uses the two mirror symmetries of this incidence; Bempp does not. The
-error is measured against the finest MFS layout. Run alone on the machine.
+MFS uses the two mirror planes of the almond, and so does Bempp
+(bem_mirror.py). The error is measured against the finest MFS layout. Run alone on the machine.
 """
 import sys
 import time
@@ -18,8 +18,8 @@ from pec_sphere_convergence import fibonacci_sphere
 
 FREQ = 1.19
 LAYOUTS = ((3, 0), (4, 1), (5, 2), (6, 3), (8, 5))        # (n_mid, J); the last is the reference
-BEM = ((28, 26), (40, 36), (60, 54))
-STYLE = {"MFS": ("#2a78d6", "o", "-", "MFS, skeleton sources"), "Bempp": ("#eb6834", "D", "-.", "Bempp (EFIE, RWG)")}
+BEM = ((28, 28), (40, 36), (60, 56), (84, 76), (100, 92))     # cells along and around; with the two mirror planes
+STYLE = {"MFS": ("#2a78d6", "o", "-", "MFS, skeleton sources"), "Bempp": ("#eb6834", "D", "-.", "Bempp (EFIE, RWG), two mirror planes")}
 INK, MUTED = "#1f1f1e", "#6b6a64"
 
 
@@ -40,7 +40,7 @@ def run():
         print(f"MFS n_mid={n_mid} J={J}: sources={len(y)} unknowns={info['unknowns']} rows={info['rows']} "
               f"time={t:.1f}s optical={rows[-1][3]:.1e}", flush=True)
     out["mfs"] = np.array(rows)
-    a.bem_reference(k, pts, ((10, 10),))                   # warm-up: Bempp compiles its kernels on first use
+    a.bem_reference(k, pts, ((12, 12),))                   # warm-up: Bempp compiles its kernels on first use
     brows = []
     for i, (ndof, Eb, t) in enumerate(a.bem_reference(k, pts, BEM)):
         brows.append((ndof, t))

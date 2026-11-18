@@ -1,6 +1,7 @@
 """Bempp reference for the PEC torus (EFIE, RWG), structured triangle mesh.
 
-Usage: python3 bem_torus.py n1,n2,...  [a] [theta phi pol]
+Usage: python3 bem_torus.py n1,n2,...  [a] [theta phi pol] [--sym]
+--sym uses the three mirror planes of the torus (bem_mirror.py; files ..._sym.npz).
 n = number of mesh cells around the tube; round(n R / a) cells around the axis.
 Writes bem_torus_a{a}_n{n}.npz: field at the test points, far field in the
 standard directions, cross-sections, time.
@@ -47,6 +48,35 @@ def torus_grid(R, a, n):
     return bempp.Grid(v, np.array(el, dtype=np.uint32).T)
 
 
+def torus_piece(R, a, n):
+    """The part of torus_grid in the octant x, y, z >= 0 (n even, round(n R / a) a multiple of 4)."""
+    m = int(round(n * R / a))
+    assert n % 2 == 0 and m % 4 == 0
+    nt, mp = n // 2, m // 4
+    T, P = np.meshgrid(np.pi * np.arange(nt + 1) / nt, 0.5 * np.pi * np.arange(mp + 1) / mp, indexing="ij")
+    rho = R + a * np.cos(T)
+    v = np.stack((rho * np.cos(P), rho * np.sin(P), a * np.sin(T)), axis=-1).reshape(-1, 3)
+    v[np.abs(v) < 1e-14] = 0.0
+    idx = lambda i, j: i * (mp + 1) + j
+    el = []
+    for i in range(nt):
+        for j in range(mp):
+            p00, p10, p01, p11 = idx(i, j), idx(i + 1, j), idx(i, j + 1), idx(i + 1, j + 1)
+            el.append((p00, p01, p11))
+            el.append((p00, p11, p10))
+    return v, np.array(el)
+
+
+def solve_sym(R, a, n, d, p, points, dirs):
+    """The same with the three mirror planes of the torus (bem_mirror.py)."""
+    import bem_mirror as bm
+    refl = bm.group()
+    sym = bm.Mirror(*bm.mirror_grid(*torus_piece(R, a, n), refl), refl, K)
+    J, _ = sym.solve(d, p)
+    F = sym.field(J, RFAR * dirs) * RFAR * np.exp(-1j * K * RFAR)
+    return sym.field(J, points), F, sym.N
+
+
 def solve(grid, d, p, points, dirs):
     lam, div, _ = br.efie_solve(grid, K, d, p)
 
@@ -58,18 +88,26 @@ def solve(grid, d, p, points, dirs):
 
 
 def main():
-    ns = [int(v) for v in sys.argv[1].split(",")]
-    a = float(sys.argv[2]) if len(sys.argv) > 2 else 0.5
-    ang = [float(v) for v in sys.argv[3:6]] if len(sys.argv) > 5 else [0.0, 0.0, 90.0]
+    sym = "--sym" in sys.argv
+    args = [v for v in sys.argv if v != "--sym"]
+    ns = [int(v) for v in args[1].split(",")]
+    a = float(args[2]) if len(args) > 2 else 0.5
+    ang = [float(v) for v in args[3:6]] if len(args) > 5 else [0.0, 0.0, 90.0]
     d, p = wave(*ang)
     tag = "" if ang == [0.0, 0.0, 90.0] else "_w" + "_".join(f"{v:g}" for v in ang)
     dirs, w = sphere_rule()
     pts = test_points()
-    solve(torus_grid(1.0, a, 6), d, p, pts[:4], dirs[:4])                # warm-up (compilation)
+    if sym:
+        tag += "_sym"
+        solve_sym(1.0, a, 8, d, p, pts[:4], dirs[:4])                    # warm-up (compilation)
+    else:
+        solve(torus_grid(1.0, a, 6), d, p, pts[:4], dirs[:4])
     for n in ns:
         t0 = time.time()
-        g = torus_grid(1.0, a, n)
-        E, F, ndof = solve(g, d, p, pts, np.vstack((dirs, d[None])))
+        if sym:
+            E, F, ndof = solve_sym(1.0, a, n, d, p, pts, np.vstack((dirs, d[None])))
+        else:
+            E, F, ndof = solve(torus_grid(1.0, a, n), d, p, pts, np.vstack((dirs, d[None])))
         t = time.time() - t0
         ext = 4 * np.pi / K * np.imag(np.conj(p) @ F[-1])
         sca = np.sum(w * np.sum(np.abs(F[:-1]) ** 2, axis=1))

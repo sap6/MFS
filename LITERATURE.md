@@ -569,18 +569,21 @@ Hafner and Bomholt 1993 (book; the author has it as an e-book).
 ## 11. Added on 2026-11-17 (evening), not read in full
 
 - **Khavinson and Lundberg 2014**, "A tale of ellipsoids in potential
-  theory", Notices AMS 61 (2), 148-156, doi 10.1090/noti1082 **[meta]**:
-  record checked against Crossref; ams.org and arxiv.org (1309.2042) are
-  blocked in the session, so the content is from a search summary and from
-  memory: the exterior potential of an ellipsoid continues into the body up
-  to the focal ellipse (the degenerate confocal ellipsoid in the plane of the
-  two longest axes), which carries the "mother body". Cited in Section 4.2
-  of the paper for the rear half of the almond, which is half an ellipsoid:
-  its focal ellipse has semi-axes sqrt(a^2 - c^2) = 0.988 a and
-  sqrt(b^2 - c^2) = 0.943 b. `pec_almond_skeleton.source_rows` already puts
-  the rear rows on ellipses confocal with it ("rear part: confocal ellipse
-  in the mid-plane"); the paper now says so. **The authors must check the
-  wording against the article** (a TODO marks the place). Also seen in the
+  theory", Notices AMS 61 (2), 148-156, doi 10.1090/noti1082 **[full:
+  arXiv 1309.2042, fetched with curl on 18 Nov]**. Section 2: the "focal
+  ellipsoid" E is the limit of the confocal family, the flat set
+  {x_N = 0, sum_{j<N} x_j^2 / (a_j^2 - a_N^2) <= 1}; Corollary 2.3
+  (MacLaurin): the exterior potential of the solid ellipsoid equals that
+  of a measure on E (density proportional to the square root of 1 - sum
+  y_j^2 / (a_j^2 - a_N^2)), a "mother body". Section 5: the continuation
+  of the exterior potential (Herglotz) has its singularities on E, the
+  real part of the characteristic surface (Johnsson). In three dimensions
+  E is the elliptic disc in the plane of the two longest axes bounded by
+  the focal ellipse with semi-axes sqrt(a^2 - c^2), sqrt(b^2 - c^2). For
+  the rear half of the almond: 0.988 a and 0.943 b.
+  `pec_almond_skeleton.source_rows` puts the rear rows on ellipses
+  confocal with it. The sentence in Section 4.2 now says "focal ellipsoid,
+  a flat elliptic disc ... bounded by the focal ellipse"; the TODO is gone. Also seen in the
   search, not read: Ebenfelt 1992 (singularities of the continuation of
   Dirichlet solutions) and a 1994 Trans. AMS paper (singularities for data
   on quadrics lie on the classical focal sets).

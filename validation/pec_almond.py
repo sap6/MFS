@@ -111,6 +111,34 @@ def mesh(n_t, n_s):
     return verts, tris
 
 
+def mesh_quarter(n_t, n_s):
+    """The part of mesh(n_t, n_s) with y, z >= 0 (n_s a multiple of 4), for
+    the boundary element solve with the two mirror planes (bem_mirror.py)."""
+    assert n_s % 4 == 0
+    q = n_s // 4
+    th = (np.arange(1, n_t) / n_t) * np.pi
+    t = 0.5 * (T0 + T1) - 0.5 * (T1 - T0) * np.cos(th)
+    s = np.arange(q + 1) / n_s * 2 * np.pi
+    rings = [surface(np.full(q + 1, ti), s) for ti in t]
+    verts = np.concatenate([np.array([[L * T0, 0, 0]])] + rings + [np.array([[L * T1, 0, 0]])])
+    verts[np.abs(verts) < 1e-15] = 0.0
+    idx = lambda i, j: 1 + i * (q + 1) + j
+    last = len(verts) - 1
+    tris = []
+    for j in range(q):
+        tris.append((0, idx(0, j + 1), idx(0, j)))
+        tris.append((last, idx(n_t - 2, j), idx(n_t - 2, j + 1)))
+        for i in range(n_t - 2):
+            tris.append((idx(i, j), idx(i, j + 1), idx(i + 1, j)))
+            tris.append((idx(i, j + 1), idx(i + 1, j + 1), idx(i + 1, j)))
+    tris = np.array(tris)
+    c = verts[tris].mean(axis=1)
+    n = np.cross(verts[tris[:, 1]] - verts[tris[:, 0]], verts[tris[:, 2]] - verts[tris[:, 0]])
+    flip = np.sum(n * (c - np.array([0.02, 0, 0])), axis=1) < 0
+    tris[flip] = tris[flip][:, [0, 2, 1]]
+    return verts, tris
+
+
 def mfs(k, h, n_s, tau, src_frac=0.65, b_min=0.35, inc=None, cond=1e-13):
     inc = inc or (lambda p: mie.plane_wave(p, k, D, P))
     x, w, nrm = point_cloud(h, n_s)
