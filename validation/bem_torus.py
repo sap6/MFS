@@ -68,17 +68,16 @@ def torus_piece(R, a, n):
     return v, np.array(el)
 
 
-def solve_sym(R, a, n, d, p, points, dirs):
+def solve_sym(R, a, n, d, p, points):
     """The same with the three mirror planes of the torus (bem_mirror.py)."""
     import bem_mirror as bm
     refl = bm.group()
     sym = bm.Mirror(*bm.mirror_grid(*torus_piece(R, a, n), refl), refl, K)
     J, _ = sym.solve(d, p)
-    F = sym.field(J, RFAR * dirs) * RFAR * np.exp(-1j * K * RFAR)
-    return sym.field(J, points), F, sym.N
+    return sym.field(J, points), lambda dirs: sym.field(J, RFAR * dirs) * RFAR * np.exp(-1j * K * RFAR), sym.N
 
 
-def solve_rot(R, a, n, d, p, points, dirs):
+def solve_rot(R, a, n, d, p, points):
     """The same with the rotational symmetry of the mesh: the rotation by one
     cell about the axis maps torus_grid to itself (bem_mirror.Cyclic)."""
     import bem_mirror as bm
@@ -89,18 +88,16 @@ def solve_rot(R, a, n, d, p, points, dirs):
     emap = 2 * vmap[:, np.repeat(np.arange(n * m), 2)] + np.tile(np.arange(2), n * m)[None, :]
     sym = bm.Cyclic(torus_grid(R, a, n), vmap, emap, K)
     J, orders = sym.solve(d, p)
-    F = sym.field(J, RFAR * dirs) * RFAR * np.exp(-1j * K * RFAR)
-    return sym.field(J, points), F, sym.N
+    return sym.field(J, points), lambda dirs: sym.field(J, RFAR * dirs) * RFAR * np.exp(-1j * K * RFAR), sym.N
 
 
-def solve(grid, d, p, points, dirs):
+def solve(grid, d, p, points):
     lam, div, _ = br.efie_solve(grid, K, d, p)
 
     def field(x):
         return -(bempp.operators.potential.maxwell.electric_field(div, x.T, K) * lam).T
 
-    F = field(RFAR * dirs) * RFAR * np.exp(-1j * K * RFAR)
-    return field(points), F, div.global_dof_count
+    return field(points), lambda dirs: field(RFAR * dirs) * RFAR * np.exp(-1j * K * RFAR), div.global_dof_count
 
 
 def main():
@@ -115,21 +112,22 @@ def main():
     pts = test_points()
     if sym:
         tag += "_sym"
-        solve_sym(1.0, a, 8, d, p, pts[:4], dirs[:4])                    # warm-up (compilation)
+        solve_sym(1.0, a, 8, d, p, pts[:4])[1](dirs[:4])                 # warm-up (compilation)
     elif rot:
         tag += "_rot"
-        solve_rot(1.0, a, 6, d, p, pts[:4], dirs[:4])
+        solve_rot(1.0, a, 6, d, p, pts[:4])[1](dirs[:4])
     else:
-        solve(torus_grid(1.0, a, 6), d, p, pts[:4], dirs[:4])
+        solve(torus_grid(1.0, a, 6), d, p, pts[:4])[1](dirs[:4])
     for n in ns:
         t0 = time.time()
         if sym:
-            E, F, ndof = solve_sym(1.0, a, n, d, p, pts, np.vstack((dirs, d[None])))
+            E, far, ndof = solve_sym(1.0, a, n, d, p, pts)
         elif rot:
-            E, F, ndof = solve_rot(1.0, a, n, d, p, pts, np.vstack((dirs, d[None])))
+            E, far, ndof = solve_rot(1.0, a, n, d, p, pts)
         else:
-            E, F, ndof = solve(torus_grid(1.0, a, n), d, p, pts, np.vstack((dirs, d[None])))
-        t = time.time() - t0
+            E, far, ndof = solve(torus_grid(1.0, a, n), d, p, pts)
+        t = time.time() - t0                                             # mesh, assembly, solve, field at the test points
+        F = far(np.vstack((dirs, d[None])))                              # for the cross-sections; not timed
         ext = 4 * np.pi / K * np.imag(np.conj(p) @ F[-1])
         sca = np.sum(w * np.sum(np.abs(F[:-1]) ** 2, axis=1))
         np.savez(f"bem_torus_a{a:g}_n{n}{tag}.npz", E=E, F=F[:-1], ndof=ndof, t=t, ext=ext, sca=sca)

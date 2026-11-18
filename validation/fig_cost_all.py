@@ -48,9 +48,8 @@ if __name__ == "__main__":
     ax.set_title("(a) sphere, two wavelengths across (against Mie)", loc="left", fontsize=8.5)
     ax = axs[0, 1]
     d = np.load("fig_cost_torus.npz")
-    curve(ax, d["mfs"][:, 1], d["mfs"][:, 2], BLUE, "o", "-", "MFS, mode by mode")
-    curve(ax, d["dense"][:, 1], d["dense"][:, 2], GREEN, "s", "--", "MFS, full matrix")
-    curve(ax, d["bem"][:, 1], d["bem"][:, 2], ORANGE, "D", "-.", "Bempp, with symmetry")
+    curve(ax, d["mfs"][:, 1], d["mfs"][:, 2], BLUE, "o", "-", "MFS")
+    curve(ax, d["bem"][:, 1], d["bem"][:, 2], ORANGE, "D", "-.", "Bempp, with symmetry")      # both use the rotational symmetry
     ax.set_title("(b) torus", loc="left", fontsize=8.5)
     ax = axs[1, 0]
     d = np.load("fig_cost_almond.npz")

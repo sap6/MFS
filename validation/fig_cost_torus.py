@@ -9,25 +9,26 @@ the scattered field at 200 points on |x| = 2.5 from the finest MFS run
 
 "MFS" solves mode by mode about the axis (uses the rotational symmetry of the
 body, any incident wave); "MFS, full matrix" is the same least-squares problem
-without using the symmetry; Bempp uses the three mirror planes of the torus
-(bem_mirror.py). Run alone on the machine.
+without using the symmetry; Bempp uses the rotational symmetry of its
+structured mesh (bem_mirror.Cyclic). Times are for the solve and the field
+at the test points. Run alone on the machine.
 """
 import sys
 import time
 
 import numpy as np
 
-from pec_torus import Torus, circle, plane_wave, rel, residual, scatter, solve_dense, sphere_rule, wave
+from pec_torus import Torus, circle, cross_sections, plane_wave, rel, residual, scatter, solve, solve_dense, sphere_rule, wave
 
 K = 2 * np.pi
 A = 0.5
 LAYOUTS = ((6, 20), (8, 28), (12, 40), (16, 52), (20, 64), (24, 80), (28, 96), (36, 128), (44, 160))
 DENSE = ((6, 20), (8, 28), (12, 40), (16, 52), (20, 64))
-BEM_N = (12, 20, 28, 40, 56, 80)
+BEM_N = (12, 20, 28, 40, 56, 80, 112, 160)
 REF = (56, 240)
 STYLE = {"MFS": ("#2a78d6", "o", "-", "MFS, dipoles on an inner torus (mode by mode)"),
          "MFS dense": ("#1baf7a", "s", "--", "the same, full matrix (no symmetry used)"),
-         "Bempp": ("#eb6834", "D", "-.", "Bempp (EFIE, RWG), three mirror planes")}
+         "Bempp": ("#eb6834", "D", "-.", "Bempp (EFIE, RWG), rotational symmetry of the mesh")}
 INK, MUTED = "#1f1f1e", "#6b6a64"
 
 
@@ -46,16 +47,19 @@ def run():
           f"sigma_ext {ref.info['sigma_ext']:.10f}, t={ref.info['t']:.1f}s", flush=True)
     out = {"ref": np.array([ref.info["unknowns"], ref.info["bc"], ref.info["opt"], ref.info["sigma_ext"]])}
     rows = []
+    rhs = lambda y: -plane_wave(y, K, d, p)
     for ns, nphi in LAYOUTS:
         t0 = time.time()
-        s = scatter(tor, K, d, p, ns, nphi, a_s=0.5 * A)        # includes residual and cross-sections
+        rho, z, _ = circle(ns, 1.0, 0.5 * A)
+        s = solve(tor, K, rhs, rho, z, nphi)
         E = s.field(x)
-        t = time.time() - t0
+        t = time.time() - t0                                    # solve and field at the test points; the checks below are not timed
+        ext, sca = cross_sections(s, d, p)
+        s.info.update(bc=residual(tor, s, rhs), opt=abs(ext - sca) / sca)
         rows.append((s.info["unknowns"], t, rel(E, Eref), s.info["bc"], s.info["opt"], s.info["alpha_norm"]))
         print(f"MFS       unknowns={rows[-1][0]:6d} time={t:7.2f}s error={rows[-1][2]:.2e} residual={rows[-1][3]:.1e} optical={rows[-1][4]:.1e}", flush=True)
     out["mfs"] = np.array(rows)
     rows = []
-    rhs = lambda y: -plane_wave(y, K, d, p)
     for ns, nphi in DENSE:
         t0 = time.time()
         rho, z, _ = circle(ns, 1.0, 0.5 * A)
@@ -66,10 +70,10 @@ def run():
         print(f"MFS dense unknowns={rows[-1][0]:6d} time={t:7.2f}s error={rows[-1][2]:.2e}", flush=True)
     out["dense"] = np.array(rows)
     np.savez("fig_cost_torus.npz", **out)
-    subprocess.run([sys.executable, "-W", "ignore", "bem_torus.py", ",".join(str(n) for n in BEM_N), str(A), "--sym"], check=True)
+    subprocess.run([sys.executable, "-W", "ignore", "bem_torus.py", ",".join(str(n) for n in BEM_N), str(A), "--rot"], check=True)
     rows = []
     for n in BEM_N:
-        b = np.load(f"bem_torus_a{A:g}_n{n}_sym.npz")
+        b = np.load(f"bem_torus_a{A:g}_n{n}_rot.npz")
         rows.append((int(b["ndof"]), float(b["t"]), rel(b["E"], Eref), float(b["ext"])))
         print(f"Bempp     unknowns={rows[-1][0]:6d} time={rows[-1][1]:7.2f}s error={rows[-1][2]:.2e}", flush=True)
     out["bem"] = np.array(rows)

@@ -75,19 +75,28 @@ def action(space, vmap, emap):
     ne, N, ng = grid.number_of_elements, space.global_dof_count, len(vmap)
     el, vt = grid.elements.T, grid.vertices.T
     cen = vt[el].mean(axis=1)
-    opp = np.zeros((ne, 3), np.int64)
-    sig = np.zeros((ne, 3))
     lc = np.array([[1.0 / 3], [1.0 / 3]])
-    for e in range(ne):                                    # which vertex each local function flows away from, and its sign
+
+    def flow(e):
+        """For each local function of element e: the local vertex it flows away from, and the sign of that flow."""
         w = space.evaluate(e, lc)[:, :, 0].T               # (3 functions, 3 components)
         dvec = cen[e][None, :] - vt[el[e]]                 # (3 vertices, 3)
         cs = (w @ dvec.T) / (np.linalg.norm(w, axis=1)[:, None] * np.linalg.norm(dvec, axis=1)[None, :])
         v = np.argmax(np.abs(cs), axis=1)
-        opp[e], sig[e] = el[e][v], np.sign(cs[np.arange(3), v])
+        return v, np.sign(cs[np.arange(3), v])
+
+    # The library's convention is the same on every element: local function l flows away from local vertex
+    # vloc[l], with the sign c[l] * local_multipliers. Learn it on one element, check it on a sample.
+    mult = np.asarray(space.local_multipliers, float)
+    vloc, s0 = flow(0)
+    c = s0 * mult[0]
+    for e in np.unique(np.linspace(0, ne - 1, 40).astype(int)):
+        v, sg = flow(e)
+        assert np.array_equal(v, vloc) and np.array_equal(sg, c * mult[e]), "unexpected RWG convention"
+    opp, sig = el[:, vloc], c[None, :] * mult
     l2g = space.local2global
-    first = np.full(N, -1)
-    for e in range(ne - 1, -1, -1):
-        first[l2g[e]] = e
+    first = np.full(N, ne)
+    np.minimum.at(first, l2g, np.arange(ne)[:, None])      # the first element that carries each degree of freedom
     perm = np.zeros((ng, N), np.int64)
     sgn = np.zeros((ng, N))
     j = np.arange(N)
