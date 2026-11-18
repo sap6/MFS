@@ -5,7 +5,7 @@ bem_grading_scan.py) are run alternately, several times, and each keeps its
 smallest wall time, as cube_duel.py does for the standard case (NOTES.md
 items 60, 66, 68).
 
-    python3 cube_cases.py k1o ref             # reference field (J = 10) -> cube_cases_k1o_ref.npz; once
+    python3 cube_cases.py k1o ref             # reference field (J = 11; J = 10 for k2) -> cube_cases_k1o_ref.npz; once
     python3 cube_cases.py k1o [repetitions]   # k = 2 pi, oblique wave (eight parity classes)
     python3 cube_cases.py k2 ref; python3 cube_cases.py k2 [repetitions]      # k = 4 pi, standard wave
     python3 cube_cases.py report              # tables of all finished cases
@@ -25,8 +25,8 @@ import pec_cube_lightning3d as m
 
 SIDE = {"k1o": 1, "k2": 2, "k2o": 2}
 OBLIQUE = (60.0, 25.0, 35.0)
-LEVELS = {"k1o": range(4, 9), "k2": range(4, 9), "k2o": range(5, 9)}      # two depths per octave; the reference is J = 10
-J_REF = 10
+LEVELS = {"k1o": range(4, 11), "k2": range(4, 9), "k2o": range(5, 9)}     # two depths per octave
+J_REFS = {"k1o": 11, "k2": 10, "k2o": 10}                                # level of the reference field
 
 
 def layout(c, S, J, family="dense"):
@@ -67,6 +67,7 @@ if __name__ == "__main__":
         report()
         sys.exit()
     S = SIDE[case]
+    J_REF = J_REFS[case]
     m.K = 2 * np.pi * S                                     # before any solver object is built
     import cube_mfs as c
     import bem_grading_scan as scan
