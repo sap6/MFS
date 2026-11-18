@@ -17,6 +17,7 @@ for c in k1 k1o k2 k3; do python3 -W ignore bem_retime_extra.py $c 2 > time_pape
 python3 -W ignore fig_cost_sphere.py run > time_paper_t_sphere.txt 2>&1
 python3 -W ignore fig_cost_torus.py run > time_paper_t_torus.txt 2>&1
 python3 -W ignore fig_cost_almond.py run > time_paper_t_almond.txt 2>&1
+python3 -W ignore almond_cost_freq.py 3.5 > time_paper_t_almond35.txt 2>&1      # almond at 3.5 GHz (one sentence in Section 7.1)
 python3 -W ignore bem_optical.py 0.1,0.07,0.05,0.04 > time_paper_t_cube_bem_uniform.txt 2>&1     # Bempp as distributed, quasi-uniform meshes
 date -u >> time_paper_t_machine.txt
 echo done

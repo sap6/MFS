@@ -132,9 +132,9 @@ best, then drop the curve without symmetry and the caveat.
       about 1e-3; the most accurate Bempp run and the first MFS level
       below it); the summary table holds the smooth bodies and the almond
       only. 40 preprint pages, 24 in the journal layout.
-- [ ] R13 Next weakest point: look for it after R11-R12 (candidates:
-      the paper is at the upper end of the length target; the almond has
-      a cost comparison at one frequency only; a fourth cube size).
+- [x] R13 Almond cost comparison at a second frequency (item 85).
+- [ ] R14 Next: a last independent read of Sections 5.5 and 7 after the
+      restructuring; then look again for the weakest point.
 
 **Still open for the authors**: the author's pass over the text; T20
 (Timo); final timing on a fixed machine; copy to `sap6/mfs-paper` (ask
@@ -2131,6 +2131,15 @@ towards the MFS field.
       the dyadic Green's function on two lines, "Figures 7 and 10".
     - The paper is 41 preprint pages, 24 in the journal layout (the upper
       end of the target).
+
+85. **Almond at 3.5 GHz against Bempp** (`almond_cost_freq.py`, nose-on,
+    three wavelengths long, sources spaced at 0.5 of their distance to the
+    surface, reference 8:5; run after the timing run on the same machine).
+    MFS 3:0 ... 7:4: 1.6, 2.8, 4.1, 6.1, 13.2 s for 5.1e-2, 1.8e-3, 4.2e-5,
+    8.3e-6, 1.3e-6. Bempp with two mirrors, 2268 ... 27324 dofs: 0.6, 1.1,
+    4.3, 16.6, 29 s for 1.5e-2, 7.7e-3, 3.1e-3, 1.6e-3, 1.1e-3. The same
+    picture as at 1.19 GHz, with the crossing near 3e-3. One sentence in
+    Section 7.1; the script is part of `time_paper.sh`.
 
 ## 3. Current best commands
 
