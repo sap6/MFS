@@ -6,7 +6,7 @@ with the quadrature orders and the mesh size, using the mirror symmetry
     python3 bem_grading_scan.py k1o         # k = 2 pi, oblique wave
     python3 bem_grading_scan.py k2          # k = 4 pi, standard wave
     python3 bem_grading_scan.py k2o         # k = 4 pi, oblique wave
-    python3 bem_grading_scan.py k3 1.25,1.5,1.75,2   # k = 6 pi, standard wave, these gradings only
+    python3 bem_grading_scan.py k3          # k = 6 pi, standard wave
     python3 bem_grading_scan.py report      # lower envelopes of all cases
     python3 bem_grading_scan.py retime k1   # re-time the runs near the envelope on a quiet machine (best of two);
                                             # writes bem_grading_scan_k1_final.npz, the envelope used by the figures
@@ -32,7 +32,7 @@ def reference(case):
     if case == "k2":
         return 4 * np.pi, np.load("cube_wavenumber_k2.npz")["dense_E10"], None
     if case == "k3":
-        return 6 * np.pi, np.load("cube_k3_ref_J9.npz")["E"], None   # cube_k3_tune.py ref 9 (only good to about 5e-4)
+        return 6 * np.pi, np.load("cube_cases_k3_ref.npz")["E"], None   # cube_cases.py k3 ref
     d = np.load("cube_wavenumber_k2_obl.npz")
     return 4 * np.pi, d["dense_E9"], (d["d"], d["p"])
 

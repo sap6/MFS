@@ -85,14 +85,14 @@ def plot(curves, fname="fig_almond_benchmark"):
             ax.plot(phi, m1, "-", color=GREY, lw=1.0, label="measured (Kelley et al. 2020)", zorder=1)
             ax.plot(phi, mfs, "-", color=BLUE, lw=1.6, label="MFS (this work)", zorder=3)
             ax.plot(phi[::12], ref[::12], "o", color=ORANGE, ms=4, mfc="white", mew=1.1,
-                    label="reference simulation (ARCHIE-AIM)", zorder=4)
+                    label="reference simulation", zorder=4)
             ax.set_title(f"{f:g} GHz, {pol}", loc="left", fontsize=9, color=INK)
             ax.set_xticks(range(0, 181, 30))
             ax.grid(True, color="#e4e3df", lw=0.6)
             for sp in ("top", "right"):
                 ax.spines[sp].set_visible(False)
             if i == 1:
-                ax.set_xlabel("azimuth [deg]  (0 = tip-on)")
+                ax.set_xlabel("azimuth [deg]  (0 = nose-on)")
         axes[i, 0].set_ylabel("monostatic RCS [dBsm]")
     h, lab = axes[0, 0].get_legend_handles_labels()
     fig.legend(h, lab, frameon=False, fontsize=8.5, ncol=3, loc="lower center", bbox_to_anchor=(0.5, -0.005))

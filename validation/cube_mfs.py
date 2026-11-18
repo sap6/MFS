@@ -287,7 +287,9 @@ def run(J, d=m.D, p=m.P, pts=None, family="balanced", max_gb=6.0, **kw):
     ext = sca_F = 0.0
     t = 0.0
     dirs = np.vstack((d[None, :], _SPHERE_DIRS))
+    cube = None
     while todo:
+        del cube                                       # free the matrices of the previous group before the next is built
         cube = Cube(J, classes=todo[:1], **kw) if len(todo) == 1 else None
         if cube is None:
             n1 = _size(J, todo[0], kw)

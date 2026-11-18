@@ -3,7 +3,7 @@
 
 Until now the sources have been placed on a smaller surface of the same shape as the body, which is possible because the sphere and the torus are smooth. The cube is different. Its flat faces meet in sharp edges and corners, where the surface normal is discontinuous, and the scaled copy no longer works. For the unit cube at $k = 2\pi$, with between $96$ and $600$ electric dipoles on the faces of a concentric inner cube of side $0.6$, the error of the scattered field stays between $21\%$ and $30\%$, measured against the reference of \autoref{sec:cube}, and does not decrease as sources are added. The NASA almond (\autoref{sec:almond}) behaves in the same way, although its surface is smooth away from the tip: at $1.19$\,GHz the best inner surface that we found leaves a boundary residual of $22\%$ with $1243$ sources.
 
-Both failures have the same cause, and it is the rule quoted in the introduction: the sources must enclose the singularities of the continued field. In this section we locate these singularities for both shapes. The layouts that follow from them are constructed in Sections~\ref{sec:cube} and~\ref{sec:almond}.
+Both failures have the same cause, and it is the rule quoted in the introduction: the sources must enclose the singularities of the continued field. In this section we find, for both shapes, a set inside the body that contains these singularities and can carry the sources. The layouts that follow from them are constructed in Sections~\ref{sec:cube} and~\ref{sec:almond}.
 
 \subsection{Convex polyhedra}
 
@@ -30,6 +30,8 @@ on $\mathcal{M}$, where $[\,\cdot\,]$ denotes the jump between the continuations
 \end{proof}
 
 The theorem has three consequences for the method. First, sources on the skeleton are sufficient, and nothing closer to the faces is needed. Second, the skeleton contains the edges, which a scaled copy of the surface does not reach: this is the stall at $21$--$30\%$. Third, both currents in \eqref{eq:jumps} are non-zero in general, so both electric and magnetic dipoles are needed. With electric dipoles alone, our edge sources stalled at an error of $5\%$. The densities $\bJ$ and $\bK$ are smooth on each wall of the skeleton and become singular only towards the edges and vertices, which is where the sources must cluster.
+
+The theorem does not say that the continued field is singular on the whole skeleton. The continuation through one face is regular in all of $\Omega$. The singular points are the edges and vertices, around which the continuations through different faces disagree, and the skeleton is the surface on which we join them. Another surface that spans the edges would serve as well. We use the skeleton because it is determined by the shape alone and shares its symmetry.
 
 A related result is known in potential theory. Gustafsson \cite{gustafsson1998} proved that a convex polyhedron of uniform density has the same exterior Newtonian potential as a unique measure on its ridge, the set of points with at least two closest points on the boundary, which is our skeleton. His construction is the same as ours, with half-space potentials in place of the reflected fields. To our knowledge the statement for scattering is new. The proof uses convexity: for a non-convex polyhedron the mirror image of the body can re-enter the body, and the reflected field is then no longer defined in the whole cell.
 

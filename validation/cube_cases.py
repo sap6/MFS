@@ -8,6 +8,7 @@ items 60, 66, 68).
     python3 cube_cases.py k1o ref             # reference field (J = 11; J = 10 for k2) -> cube_cases_k1o_ref.npz; once
     python3 cube_cases.py k1o [repetitions]   # k = 2 pi, oblique wave (eight parity classes)
     python3 cube_cases.py k2 ref; python3 cube_cases.py k2 [repetitions]      # k = 4 pi, standard wave
+    python3 cube_cases.py k3 ref; python3 cube_cases.py k3 [repetitions]      # k = 6 pi, standard wave
     python3 cube_cases.py report              # tables of all finished cases
 
 Errors of both codes are differences from the reference field of the case.
@@ -23,21 +24,25 @@ import numpy as np
 
 import pec_cube_lightning3d as m
 
-SIDE = {"k1o": 1, "k2": 2, "k2o": 2}
+SIDE = {"k1o": 1, "k2": 2, "k2o": 2, "k3": 3}
 OBLIQUE = (60.0, 25.0, 35.0)
-LEVELS = {"k1o": range(4, 11), "k2": range(4, 9), "k2o": range(5, 9)}     # two depths per octave
-J_REFS = {"k1o": 11, "k2": 10, "k2o": 10}                                # level of the reference field
+LEVELS = {"k1o": range(4, 11), "k2": range(4, 9), "k2o": range(5, 9), "k3": range(4, 9)}     # two depths per octave
+J_REFS = {"k1o": 11, "k2": 10, "k2o": 10, "k3": 10}                      # level of the reference field
+MODES = {1: 0, 2: 4, 3: 12}                                              # additional modes per line at S wavelengths per side
 
 
 def layout(c, S, J, family="dense"):
     """The layout of cube_mfs.py at S wavelengths per side: the same rule as at
-    one wavelength, with 4 (S - 1) more modes per line (NOTES.md items 57, 68).
-    The line quadrature takes more nodes by itself (line_tree.nodes). Valid for
-    S = 1 and 2; at S = 3 the layout is not converged (item 67)."""
+    one wavelength (first depth 0.2, eight base points per side), with MODES[S]
+    more modes per line (NOTES.md items 57, 68, 79). The line quadrature
+    takes more nodes by itself (line_tree.nodes). At three wavelengths the
+    matrices of the two classes are built one after the other (memory)."""
     if S == 1:
         return {}
     kw = dict(c.dense(J))
-    kw["kw"] = dict(kw["kw"], n0=kw["kw"]["n0"] + int(round(4 * (S - 1))))
+    kw["kw"] = dict(kw["kw"], n0=kw["kw"]["n0"] + MODES[S])
+    if S == 3 and J >= 9:
+        kw["max_gb"] = 2.5
     return kw
 
 
@@ -80,8 +85,9 @@ if __name__ == "__main__":
         print(f"{case} reference, two depths per octave, J = {J_REF}: unknowns/class {max(info['per_class'])} rows {info['rows']} t = {t:.0f} s "
               f"optical {info['optical']:.1e} sigma_ext {info['ext']:.6f} |c| {info['coef_norm']:.1f}")
         np.savez(f"cube_cases_{case}_ref.npz", E=E, pts=pts, info=np.array([J_REF, t, max(info["per_class"]), info["rows"], info["optical"], info["ext"]]))
-        old = scan.reference(case)[1]
-        print(f"   differs from the reference of the earlier family by {np.linalg.norm(E - old) / np.linalg.norm(old):.2e}")
+        if case != "k3":
+            old = scan.reference(case)[1]
+            print(f"   differs from the reference of the earlier family by {np.linalg.norm(E - old) / np.linalg.norm(old):.2e}")
         sys.exit()
     reps = int(sys.argv[2]) if len(sys.argv) > 2 else 2
     ref = reference(case)
