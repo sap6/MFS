@@ -11,7 +11,7 @@ It lives here, next to the code that produces its numbers, and is not yet in
   derivations are in the text and three appendices (`sections/appendix.tex`)
   hold the cone exponents, the line quadrature and the Bempp settings.
   Lines starting with `%% TODO` are open points for the authors. The title
-  is a placeholder.
+  is settled (the author, 18 November).
 - Length: the target is 22-24 pages in the journal's layout (at present 23, and 38 in the
   12 pt preprint layout). To count them,
   build `main.tex` with `\documentclass[final,3p,times]{elsarticle}`
