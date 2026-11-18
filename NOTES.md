@@ -23,6 +23,17 @@ tangential E_sc = -tangential E_inc on the surface, least-squares collocation.
   one machine (item 83). If one part is re-run, re-run all
   (`validation/time_paper.sh`, three hours).
 
+### Seventh session, part three: the code for readers (18 Nov, READ FIRST)
+
+**The author (18 Nov, verbatim):** "Please find JCP limit or guidance, I think <250 word abstract is good. Cutting unnecessary pages to simplify is good, only if they are actually unnecessary. The other 3 changes you suggested seems forced. Could you now look at the notebooks and can we make the codebase simple and easy to read? With as few lines as possible (still readable and clear)? And please employ the best way to share Python code in a GitHub repository accompanying a paper. I want this to be a repo that people visit and interact with from the paper." Then: "Use comments in a very similar way to the way I used comments in my original repo. Take your time with this, don't finish early." "Also are Jupyter notebooks the best way to show this?" "are there any other JCP limits/rules we need to follow that we aren't?"
+
+Done so far:
+- Abstract 242 words (JCP: at most 250). Almond "In summary" paragraph cut (redundant). `paper/jcp_checklist.md` (sent): declarations (competing interest, CRediT, generative AI), corresponding author and acknowledgements are left to the authors; commented templates in `main.tex`.
+- New package `mfs/` (core, mie, sphere, torus, cube + lines, almond, cone, bem), comment style of the thesis notebooks (docstring: formula, then arguments with shapes; "# Form matrix A" block comments). Each module reproduces the stored paper results: sphere errors identical; torus field identical; cube fields 1e-14 (J = 4, 5, 6, one depth per octave, general wave, two wavelengths); almond fields 1e-15, RCS 1e-13 dB; cone exponents as in Table A.1; Bempp cube, torus, almond identical to the old code.
+- **Found while porting:** Bempp's default quadrature in bempp-cl 0.4.2 is 4/4, not 4/6 as Appendix C said. The cube runs set 4/6, 6/8, 8/10 explicitly; the sphere, torus and almond used 4/4. Test: on those three, 4/6 and 6/8 change Bempp's error by less than 1% (sphere h = 0.1: 7.58e-3 for all three; torus n = 56: 4.18e-3; almond 60x56: 2.79e-3 to 2.81e-3). Appendix C corrected.
+
+Plan (tick off): package [x]; tests; figures/ with one script per figure (replots from data/, `--run` recomputes); notebooks/ (Colab, one per shape); thesis notebooks to thesis/; README, pyproject, CITATION.cff, CI; research scripts out of the main tree (`validation/` stays in git history; last commit with it to be recorded here); paper paths and code-availability statement.
+
 ### Seventh session, part two: the humanising pass (18 Nov, READ FIRST)
 
 **The author (18 Nov, verbatim):** "continue, but since you are not Fable
