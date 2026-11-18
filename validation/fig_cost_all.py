@@ -84,7 +84,7 @@ if __name__ == "__main__":
     ax.set_ylim(8e-7, 3e-2)
     for ax in axs.ravel():
         ax.grid(True, which="major", color="#e4e3df", lw=0.6)
-        ax.legend(frameon=False, fontsize=6.8, loc="lower left", handlelength=2.6)
+        ax.legend(frameon=False, fontsize=6.8, loc="upper right" if ax is axs[1, 0] else "lower left", handlelength=2.6)
         ax.xaxis.set_minor_formatter(matplotlib.ticker.NullFormatter())
         for sp in ("top", "right"):
             ax.spines[sp].set_visible(False)
