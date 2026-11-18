@@ -30,13 +30,13 @@ Let $\Phi(r) = \rme^{\rmi kr}/(4\pi r)$ with $r = \|\bx-\by\|$ be the fundamenta
 \end{split}
   \label{eq:dyadic}
 \end{equation}
-Because this Green's function is a $3\times3$ matrix that connects vector sources to vector fields, it is often referred to as the \emph{dyadic Green's function}. For a vector $\balpha\in\mathbb{C}^3$, the field $\bG(\bx,\by)\,\balpha$ is that of an electric dipole at $\by$ with moment $\balpha$, which satisfies both \eqref{eq:maxwell} away from $\by$ and the radiation condition. Taking the curl gives a second family of solutions, the fields of magnetic dipoles,
+Because this Green's function is a $3\times3$ matrix that connects vector sources to vector fields, it is often referred to as the \emph{dyadic Green's function}. For a vector $\balpha\in\mathbb{C}^3$, the field $\bG(\bx,\by)\,\balpha$ is that of an electric dipole at $\by$ with moment $\balpha$; this field satisfies both \eqref{eq:maxwell} away from $\by$ and the radiation condition. Taking the curl gives a second family of solutions, the fields of magnetic dipoles,
 \begin{equation}
   \frac{1}{k}\,\nabla_{\bx}\Phi(r)\times\bbeta
   = \Bigl(\rmi-\frac{1}{kr}\Bigr)\Phi(r)\;\rhat\times\bbeta .
   \label{eq:magnetic}
 \end{equation}
-For the smooth bodies of \autoref{sec:smooth} the electric dipoles are sufficient, and we shall see in \autoref{sec:skeleton} why bodies with edges need both families.
+For the smooth bodies of \autoref{sec:smooth} the electric dipoles are sufficient, whereas bodies with edges need both families, for reasons given in \autoref{sec:skeleton}.
 
 \subsection{Formulation}
 
@@ -64,7 +64,7 @@ For the sphere, the Mie series \cite{mie1908,bohren1998} gives the exact scatter
 \end{equation}
 at points $\mathbf{z}_l$ on a sphere that encloses the body: $400$ points on the sphere of radius $2$ for the unit sphere and the unit cube, $200$ points on the sphere of radius $2.5$ for the torus, and $400$ points on the sphere of radius $0.3$\,m for the almond. For the other shapes no exact solution exists, so we use \eqref{eq:fielderror} with a reference field in place of $\bE$, always stating which. We also report the boundary residual, which is the square root of \eqref{eq:leastsquares} relative to its value for the incident field alone.
 
-In addition, we use two further checks. The first is the optical theorem. Since a perfect conductor absorbs no energy, the extinction and scattering cross-sections
+We also use two further checks. The first is the optical theorem. Since a perfect conductor absorbs no energy, the extinction and scattering cross-sections
 \begin{equation}
   \sext = \frac{4\pi}{k}\,\operatorname{Im}\bigl(\bar\bp\cdot\bF(\bd)\bigr), \qquad
   \ssca = \int_{S^2}|\bF(\hat\bx)|^2\,\mathrm{d}s(\hat\bx)

@@ -5,6 +5,33 @@ structure, every number, every citation and every claim are unchanged.
 A script compared the old and new versions of each section: no number or
 citation was added or removed. Only the sentences changed.
 
+## Second round, after an independent reading
+
+A fresh reader compared the text with your thesis and the humanizer rules.
+It found about forty sentences that still read as machine-written, and I
+applied nearly all of the fixes. Seven of them undid mistakes from my own
+first pass, for example:
+
+- a "whereas" where the numbers actually agree;
+- an "As a result" with no cause behind it;
+- "Its largest value", which pointed to the wrong thing;
+- a clause on the cube ("its error then decreases slowly") that added a
+  claim.
+
+Three small wording corrections change what a sentence says, so please
+check them:
+
+- **Abstract.** It said "successive layouts of the torus agree to 7e-12".
+  The number is actually the difference from the finest MFS run, and the
+  sentence now says so.
+- **Conclusion.** It stated the almond's singular curve as a fact. It now
+  says "we expect", as Section 4.2 does.
+- **Introduction.** "The bound" had nothing to refer back to. It now reads
+  "a lower bound for its radius", as in the abstract.
+
+The paper is now 42 preprint pages (41 before), because the figures fall
+on different pages.
+
 ## Where the style comes from
 
 Your thesis. The profile I used is in `paper/style_profile.md`:

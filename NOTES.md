@@ -50,7 +50,11 @@ github.com/AIScientists-Dev/academic-humanizer.
 - [x] H1 Style profile from the thesis (`paper/style_profile.md`).
 - [x] H2 First pass over all sections; a script confirmed that no number,
       citation or reference changed (commit 51ea8ac).
-- [ ] H3 Independent read for remaining machine-like sentences; apply.
+- [x] H3 Independent read (fresh agent: thesis + humanizer rules + text):
+      about forty fixes applied, seven of them undoing slips of the first
+      pass; three small meaning corrections (abstract: torus 7e-12 is the
+      difference from the finest run; conclusion: almond curve "we
+      expect"; introduction: "a lower bound for its radius").
 - [ ] H4 Rebuild, export for Overleaf, send PDF and
       `paper/humanising_pass_18nov.md` (before/after, and ideas for
       presenting the results, NOT done: headline table "MFS time at
