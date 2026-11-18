@@ -24,8 +24,10 @@ for every tangent vector $\bt$. Far from the body the scattered field is an outg
 
 Let $\Phi(r) = \rme^{\rmi kr}/(4\pi r)$ with $r = \|\bx-\by\|$ be the fundamental solution of the scalar Helmholtz equation. To lift this scalar solution to a vector solution of \eqref{eq:maxwell}, we follow \cite{osipov2017} and apply the operator $I + k^{-2}\nabla\nabla$, where $I$ is the unit dyadic and $\nabla\nabla\Phi$ the Hessian of $\Phi$. With $\rhat = (\bx-\by)/r$ this gives
 \begin{equation}
-  \bG(\bx,\by) = \Bigl(I + \frac{1}{k^2}\nabla\nabla\Bigr)\Phi(r)
-  = \frac{\rme^{\rmi kr}}{4\pi r}\Biggl(\Bigl(1+\frac{\rmi}{kr}-\frac{1}{(kr)^2}\Bigr)I-\Bigl(1+\frac{3\rmi}{kr}-\frac{3}{(kr)^2}\Bigr)\rhat\rhat^{\top}\Biggr).
+\begin{split}
+  \bG(\bx,\by) &= \Bigl(I + \frac{1}{k^2}\nabla\nabla\Bigr)\Phi(r)\\
+  &= \Phi(r)\Biggl(\Bigl(1+\frac{\rmi}{kr}-\frac{1}{(kr)^2}\Bigr)I-\Bigl(1+\frac{3\rmi}{kr}-\frac{3}{(kr)^2}\Bigr)\rhat\rhat^{\top}\Biggr).
+\end{split}
   \label{eq:dyadic}
 \end{equation}
 Because this Green's function is a $3\times3$ matrix that connects vector sources to vector fields, it is referred to as the \emph{dyadic Green's function}. For a vector $\balpha\in\mathbb{C}^3$ the field $\bG(\bx,\by)\,\balpha$ is that of an electric dipole at $\by$ with moment $\balpha$. It satisfies \eqref{eq:maxwell} away from $\by$ and the radiation condition. Taking the curl gives a second family of solutions, the fields of magnetic dipoles,
@@ -50,7 +52,7 @@ Each coefficient $\balpha_j$ or $\bbeta_j$ is a 3-component vector. The approxim
 \end{equation}
 where the weight $w_i$ is the surface area that the point represents (modified near the edges of the cube, \autoref{sec:cubepoints}). After projection onto the tangent plane each $3\times3$ block of the system is reduced to a $2\times3$ block, so for electric dipoles this is a linear least-squares problem $A\balpha = \mathbf{b}$ with $2M$ equations and $3N$ unknowns. We always take more equations than unknowns, so that the boundary condition is also controlled between the boundary points.
 
-A known disadvantage of the MFS is that this system is often ill-conditioned \cite{fairweather1998,barnett2008}. For the sphere and the torus we therefore solve it with orthogonal factorisations \cite{golub2013}, QR for the sphere and the singular value decomposition for the small systems of the torus. For the layouts of the cube and the almond the matrices are well conditioned once their columns are scaled to unit norm, with condition numbers below $10^{6}$, and we solve the normal equations by a Cholesky factorisation and correct the solution by two steps of iterative refinement with the residual of the least-squares problem, in the manner of the corrected semi-normal equations \cite{bjorck1987}. This costs about half as much as QR, and the fields of the cube agree with those of a QR solve to $10^{-13}$. If the Cholesky factorisation finds the matrix too ill-conditioned, the solver falls back to QR. In all cases the cost is $O(MN^2)$ operations, and the systems have at most a few thousand unknowns once the symmetry of the body has been used.
+A known disadvantage of the MFS is that this system is often badly conditioned \cite{fairweather1998,barnett2008}. For the sphere and the torus we therefore solve it with orthogonal factorisations \cite{golub2013}, QR for the sphere and the singular value decomposition for the small systems of the torus. For the layouts of the cube and the almond the matrices are well conditioned once their columns are scaled to unit norm, with condition numbers below $10^{6}$, and we solve the normal equations by a Cholesky factorisation and correct the solution by two steps of iterative refinement with the residual of the least-squares problem, in the manner of the corrected semi-normal equations \cite{bjorck1987}. This costs about half as much as QR, and the fields of the cube agree with those of a QR solve to $10^{-13}$. If the Cholesky factorisation finds the matrix too ill-conditioned, the solver falls back to QR. In all cases the cost is $O(MN^2)$ operations, and the systems have at most a few thousand unknowns once the symmetry of the body has been used.
 
 \subsection{Measuring the error}
 \label{sec:errors}
