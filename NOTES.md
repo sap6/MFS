@@ -1804,9 +1804,10 @@ towards the MFS field.
       1.74e-5 (from J = 9 the four matrices exceed 6 GB and are assembled
       in two groups, which is the jump in time). Bempp: 1.5 s 1.07e-3;
       3.4 s 5.5e-4; 8.3 s 3.3e-4; 19 s 2.1e-4; 32 s 1.51e-4; 39 s
-      1.44e-4; 66 s 1.06e-4. **Bempp is faster down to about 1.2e-4 (ten
-      times at 1e-3, 1.35 times at 1.5e-4); at 1.06e-4 the MFS needs 54 s
-      against 66 s, and it continues to 1.7e-5.** Before this session the
+      1.44e-4; 66 s 1.06e-4. **Bempp is faster down to about 1.3e-4 (ten
+      times at 1e-3, 1.35 times at 1.5e-4; the curves cross at 1.28e-4,
+      48 s); at 1.06e-4 the MFS needs 54 s against 66 s, and it continues
+      to 1.7e-5.** Before this session the
       MFS needed 94.5 s at J = 8 and the levels 9, 10 were not run.
     - **Two wavelengths**: MFS J = 4..8: 7.8, 11.7, 17.0, 25.3, 38.3 s for
       6.34e-3, 2.23e-3, 9.17e-4, 3.80e-4, 1.48e-4. Bempp: 3.0 s 9.2e-4;
@@ -1820,7 +1821,7 @@ towards the MFS field.
       Almond: MFS 4:1, 5:2, 6:3: 1.6, 2.5, 3.7 s for 4.0e-3, 2.8e-4,
       5.6e-5; Bempp with two mirrors 0.7 s 1.2e-2, 1.3 s 6.7e-3, 3.8 s
       2.8e-3, 11 s 1.5e-3, 23 s 1.0e-3: **the MFS is ahead below about
-      5e-3** (was "below 1e-2").
+      6e-3** (the curves cross at 5.8e-3, 1.5 s; was "below 1e-2").
     - Gain of Bempp from the symmetry, this machine: cube g = 2, 6/8,
       4608 to 14112 dofs: 16, 33, 62, 118 s without, 3.2, 4.8, 7.9, 12.2 s
       with (5 to 10 times); torus 4704 / 9600 dofs: 6.0 / 23.8 s without,
@@ -1829,6 +1830,23 @@ towards the MFS field.
     - Quasi-uniform Bempp on the cube (no symmetry): 1.9e-3 after 54 s.
     - The worker was restarted once at 01:24 UTC and killed the first
       timing run; nothing else was lost.
+    - **Independent check of the new numbers** (a fresh agent, from the
+      .npz files): ratios and crossovers of the standard wave, the one-
+      depth variant, two wavelengths, the orders, the tables: confirmed.
+      Corrected after it: general-wave crossover 1.3e-4 (text had 1.2e-4),
+      almond 6e-3 (5e-3), "1.3 to 1.5 times" the standard wave, "after 20
+      to 30 seconds", the fit printed as 0.46 exp(-0.0474 sqrt N_u) (with
+      0.047 it missed J = 10 by 12%), symmetric against full Bempp solve
+      3e-5 (default quadrature) and 7e-6 (8/10; text had 2e-6, re-measured
+      6.7e-6), "four of the eight classes are copies" (not six), gradings
+      1.5 to 2 among the best runs, and the sentence that said both codes
+      use the mirror planes of the torus (the MFS uses the rotation).
+    - **Bempp runs that the scan had excluded on its old times**
+      (`bem_retime_extra.py k1|k1o|k2`): 23 runs for the standard wave, 2
+      for the general wave, 21 at two wavelengths, timed in the same
+      session and merged. One of them enters an envelope (standard wave:
+      g = 1.6, 4/6, 28800 dofs, 16.2 s, 1.94e-4); no crossover changes.
+      After any future `time_paper.sh`, run it for the three cases.
 78. **Titles (Plan E).** The author: "think about it, we can change
     later". The working title stays "The Method of Fundamental Solutions
     for Maxwell's Equations". Candidates offered in the final message of
