@@ -105,6 +105,14 @@ D.~Kong, J.~Shen, Lightning algorithm for inhomogeneous modified {H}elmholtz
   equations on cornered domains and their applications, arXiv:2610.26540
   (2026).
 
+\bibitem{tabatadze2025}
+V.~Tabatadze, K.~{\.I}{\c{s}}can, K.~Kara{\c{c}}uha, On electromagnetic
+  scattering from perfectly conducting parallel square plates and their
+  resonance characteristics using method of auxiliary sources, J. Electromagn.
+  Waves Appl. 39 (2025) 952--971.
+\newblock \href {https://doi.org/10.1080/09205071.2025.2490919}
+  {\path{doi:10.1080/09205071.2025.2490919}}.
+
 \bibitem{young2005}
 D.~L. Young, J.~W. Ruan, Method of fundamental solutions for scattering
   problems of electromagnetic waves, CMES Comput. Model. Eng. Sci. 7~(2) (2005)
