@@ -122,8 +122,12 @@ def class_part(x, k, d, p, refl, cls):
       d, p: shape (3,) for one wave, or (W, 3) for W waves
       Returns an array of shape (M, 3), or (M, W, 3)
     """
-    E = sum(sign(cls, R) * np.atleast_2d(p)[None] * R * np.exp(1j * k * ((x * R) @ np.atleast_2d(d).T))[:, :, None]
-            for R in refl) / len(refl)
+    D, P = np.atleast_2d(d), np.atleast_2d(p)                  # (W, 3)
+    E = 0
+    for R in refl:
+        phase = np.exp(1j * k * (x * R) @ D.T)                   # e^{ik d·Rx}, shape (M, W)
+        E = E + sign(cls, R) * R * P[None] * phase[:, :, None]
+    E = E / len(refl)
     return E[:, 0] if np.ndim(d) == 1 else E
 
 

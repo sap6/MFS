@@ -184,11 +184,13 @@ class Mirror(Symmetric):
 
         # Each element of the piece number r has its image under reflection q in piece number (r times q)
         ne = grid.number_of_elements
-        r_of = np.arange(ne) // n_piece
+        r_of = np.arange(ne) // n_piece                             # the piece of each element
         idx = {tuple(R): i for i, R in enumerate(refl)}
-        emap = np.array([np.arange(ne) + (np.array([idx[tuple(refl[r] * Rq)] for r in range(len(refl))])[r_of] - r_of) * n_piece
-                         for Rq in refl])
-        super().__init__(grid, vmap, emap, k)
+        emap = []
+        for Rq in refl:
+            piece = np.array([idx[tuple(R * Rq)] for R in refl])      # piece r -> piece (r times q)
+            emap.append(np.arange(ne) + (piece[r_of] - r_of) * n_piece)
+        super().__init__(grid, vmap, np.array(emap), k)
 
     def _class(self, c):
         """Columns, coefficients and LU factors of the symmetrised system of class c"""

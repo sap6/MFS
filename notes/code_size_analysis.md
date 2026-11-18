@@ -6,15 +6,16 @@
 
 | | before B | after B |
 |---|---|---|
-| package `mfs/`, total lines | 1872 | **1780** (-92) |
-| of which code | 1170 | **1103** (-67) |
+| package `mfs/`, total lines | 1872 | **1788** (-84) |
+| of which code | 1170 | **1111** (-59) |
 | of which docstrings | 402 | 383 |
 
-B saved 92 lines, not the 150 I estimated. The difference is the docstrings:
+B saved 84 lines, not the 150 I estimated. The difference is the docstrings:
 I kept the argument lists with shapes, as in your notebooks, instead of cutting
 each docstring to two lines. Merging the two Bempp solvers into one base class
 also saved less than I expected, because the mirror and rotation solves really
-are different.
+are different. Last, I put 8 lines back: three expressions that had become
+too dense to read at a glance are now short loops with their shapes commented.
 
 What B changed:
 
@@ -81,7 +82,7 @@ Before today the paper's code was `validation/`: 67 scripts and **7301 lines**.
 
 | | total lines | code | docstrings | comments | blank |
 |---|---|---|---|---|---|
-| package `mfs/` | 1780 | 1103 | 383 | 55 | 239 |
+| package `mfs/` | 1788 | 1111 | 383 | 55 | 239 |
 | figure scripts `figures/` | 848 | 604 | 97 | 38 | 109 |
 | tests | 84 | 52 | 5 | 8 | 19 |
 | notebooks (code cells) | 150 | 134 | 0 | 7 | 9 |
@@ -93,21 +94,21 @@ Lines of code in each module:
 
 | module | what it does | code |
 |---|---|---|
-| `core` | kernels, plane wave, symmetry helpers, QR and semi-normal equations, cross-sections | 108 |
+| `core` | kernels, plane wave, symmetry helpers, QR and semi-normal equations, cross-sections | 112 |
 | `mie` | the Mie series | 34 |
 | `sphere` | the sphere | 11 |
 | `torus` | the torus, mode by mode | 69 |
 | `cube` | layout, tails, symmetry classes, solve | 186 |
 | `lines` | the fast line quadrature of the cube (speed only) | 182 |
-| `almond` | geometry, source rows and tip tail, compiled kernel, radar cross-section | 187 |
+| `almond` | geometry, source rows and tip tail, compiled kernel, radar cross-section | 189 |
 | `cone` | the exponents of Appendix A | 103 |
-| `bem` | the Bempp side of the comparison, with the same symmetries | 221 |
+| `bem` | the Bempp side of the comparison, with the same symmetries | 223 |
 
 ## The options as I first wrote them
 
 **A. Keep it as it is.** 1872 lines.
 
-**B. Same results, same speed: about 150 lines fewer.** (Done: 92 fewer.)
+**B. Same results, same speed: about 150 lines fewer.** (Done: 84 fewer.)
 
 **C. Simpler but slower: about 450 lines fewer (to about 1400).** Replace
 the fast line quadrature with plain NumPy Gauss panels, the compiled almond

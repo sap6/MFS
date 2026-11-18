@@ -166,7 +166,9 @@ def tail_matrix(x, tail, k, T, cls, n_e=2, n_m=1):
     cols = []
     # H is a pseudovector, so the potential of the magnetic type has the opposite parities
     for sel, exps in ((comps < 3, CONE_NU[(sy, sz)][:n_e]), (comps >= 3, CONE_TAU[(-sy, -sz)][:n_m])):
-        cols += [np.einsum("mnc,n->mc", G[:, row == i][:, :, sel], rr[row == i] ** (e + 2)) for i in np.unique(row) for e in exps]
+        for i in np.unique(row):
+            Gi, ri = G[:, row == i][:, :, sel], rr[row == i]          # the points of row i, (M nc, n_i, 3)
+            cols += [np.einsum("mnc,n->mc", Gi, ri ** (e + 2)) for e in exps]
     return np.concatenate(cols, axis=1)
 
 

@@ -5,7 +5,7 @@
 ```
 README.md      the landing page: results figure, Colab table, install,
                which script makes which figure
-mfs/           the method, 1780 lines, one module per shape
+mfs/           the method, 1788 lines, one module per shape
 notebooks/     one notebook per shape; opens in Colab with one click
 figures/       one script per figure of the paper, and the tables
 data/          the results behind every figure and table (1.6 MB)
@@ -16,7 +16,7 @@ notes/         our research log
 ```
 
 The old `validation/` folder had 67 scripts and about 7300 lines. It is now
-1780 lines in the package and 848 in the figure scripts. Every module
+1788 lines in the package and 848 in the figure scripts. Every module
 reproduces the stored results of the paper:
 
 - the sphere errors are the same;
