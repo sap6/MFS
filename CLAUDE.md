@@ -36,8 +36,9 @@ above for as long as the paper is being finished.
   paper/code/results/etc. or simplifying things that are too complex."
   Do not end a turn to report or to ask; work through the plan at the top
   of `NOTES.md` ("Seventh session"), keep it current, commit and push
-  often. If a turn must end, schedule a message to the session first so
-  that the work resumes.
+  often. A wake-up message cannot be scheduled in this
+  session, so wait for long jobs inside the turn and go on to the next
+  item instead of ending it.
 - "I would like to keep it clear and not have tons of optimisations and
   extra lines to explain." The paper should be "simple and appropriate
   for a first year PhD student publishing their master's thesis".

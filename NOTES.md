@@ -43,9 +43,11 @@ week'. Please follow this next time. You can always keep improving and
 polishing the paper/code/results/etc. or simplifying things that are too
 complex." So: do not end a turn to report or to ask. Work through the
 plan below, then keep polishing and simplifying. Keep this block and the
-task list current as you go, commit and push often. If a turn has to
-end (a long job is running, a tool limit), first schedule a message to
-this session (send_later) so that the work resumes by itself. The author
+task list current as you go, commit and push often. A wake-up message cannot be
+scheduled for this session (tried on 18 Nov: refused), so the only way to
+keep going is not to end the turn: wait for long jobs inside the turn
+(`timeout 590 sh -c 'while pgrep -f ...; do sleep 15; done'`) and go on
+to the next item of the plan. The author
 reads on a phone, where only the last message of a turn is shown in
 full: send PDFs and anything with a list as a file.
 
