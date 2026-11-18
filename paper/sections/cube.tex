@@ -39,12 +39,19 @@ The deepest free line lies at the depth $d_{\min}$. The current sheet of \autore
 
 We therefore add nine lines at the depths $2^{-i}d_{\min}$, $i = 1,\dots,9$, which are not free. All nine carry the same set of mode coefficients, multiplied by fixed weights $(2^{-i})^{e}$ that decrease with the depth. We call this continuation the \emph{singular tail}. It adds one set of coefficients per edge and kind of dipole, with as many modes as the line at $d_{\min}$, in place of nine. The exponent $e$ is not a fitting parameter. It follows from the edge expansion of the field, as we now show.
 
-Consider one edge of the cube, with the coordinate $t$ along the edge as before and polar coordinates $(\rho,\phi)$ around it, so that the exterior is the wedge $0<\phi<3\pi/2$. Near the edge the field is a sum of terms of two types \cite{meixner1972,costabel2000},
+Consider one edge of the cube, with the coordinate $t$ along the edge as before and polar coordinates $(\rho,\phi)$ around it, so that the exterior is the wedge $0<\phi<3\pi/2$ (\autoref{fig:wedge}). Near the edge the field is a sum of terms of two types \cite{meixner1972,costabel2000},
 \begin{align}
   E_t &= a_\ell(t)\,\rho^{2\ell/3}\sin(2\ell\phi/3), & \ell &= 1,2,\dots, \label{eq:tm}\\
   H_t &= b_\ell(t)\,\rho^{2\ell/3}\cos(2\ell\phi/3), & \ell &= 0,1,2,\dots, \label{eq:te}
 \end{align}
 each multiplied by a power series in $\rho^2$. The components across the edge follow from $E_t$ and $H_t$ and are one power of $\rho$ lower.
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.4\textwidth]{fig_wedge.pdf}
+  \caption{Cross-section normal to an edge of the cube. The exterior is the wedge $0<\phi<3\pi/2$, and $\psi$ is the angle from the exterior bisector. The field is continued into the conductor through each of the two faces (arrows), and the two continuations meet on the wall of the skeleton.}
+  \label{fig:wedge}
+\end{figure}
 
 The reflection used in the proof of \autoref{thm:skeleton} continues each term into the body, once through each of the two faces. The two continuations meet on the bisector half-plane, which is the wall of the skeleton at this edge, and by \eqref{eq:jumps} the currents are the jumps of the tangential fields there. It is convenient to measure the angle from the exterior bisector, $\psi = \phi - 3\pi/4$, so that the wall is $\psi = \pi$ seen from one side and $\psi = -\pi$ from the other.
 
