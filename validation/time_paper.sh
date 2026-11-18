@@ -2,7 +2,7 @@
 # Every timing of the paper, on one machine, in one go (NOTES.md items 66, 68). The errors do not
 # depend on the machine and are not touched; only the seconds are measured again. Runs that are
 # compared with each other are timed alternately and keep their smallest time. Run nothing else
-# meanwhile (not even a LaTeX build). About two hours on four cores. Afterwards:
+# meanwhile (not even a LaTeX build). About two and a half hours on four cores. Afterwards:
 #     python3 fig_cost_all.py; python3 fig_cube_cases.py; python3 fig_cube_convergence.py
 #     cd ../paper; python3 make_tables.py; latexmk -pdf main.tex
 # Needed once beforehand (fields, not timings): python3 fig_cost_cube.py run;

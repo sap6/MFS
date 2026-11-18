@@ -20,7 +20,7 @@ tangential E_sc = -tangential E_inc on the surface, least-squares collocation.
   "faster / slower than Bempp" before item 77).
 - Before changing any number in a table: all times come from one run on
   one machine (item 77). If one part is re-run, re-run all
-  (`validation/time_paper.sh`, then `cube_cases.py k1o 2`).
+  (`validation/time_paper.sh`, two and a half hours).
 
 ### Seventh session, 2026-11-18 (READ THIS FIRST)
 
