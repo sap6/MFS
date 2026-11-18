@@ -70,9 +70,33 @@ both.
   wavelengths (item 76).
 - All timings of the paper re-measured on one machine (item 77).
 
-**Still open**: title (Plan E, candidates in item 78); the author's pass
-over the text; T20 (Timo); final timing on a fixed machine; copy to
-`sap6/mfs-paper` (ask first).
+**The author's reply to the report of this session (18 Nov, verbatim):**
+"keep the title, don't like any of these. Again you stopped even though I
+said multiple times not to stop."
+-> The title is settled: "The Method of Fundamental Solutions for
+Maxwell's Equations". Do not offer titles again.
+-> **Finishing a plan is not a reason to end the turn.** When the list
+below is done, write the next list here and go on. Send files as they
+become ready (the author sees files), keep the notes current, commit and
+push after every step.
+
+**Work list after that message (tick off here):**
+- [ ] R1 A full independent reading of the paper (text and PDF) by a
+      fresh agent; correct what is wrong.
+- [ ] R2 Three wavelengths: find what limits the layout (one knob at a
+      time against a common yardstick; item 79).
+- [ ] R3 Notation: J is the level of the cube, the current and the
+      number of almond rows (flagged in items 64 and 70).
+- [ ] R4 A sketch of the wedge for the edge derivation (item 70).
+- [ ] R5 Code: delete scripts that are superseded (`cube_oblique_table.py`,
+      `cube_wavenumber.py`, the `tapered` family if unused), shorten
+      what is long.
+- [ ] R6 Whatever the reading of R1 turns up; then look for the next
+      weakest point of the paper and work on it.
+
+**Still open for the authors**: the author's pass over the text; T20
+(Timo); final timing on a fixed machine; copy to `sap6/mfs-paper` (ask
+first).
 
 ### Sixth session, 2026-11-17, evening
 
@@ -1847,19 +1871,10 @@ towards the MFS field.
       session and merged. One of them enters an envelope (standard wave:
       g = 1.6, 4/6, 28800 dofs, 16.2 s, 1.94e-4); no crossover changes.
       `time_paper.sh` now runs it for the three cases.
-78. **Titles (Plan E).** The author: "think about it, we can change
-    later". The working title stays "The Method of Fundamental Solutions
-    for Maxwell's Equations". Candidates offered in the final message of
-    this session (none repeats the thirteen of item 64):
-    "Where to place the sources: the method of fundamental solutions for
-    Maxwell's equations"; "The method of fundamental solutions for
-    Maxwell's equations beyond smooth bodies"; "The method of fundamental
-    solutions for electromagnetic scattering by bodies with edges and
-    tips"; "Source placement in the method of fundamental solutions for
-    Maxwell's equations"; "Point and line sources for Maxwell's
-    equations: the method of fundamental solutions on smooth bodies, a
-    cube and an almond"; "A mesh-free method for electromagnetic
-    scattering to high accuracy". Recommended: the first or the second.
+78. **Title: settled.** The author on 18 Nov: "keep the title, don't like
+    any of these." It is "The Method of Fundamental Solutions for
+    Maxwell's Equations". Nineteen alternatives were offered over three
+    sessions and all were declined; do not offer more.
 
 ## 3. Current best commands
 
