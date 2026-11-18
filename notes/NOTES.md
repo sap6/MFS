@@ -62,6 +62,10 @@ Done (all committed):
 - [x] Cube, standard wave, J = 4..9, totals CSNE / QR / lstsq: 4.7/6.6/7.1, 6.8/11.3/13.3, 11.3/17.8/22.1, 16.5/28.1/35.3, 23.9/46.2/61.8, 35.7/68.1/- s; QR at J = 10 killed for lack of memory (one more copy). In the Bempp comparison (stored times scaled): standard wave crossover 1.5e-4 (CSNE), 8.2e-5 (QR), 7.1e-5 (lstsq); MFS at Bempp's best error 36 / 69 / 93 s (Bempp 131 s); general wave with lstsq: no crossover (MFS slower wherever both reach).
 - [x] Line quadrature without the moment panels (Gauss panels only, minimum level 3): fields to 3e-9, J = 6 / 8 assembly 7.4 -> 15.0 / 13.6 -> 26.1 s, totals 11.0 -> 19.0 / 23.9 -> 38.2 s (level >= 4: 30.5 / 58.2 s). Both dropped: 2.1-2.4x; standard wave crossover 7.3e-5, general wave none.
 - [x] Almond kernel in NumPy: 16.8 s per class against 0.31 s (54x).
+**The author (18 Nov, verbatim):** "for the next hour, can you look into any way to make MFS faster so that MFS can be faster than bempp earlier than now? but in no way that's unfair to bempp" -> `notes/faster_mfs_18nov.md` (sent). No code or paper change yet; the author decides.
+- [x] Lower envelope of the two MFS layouts (one / two depths per octave), the counterpart of Bempp's envelope: standard wave crossover 1.5e-4 -> 3.2e-4; general wave level at 3e-4, faster below except 1.4e-4 to 1.7e-4. Bempp's best runs re-timed alternately: within 5% of the stored times.
+- [x] (n_base, hmax) = (6, 0.15): same errors, 20-45% faster to J = 10 (both layouts); closes the general-wave band (two depths J = 8: 29.2 s instead of 40.8 s for 1.6e-4). (4, 0.25) breaks from J = 6-7.
+- [ ] If the author agrees: Figure 7 / Table 5 with both layouts (k2, k3 untested with one depth; about an hour each), new crossovers in the text.
 
 Open (authors):
 - [ ] Merge into `main` without squashing (Colab links, CI badge and pip install point to `main`); push the local tag `research-scripts` (= 9f5a721)? Asked.
@@ -2643,6 +2647,7 @@ Open, in the order I would take them:
 - 18 Nov. Package simplification B: 1872 -> 1788 lines; after the readability edits Bempp fields equal to the old ones to 2e-15, almond RCS to 1e-13 dB, cube to 2e-15; tests incl. Bempp pass (8 in 38 s), tables identical, edge residual recomputed to 4e-13 of the stored one. Kept.
 - 18 Nov. Library pass: SciPy lstsq (any driver) 2-5x slower than our CSNE, qr_multiply as fast as our QR but refactors per rhs; cube J = 9: 39 s, factorisation 18 s; NumPy point kernel 20-30x slower than numba; almond kernel on the shared dipole function 1.4-1.7x faster, nose-on totals unchanged. Package 1767 lines; all results identical.
 - 18 Nov. Speed against simplicity: CSNE buys 1.4-1.9x on the cube (QR) and 1.5-2.6x (lstsq); the moment panels 1.6x at J = 8; both together 2.1-2.4x; without them the MFS is no longer faster than Bempp on the general wave at any common accuracy. Kept.
+- 18 Nov. Faster MFS, fairly: one depth per octave J = 6..9 (standard wave) 3.7, 5.3, 7.2, 10.1 s for 9.4e-4, 4.1e-4, 2.1e-4, 1.35e-4 (Bempp's best 1.2, ~3, 10.9, 19.9 s); general wave J = 5..9 3.9, 5.4, 8.2, 11.7, 16.7 s for 2.8e-3 .. 1.9e-4; (6, 0.15) grid: two depths J = 4..8 same errors, 1.3-1.45x faster; one depth 1.2-1.4x. Envelope of both layouts: crossover 3.2e-4 (standard), ~3e-4 (general).
 
 ## 6. Write-up session
 
