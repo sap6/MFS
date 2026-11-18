@@ -26,6 +26,27 @@ anything recorded there.
    Claude critiques, checks maths and references, runs experiments, formats.
 8. Never push to `sap6/mfs-paper` without asking: it syncs to Overleaf.
 
+## Standing instructions from the author (18 November 2026)
+
+These come from the author's own messages and take precedence over rule 1
+above for as long as the paper is being finished.
+
+- "Don't stop unless I explicitly say, as I'm working on other projects
+  this week." "You can always keep improving and polishing the
+  paper/code/results/etc. or simplifying things that are too complex."
+  Do not end a turn to report or to ask; work through the plan at the top
+  of `NOTES.md` ("Seventh session"), keep it current, commit and push
+  often. If a turn must end, schedule a message to the session first so
+  that the work resumes.
+- "I would like to keep it clear and not have tons of optimisations and
+  extra lines to explain." The paper should be "simple and appropriate
+  for a first year PhD student publishing their master's thesis".
+- The author reads on a phone: only the last message of a turn is shown
+  in full, and repository files cannot be opened there. Send PDFs,
+  figures and lists as files.
+- arXiv is reachable with `curl` from the shell even when the page-fetch
+  tool fails.
+
 ## Setup (fresh container)
 
 ```
