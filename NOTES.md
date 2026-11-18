@@ -6,27 +6,21 @@ Last updated: 2026-11-18 (seventh session: symmetry in both codes on every body,
 exterior scattering of a plane wave by a perfectly conducting (PEC) body,
 tangential E_sc = -tangential E_inc on the surface, least-squares collocation.
 
-## Start here (state at the end of 2026-11-16)
+## Start here
 
-- Everything is committed and pushed on branch `ccr-116c520c-fts35f` (last
-  commit of the session: "Notes: handover"). No pull request exists. No
-  jobs are running anywhere.
-- All experiment tasks on the list are done (T0-T11). What is left is
-  reading, writing and optional extras: section 4, T12-T18. The next real
-  step is **T13, the write-up**, which the author leads; `PAPER_OUTLINE.md`
-  is the starting point and section 6 lists what the paper may and may not
-  claim.
-- Before changing any number in a table, read section 2, items 22-32: the
-  cube table (item 27) was re-timed in one container and must be redone as a
-  whole if any part of it is re-run.
-- The one result that cuts against the paper's first draft of its story:
-  on the cube an edge-graded Bempp mesh is as fast as the MFS at 0.15-0.2%
-  and faster for a general incident wave at 0.1-0.4% (items 26-27).
-- Open questions for the author (also at the end of `PAPER_OUTLINE.md`):
-  keep or delete the third-party benchmark files in
-  `validation/austin_almond/`; which BEM curve leads the cube figure; title.
-- Nothing was ever pushed to `sap6/mfs-paper`; it is still the thesis text
-  (commit 4f8731f).
+- Everything is committed and pushed on branch `ccr-116c520c-fts35f`. No
+  pull request exists. Nothing was ever pushed to `sap6/mfs-paper`; it is
+  still the thesis text (commit 4f8731f).
+- The paper is `paper/main.tex` (one document, 38 preprint pages, 22 in
+  the journal layout). Its numbers are those of items 65, 68 (errors) and
+  77 (times). Section 6 lists what the paper may and may not claim.
+- The blocks below are in reverse order of time. The newest one is
+  authoritative; older blocks are kept as the record and are superseded
+  where they disagree with it (in particular every time and every
+  "faster / slower than Bempp" before item 77).
+- Before changing any number in a table: all times come from one run on
+  one machine (item 77). If one part is re-run, re-run all
+  (`validation/time_paper.sh`, then `cube_cases.py k1o 2`).
 
 ### Seventh session, 2026-11-18 (READ THIS FIRST)
 
