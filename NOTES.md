@@ -151,7 +151,11 @@ best, then drop the curve without symmetry and the caveat.
 - [x] R17 Bempp on its finest possible cube mesh (41472 unknowns) in all
       four cases (item 87): done; figures, tables and text updated.
 - [x] R18 Bempp's largest meshes on the sphere and the torus (item 88).
-- [ ] R19 Look again for the weakest point.
+- [x] R19 MFS level 9 added at three wavelengths (6.5e-5 against the
+      J = 10 reference, 258 s: QR, one class at a time, on the slower
+      afternoon machine), so that the MFS curve covers Bempp's range of
+      times in every panel.
+- [ ] R20 Look again for the weakest point.
 
 **Still open for the authors**: the author's pass over the text; T20
 (Timo); final timing on a fixed machine; copy to `sap6/mfs-paper` (ask
