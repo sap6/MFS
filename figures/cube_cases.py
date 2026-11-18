@@ -37,12 +37,12 @@ def setup(case):
 
 
 def bempp_run(case, g, reg, sing, n, ref):
-    import bempp_cl.api as bempp
-    from mfs import bem
+    from mfs import bem                         # before bempp: it lets the OpenCL driver see all of the memory
+    bempp = bem.bempp
     k, d, p, pts, _ = setup(case)
-    bempp.GLOBAL_PARAMETERS.quadrature.regular, bempp.GLOBAL_PARAMETERS.quadrature.singular = reg, sing
+    bempp.GLOBAL_PARAMETERS.quadrature.regular, bempp.GLOBAL_PARAMETERS.quadrature.singular = int(reg), int(sing)
     t0 = time.time()
-    E, N = bem.cube(n, g, k, d, p, pts)
+    E, N = bem.cube(int(n), g, k, d, p, pts)
     return (g, reg, sing, n, N, time.time() - t0, rel(E, ref))
 
 
@@ -56,9 +56,11 @@ if "--scan" in sys.argv or "--run" in sys.argv:
         np.savez(data(f"cube_scan_{case}.npz"), rows=np.array(rows))
     else:
         # The reference, then the MFS levels and the Bempp runs near the lower envelope of the scan, alternately
+        cube.solve(2, d, p, pts, k)                                         # warm-up: compilation is not timed
         E, t, info = cube.solve(J_REF[case], d, p, pts, k, **layout(J_REF[case]))
         np.savez(data(f"cube_cases_{case}_ref.npz"), E=E, pts=pts, info=[J_REF[case], t, max(info["unknowns"]), info["rows"], info["optical"], info["ext"]])
         rows = [tuple(r) for r in np.load(data(f"cube_scan_{case}.npz"))["rows"]]
+        bempp_run(case, 1.0, 4, 6, 4, E)
         cand = [r for r in rows if not any(q[5] <= 0.5 * r[5] and q[6] <= r[6] for q in rows)]
         t_mfs, t_bem, res = {J: [] for J in LEVELS[case]}, {r[:4]: [] for r in cand}, {}
         for rep in range(2):

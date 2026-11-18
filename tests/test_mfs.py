@@ -76,7 +76,6 @@ def test_cone():
 @pytest.mark.skipif(not os.environ.get("MFS_TEST_BEMPP"), reason="set MFS_TEST_BEMPP=1 to test the Bempp comparison")
 def test_bempp_symmetry():
     # The symmetric boundary element solve equals the full one (Appendix C)
-    import bempp_cl.api as bempp
     from mfs import bem
     pts = 2.0 * core.fibonacci(50)
     E_sym, N, _ = bem.torus(8, K, D, P, pts)

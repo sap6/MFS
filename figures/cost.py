@@ -30,14 +30,15 @@ def timed(f, *args):
 
 
 if "--run" in sys.argv:
-    import bempp_cl.api as bempp
-    from mfs import bem
+    from mfs import bem                         # before bempp: it lets the OpenCL driver see all of the memory
+    bempp = bem.bempp
     shape, (d, p) = sys.argv[-1], core.wave()
     if shape == "sphere":
         # 400 points on the sphere of radius 2, against the Mie series
         pts = 2.0 * core.fibonacci(400)
         exact = mie.scattered_field(pts, K, d, p)
         mfs = lambda N: core.field(pts, *sphere.solve(N), K)
+        mfs(50), bem.efie(bempp.shapes.sphere(h=0.4), K, d, p, pts)          # warm-up: compilation is not timed
         rows = [(3 * N, t, rel(E, exact)) for N in (50, 100, 150, 200, 300, 400, 600, 800, 1200) for E, t in [timed(mfs, N)]]
         bems = [(N, t, rel(E, exact)) for h in (0.2, 0.14, 0.1, 0.07, 0.056)
                 for (E, N), t in [timed(bem.efie, bempp.shapes.sphere(h=h), K, d, p, pts)]]
@@ -46,6 +47,7 @@ if "--run" in sys.argv:
         # 200 points on the sphere of radius 2.5, against the finest MFS run (n_s = 56 rings of 240 dipoles)
         pts = 2.5 * core.sphere_rule(10, 20)[0]
         ref = torus.scatter(K, d, p, 56, 240)
+        bem.torus(6, K, d, p, pts)                                          # warm-up
         Eref = ref.field(pts)
         rows = []
         for ns, nphi in ((6, 20), (8, 28), (12, 40), (16, 52), (20, 64), (24, 80), (28, 96), (36, 128), (44, 160)):
@@ -62,6 +64,7 @@ if "--run" in sys.argv:
         k = 2 * np.pi * 1.19e9 / almond.C0
         pts = 0.3 * core.fibonacci(400)
         out, rows = {}, []
+        almond.nose_on(k, 2, 0), bem.almond(12, 12, k, np.array([-1.0, 0, 0]), np.array([0, 1.0, 0]), pts)   # warm-up
         for i, (n_mid, n_F) in enumerate(((3, 0), (4, 1), (5, 2), (6, 3), (8, 5))):
             (y, c, E, (ext, sca), shape_), t = timed(almond.nose_on, k, n_mid, n_F, pts)
             rows.append((len(y), shape_[1], t, abs(ext - sca) / sca))

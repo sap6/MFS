@@ -9,7 +9,7 @@ the dotted lines mark the conjectured bound a_s = R - sqrt(R² - a²).
 import sys
 
 import numpy as np
-from style import BLUE, GREEN, INK, MUTED, ORANGE, data, finish, plt
+from style import BLUE, GREEN, MUTED, ORANGE, data, finish, plt
 
 from mfs import core, torus
 

@@ -7,15 +7,17 @@ differences from the finest layout, J = 12.
     python figures/cube_convergence.py --run    # solve again (about 15 minutes; Bempp: half an hour more)
 """
 import sys
+import time
 
 import numpy as np
-from style import BLUE, GREEN, INK, MUTED, NAVY, ORANGE, PURPLE, RUST, data, plt, rel
+from style import BLUE, GREEN, HERE, MUTED, NAVY, ORANGE, PURPLE, RUST, data, plt, rel
 
 from mfs import core, cube
 
 if "--run" in sys.argv:
     # The paper's layout (two depths per octave), one depth per octave, no tails, and the usual layout (an inner cube)
     pts = 2.0 * core.fibonacci(400)
+    cube.solve(2, pts=pts)                                                  # warm-up: compilation is not timed
     out = {"pts": pts}
     for name, Js, kw in (("dense", range(3, 13), {}), ("tail", range(3, 10), dict(q=0.5)),
                          ("notail", (4, 6, 8), dict(tails=False)), ("plain", (4, 6, 8, 10), None)):
@@ -30,14 +32,14 @@ if "--run" in sys.argv:
     np.savez(data("cube_convergence.npz"), **out)
 
     # Bempp as distributed: quasi-uniform meshes, no symmetry, quadrature orders 4 and 6
-    import bempp_cl.api as bempp
-    from mfs import bem
+    from mfs import bem                         # before bempp: it lets the OpenCL driver see all of the memory
+    bempp = bem.bempp
     bempp.GLOBAL_PARAMETERS.quadrature.regular, bempp.GLOBAL_PARAMETERS.quadrature.singular = 4, 6
-    rows = []
+    rows, _ = [], bem.efie(bempp.shapes.cube(length=1, origin=(-0.5, -0.5, -0.5), h=0.4), 2 * np.pi, *core.wave(), pts)
     for h in (0.3, 0.1, 0.07, 0.05, 0.04):
-        t0 = __import__("time").time()
+        t0 = time.time()
         E, N = bem.efie(bempp.shapes.cube(length=1, origin=(-0.5, -0.5, -0.5), h=h), 2 * np.pi, *core.wave(), pts)
-        rows.append((N, __import__("time").time() - t0, E, h))
+        rows.append((N, time.time() - t0, E, h))
     np.savez(data("cube_bempp_uniform.npz"), ndof=[r[0] for r in rows], t=[r[1] for r in rows], E=[r[2] for r in rows], h=[r[3] for r in rows])
 
 # Errors against the reference, as a function of the unknowns of the whole cube
@@ -80,4 +82,4 @@ for sp in ("top", "right"):
 ax.legend(frameon=False, fontsize=7.5, loc="upper center", bbox_to_anchor=(0.5, -0.17), ncol=2, columnspacing=1.2)
 fig.tight_layout()
 for ext in ("pdf", "png"):
-    fig.savefig(f"{__import__('style').HERE}/fig_cube_convergence.{ext}", dpi=200, bbox_inches="tight")
+    fig.savefig(f"{HERE}/fig_cube_convergence.{ext}", dpi=200, bbox_inches="tight")

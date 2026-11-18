@@ -16,8 +16,8 @@ K = 2 * np.pi
 
 if "--run" in sys.argv:
     # 200 points on each of 17 spheres at distances 1e-4 to 1 from the surface
-    import bempp_cl.api as bempp
-    from mfs import bem
+    from mfs import bem                         # before bempp: it lets the OpenCL driver see all of the memory
+    bempp = bem.bempp
     d, p = core.wave()
     delta = np.logspace(-4, 0, 17)
     pts = np.concatenate([(1 + dl) * core.fibonacci(200) for dl in delta])

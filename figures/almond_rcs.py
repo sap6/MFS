@@ -10,7 +10,7 @@ Benchmark Suite (Kelley et al. 2020, problem III-A; data in data/austin_almond).
 import sys
 
 import numpy as np
-from style import BLUE, MUTED, ORANGE, data, finish, plt
+from style import BLUE, ORANGE, data, finish, plt
 
 from mfs import almond
 
