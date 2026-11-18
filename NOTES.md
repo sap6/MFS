@@ -148,9 +148,8 @@ best, then drop the curve without symmetry and the caveat.
 - [x] R16 Probe at four wavelengths (item 86): the unchanged layout
       needs more modes and six boundary nodes per panel; one sentence in
       the conclusion, not pursued.
-- [ ] R17 Bempp on its finest possible cube mesh (41472 unknowns) in all
-      four cases (item 87): runs started 12:29 UTC; then update figures,
-      tables and text, and the status sheet.
+- [x] R17 Bempp on its finest possible cube mesh (41472 unknowns) in all
+      four cases (item 87): done; figures, tables and text updated.
 - [ ] R18 Look again for the weakest point.
 
 **Still open for the authors**: the author's pass over the text; T20
@@ -2198,9 +2197,24 @@ towards the MFS field.
     cases: `bem_finest.py <case>` (gradings 1.5, 1.6, 1.75, 1.9; three
     quadrature settings; two repetitions; appended to the scan and merged
     into the timed runs). Running since 12:29 UTC, about 2.7 hours.
-    **Then**: figures, `make_tables.py`, `crossovers.py`, every "28800"
-    and "8e-5" in the text (abstract, introduction, Section 5.4, 7.2,
-    conclusion, Appendix C), Table C.1, the extrapolated cross-section.
+    **Results (12:29-15:17 UTC, each run twice, smaller time kept)**, the
+    most accurate run of Bempp in each case, all with g = 1.75 or 1.6 and
+    the orders 8/10: standard wave 6.09e-5 in 131 s (was 8.1e-5 in 61 s on
+    28800); general wave 7.44e-5 in 133 s; two wavelengths 1.25e-4 in
+    137 s; three wavelengths 3.09e-4 in 132 s (and 4.2e-4 in 36 s with
+    4/6). The MFS level that is more accurate: J = 9 (5.6e-5, 37.5 s),
+    J = 9 (6.0e-5, 66 s), J = 9 (about 4.5e-5 against the J = 10
+    reference, 66 s; this level was added with
+    `cube_cases_add_level.py k2 9`), J = 8 (1.9e-4, 53 s): **half of
+    Bempp's time or less in every case** (Table 5 of the paper,
+    `make_tables.cube_ends`). The crossings do not move (1.5e-4, 1.4e-4,
+    3.0e-4; three wavelengths 4.2e-4 to 5.7e-4).
+    Text: "41472 unknowns" and "6e-5" in abstract, introduction, Section
+    5.4, conclusion, Appendix C; Bempp confirms the references at two and
+    three wavelengths to 1.3e-4 and 3e-4. The extrapolated cross-section
+    (2.92786, from the g = 2 meshes) is unchanged. `time_paper.sh` does
+    not yet run `bem_finest.py`: after a new timing run, run it for the
+    four cases (2.7 hours).
 
 ## 3. Current best commands
 
