@@ -148,8 +148,10 @@ best, then drop the curve without symmetry and the caveat.
 - [x] R16 Probe at four wavelengths (item 86): the unchanged layout
       needs more modes and six boundary nodes per panel; one sentence in
       the conclusion, not pursued.
-- [ ] R17 Look again for the weakest point; keep the status sheet
-      current when something of substance changes.
+- [ ] R17 Bempp on its finest possible cube mesh (41472 unknowns) in all
+      four cases (item 87): runs started 12:29 UTC; then update figures,
+      tables and text, and the status sheet.
+- [ ] R18 Look again for the weakest point.
 
 **Still open for the authors**: the author's pass over the text; T20
 (Timo); final timing on a fixed machine; copy to `sap6/mfs-paper` (ask
@@ -2182,6 +2184,23 @@ towards the MFS field.
       8.1e-5 and 4.6e-5, which is 7 to 10% of their errors (1.15e-3,
       4.5e-4). The three-wavelength results of item 79 do not suffer
       from the under-sampling.
+
+87. **Bempp's finest cube mesh is 41472 unknowns, not 28800 (found
+    18 Nov, 12:25 UTC).** The paper said "the finest mesh that fits into
+    memory, with 28800 unknowns". That was the limit of the first
+    symmetric implementation (a 41472-unknown general-wave run was killed
+    for memory early in this session). With `bem_mirror.py` as it is now,
+    n = 44 and 48 (34848 and 41472 unknowns) run with a peak of 5.2 and
+    7.1 GB; n = 48 is the largest mesh whose octant matrix (3.4 GB) stays
+    under the 4 GB of the OpenCL driver. First numbers, standard wave,
+    g = 1.6, 4/6: 1.72e-4 in 31 s (n = 44) and 1.56e-4 in 40 s (n = 48).
+    By the rule "best for both" the finest mesh goes into all four cube
+    cases: `bem_finest.py <case>` (gradings 1.5, 1.6, 1.75, 1.9; three
+    quadrature settings; two repetitions; appended to the scan and merged
+    into the timed runs). Running since 12:29 UTC, about 2.7 hours.
+    **Then**: figures, `make_tables.py`, `crossovers.py`, every "28800"
+    and "8e-5" in the text (abstract, introduction, Section 5.4, 7.2,
+    conclusion, Appendix C), Table C.1, the extrapolated cross-section.
 
 ## 3. Current best commands
 
