@@ -105,14 +105,24 @@ best, then drop the curve without symmetry and the caveat.
       To do: J = 9 (running), a clean reference, Bempp check, then replace
       the "limit" paragraph of Section 5.5 and the conclusion; times
       against Bempp need a Bempp scan at k = 6 pi.
-- [ ] R3 Notation: J is the level of the cube, the current and the
-      number of almond rows (flagged in items 64 and 70).
-- [ ] R4 A sketch of the wedge for the edge derivation (item 70).
-- [ ] R5 Code: delete scripts that are superseded (`cube_oblique_table.py`,
-      `cube_wavenumber.py`, the `tapered` family if unused), shorten
-      what is long.
-- [ ] R6 Whatever the reading of R1 turns up; then look for the next
-      weakest point of the paper and work on it.
+- [x] R3 Notation: the almond layout is n_mid:n_F (J is only the cube
+      level); the coordinate along the edge is t throughout; the total
+      field is E^tot; appendix tables are A.1 and C.1.
+- [x] R4 Sketch of the wedge: `fig_wedge.py`, Figure in Section 5.2.
+- [x] R5 Code: `cube_oblique_table.py`, `cube_wavenumber.py`,
+      `cube_k3_tune.py` and their data deleted; the scans use the present
+      references. (`tapered` stays: it is the record of T21.)
+- [ ] R6 Referee report, remaining: A2 (name the least-squares solver
+      correctly, QR cross-check at J = 10); uncited references on edges
+      (tabatadze2025, eisler1989, shifman1997); citations to verify
+      (kangro2012 "proves", desmedt1986 for the cube corner).
+- [ ] R7 Three wavelengths into the paper: Bempp scan (running), timing,
+      third panel of the cases figure, Section 5.5, conclusion, appendix.
+- [ ] R8 Torus with rotational symmetry in both codes into the paper:
+      cost section, appendix, caption, table (after the timing run).
+- [ ] R9 Final `time_paper.sh` (three and a half hours; Bempp's set-up
+      changed, so every time is measured again), figures, tables, text,
+      then an independent number check as in item 77.
 
 **Still open for the authors**: the author's pass over the text; T20
 (Timo); final timing on a fixed machine; copy to `sap6/mfs-paper` (ask

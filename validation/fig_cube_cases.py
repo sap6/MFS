@@ -1,5 +1,5 @@
 """Cube beyond the standard case: error against wall time for a general
-incident wave and for a side of two wavelengths, from the data of
+incident wave and for sides of two and three wavelengths, from the data of
 cube_cases.py (MFS and the best Bempp runs with the mirror symmetry, timed
 alternately).
 
@@ -16,12 +16,12 @@ import numpy as np
 
 from fig_cost_all import BLUE, INK, MUTED, curve
 
-PANELS = (("k1o", "(a) side one wavelength, general wave"), ("k2", "(b) side two wavelengths, standard wave"))
+PANELS = (("k1o", "(a) one wavelength, general wave"), ("k2", "(b) two wavelengths"), ("k3", "(c) three wavelengths"))
 
 if __name__ == "__main__":
     plt.rcParams.update({"font.size": 8.5, "axes.edgecolor": MUTED, "axes.labelcolor": INK, "text.color": INK,
                          "xtick.color": MUTED, "ytick.color": MUTED, "axes.linewidth": 0.6})
-    fig, axs = plt.subplots(1, 2, figsize=(7.4, 3.0), sharey=True)
+    fig, axs = plt.subplots(1, 3, figsize=(7.6, 2.9), sharey=True)
     for ax, (case, title) in zip(axs, PANELS):
         if os.path.exists(f"cube_cases_{case}.npz"):
             d = np.load(f"cube_cases_{case}.npz")
@@ -33,7 +33,7 @@ if __name__ == "__main__":
         ax.xaxis.set_minor_formatter(matplotlib.ticker.NullFormatter())
         for sp in ("top", "right"):
             ax.spines[sp].set_visible(False)
-        ax.set_xlabel("wall time [s]  (4 cores)")
+        ax.set_xlabel("wall time [s]")
     axs[0].set_ylabel("relative error of the scattered field")
     axs[0].legend(frameon=False, fontsize=6.8, loc="lower left", handlelength=2.6)
     fig.tight_layout()

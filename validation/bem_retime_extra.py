@@ -3,7 +3,7 @@ because the scan had been timed with a slower version of the symmetry fold
 (NOTES.md item 72): time every scanned run that could now lie on the lower
 envelope and merge it into the data of the case.
 
-    python3 bem_retime_extra.py k1|k1o|k2 [repetitions] [list]
+    python3 bem_retime_extra.py k1|k1o|k2|k3 [repetitions] [list]
 
 A scanned run is timed if its scan time, scaled by the smallest new/old
 ratio of the timed runs with the same quadrature and mesh, is not beaten by
@@ -19,7 +19,7 @@ import pec_cube_lightning3d as m
 
 case = sys.argv[1]
 reps = int(sys.argv[2]) if len(sys.argv) > 2 and sys.argv[2].isdigit() else 2
-S = 2 if case == "k2" else 1
+S = {"k2": 2, "k3": 3}.get(case, 1)
 m.K = 2 * np.pi * S
 import cube_mfs as c  # noqa: E402
 import bem_grading_scan as scan  # noqa: E402
