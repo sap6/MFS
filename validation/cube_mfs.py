@@ -75,6 +75,30 @@ def classes_of(d, p):
     return [c for c in CLASSES if np.abs(class_part(x, d, p, c)).max() > 1e-12]
 
 
+ROT = np.eye(3)[[1, 2, 0]]                             # a third of a turn about the body diagonal: (ROT v)_i = v_{i+1}
+
+
+def diagonal_orbits(classes):
+    """The cube is also symmetric under the rotation ROT about a body
+    diagonal, which permutes the three mirrors. If E solves the problem of
+    the wave (d, p), then x -> Q E(Q^T x) solves that of (Q d, Q p), and if E
+    has the parities c, the turned field has the parities c[i+1]. So the
+    part of parity c' = c turned j times is obtained from the matrix of
+    class c with the wave turned back j times, and of the eight classes
+    only four need a matrix: (+,+,+), (-,-,-) and one of each triple.
+    Returns {class to assemble: [j, ...]}, with j = 0 for the class itself."""
+    orbit, todo = {}, list(classes)
+    while todo:
+        c = todo.pop(0)
+        orbit[c] = [0]
+        for j in (1, 2):
+            cj = tuple(c[(i + j) % 3] for i in range(3))
+            if cj in todo:
+                todo.remove(cj)
+                orbit[c].append(j)
+    return orbit
+
+
 class Cube:
     """Assembles and factorises the given parity classes once; solve() then
     takes any plane wave whose classes are among them."""
@@ -256,10 +280,12 @@ def run(J, d=m.D, p=m.P, pts=None, family="balanced", max_gb=6.0, **kw):
     elif family == "tapered":
         kw = dict(tapered(J, kw.pop("n", None), kw.pop("col_p", 4)), **kw)
         J = len(kw["kw"]["depths"]) - 1
-    todo = classes_of(d, p)
+    orbit = diagonal_orbits(classes_of(d, p))          # {class to assemble: the rotations that give the other classes}
+    todo = list(orbit)
     E, info, r2, b2, c2 = None, None, 0.0, 0.0, 0.0
     ext = sca_F = 0.0
     t = 0.0
+    dirs = np.vstack((d[None, :], _SPHERE_DIRS))
     while todo:
         cube = Cube(J, classes=todo[:1], **kw) if len(todo) == 1 else None
         if cube is None:
@@ -267,12 +293,20 @@ def run(J, d=m.D, p=m.P, pts=None, family="balanced", max_gb=6.0, **kw):
             g = max(1, min(len(todo), int(max_gb * 2 ** 30 / (16.0 * n1[0] * n1[1]))))
             cube = Cube(J, classes=todo[:g], **kw)
         group, todo = cube.classes, todo[len(cube.classes):]
-        coef, res = cube.solve(d, p, only=group)
-        Eg = cube.field(coef, pts) if pts is not None else None
-        E = Eg if E is None else E + Eg
+        sols = []
+        for j in range(3):                             # the wave turned back by j thirds of a turn about the body diagonal
+            only = [c for c in group if j in orbit[c]]
+            if only:
+                Q = np.linalg.matrix_power(ROT, j)
+                coef, res = cube.solve(Q.T @ d, Q.T @ p, only=only)
+                Eg = cube.field(coef, pts @ Q) @ Q.T if pts is not None else None
+                E = Eg if E is None else E + Eg
+                sols.append((Q, coef, res, cube.rhs_norm2, cube.coef_norm))
         t, t0 = t + time.time() - t0, None             # the cross-sections below are not part of the timing
-        b = cube.rhs_norm2
-        r2, b2, c2 = r2 + res ** 2 * b, b2 + b, c2 + cube.coef_norm ** 2
+        for Q, coef, res, b, cn in sols:
+            r2, b2, c2 = r2 + res ** 2 * b, b2 + b, c2 + cn ** 2
+            F = cube.far(coef, dirs @ Q) @ Q.T
+            ext, sca_F = ext + F[0], sca_F + F[1:]
         part = dict(unknowns=sum(cube.unknowns.values()), per_class=list(cube.unknowns.values()), rows=cube.rows,
                     t_assemble=cube.t_assemble, t_factor=cube.t_factor)
         if info is None:
@@ -281,8 +315,6 @@ def run(J, d=m.D, p=m.P, pts=None, family="balanced", max_gb=6.0, **kw):
             for key in ("unknowns", "t_assemble", "t_factor"):
                 info[key] += part[key]
             info["per_class"] += part["per_class"]
-        F = cube.far_pattern(coef, d)
-        ext, sca_F = ext + F[0], sca_F + F[1]
         t0 = time.time()
     info.update(residual=float(np.sqrt(r2 / b2)), coef_norm=float(np.sqrt(c2)))
     info["ext"] = 4 * np.pi / m.K * float(np.imag(np.conj(p) @ ext))

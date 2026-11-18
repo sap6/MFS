@@ -23,10 +23,12 @@ import time
 import bem_env  # noqa: F401  (memory for the OpenCL driver; must come before bempp)
 import bempp_cl.api as bempp
 import numpy as np
+from numba import njit, prange
 import scipy.linalg as sla
 import scipy.sparse as sp
 
 import bem_reference as br
+from cube_mfs import ROT, diagonal_orbits
 
 K = 2 * np.pi
 H = 0.5
@@ -140,6 +142,18 @@ def class_trace(x, n, domain_index, result, parameters):
     result[2] = e0 * n[1] - e1 * n[0]
 
 
+@njit(parallel=True, cache=True)
+def fold(A, rows, cols, coef):
+    """out[i, k] = sum over the eight images r of coef[r, k] * A[rows[i], cols[r, k]]."""
+    out = np.zeros((len(rows), cols.shape[1]), np.complex128)
+    for i in prange(len(rows)):
+        a = A[rows[i]]
+        for r in range(cols.shape[0]):
+            for k in range(cols.shape[1]):
+                out[i, k] += coef[r, k] * a[cols[r, k]]
+    return out
+
+
 def classes_of(d, p):
     x = np.random.default_rng(0).uniform(-0.5, 0.5, (40, 3))
     out = []
@@ -150,7 +164,7 @@ def classes_of(d, p):
     return out
 
 
-def solve(n, g, points, d=D, p=P):
+def solve(n, g, points, d=D, p=P, rotate=True):
     """Field at points and the times (set-up, assembly, fold and LU, evaluation)."""
     t0 = time.time()
     grid, vmap, T = sym_grid(n, g)
@@ -173,25 +187,36 @@ def solve(n, g, points, d=D, p=P):
     assert np.array_equal(full_of[rows], rep)
     t1 = time.time()
     efie = bempp.operators.boundary.maxwell.electric_field(div, div, test, K)
-    A = np.asarray(efie.weak_form().to_dense())[rows]               # (orbits, N)
+    A = np.asarray(efie.weak_form().to_dense())                     # (test functions, N)
     t2 = time.time()
-    J = np.zeros(N, complex)
+    # The rotation about the body diagonal permutes the mirrors (and maps the mesh to itself), so the part of
+    # parity c turned j times is the solution of class c for the wave turned back j times, turned forward:
+    # at most four of the eight classes are folded and factorised (cube_mfs.diagonal_orbits; rotate=False: all eight).
+    orbit = diagonal_orbits(classes_of(d, p)) if rotate else {c: [0] for c in classes_of(d, p)}
+    J = np.zeros((3, N), complex)
     sizes = []
-    for c in classes_of(d, p):
+    for c, turns in orbit.items():
         sg = np.array([sign(c, R) for R in REFL])
         B = sp.coo_matrix(((sg[:, None] * sgn[:, rep]).ravel(), (perm[:, rep].ravel(), np.tile(np.arange(len(rep)), 8))),
                           shape=(N, len(rep))).tocsc()
         keep = np.nonzero(np.abs(B).sum(axis=0).A1 > 1e-12)[0]      # orbits on a mirror plane drop out of some classes
         B = B[:, keep]
-        Ac = (B.T @ A[keep].T).T                                    # A[keep] @ B without densifying B
-        par = np.concatenate(([K], d, p, c))
-        b = bempp.GridFunction(div, fun=class_trace, dual_space=test, function_parameters=par).projections(test)[rows][keep]
-        xc = sla.lu_solve(sla.lu_factor(Ac, overwrite_a=True, check_finite=False), b, check_finite=False)
-        J += B @ xc
-        sizes.append(len(keep))
+        cols = rep[keep]
+        Ac = fold(A, rows[keep], perm[:, cols], sg[:, None] * sgn[:, cols])   # A[rows[keep]] @ B
+        lu = sla.lu_factor(Ac, overwrite_a=True, check_finite=False)
+        for j in turns:
+            Q = np.linalg.matrix_power(ROT, j)
+            par = np.concatenate(([K], Q.T @ d, Q.T @ p, c))
+            b = bempp.GridFunction(div, fun=class_trace, dual_space=test, function_parameters=par).projections(test)[rows][keep]
+            J[j] += B @ sla.lu_solve(lu, b, check_finite=False)
+            sizes.append(len(keep))
     t3 = time.time()
-    lam = bempp.GridFunction(div, coefficients=J)
-    E = -(bempp.operators.potential.maxwell.electric_field(div, points.T, K) * lam).T
+    E = 0
+    for j in range(3):
+        if np.any(J[j]):
+            Q = np.linalg.matrix_power(ROT, j)
+            lam = bempp.GridFunction(div, coefficients=J[j])
+            E = E - (bempp.operators.potential.maxwell.electric_field(div, np.ascontiguousarray((points @ Q).T), K) * lam).T @ Q.T
     t4 = time.time()
     return E, N, sizes, (t1 - t0, t2 - t1, t3 - t2, t4 - t3), grid
 
