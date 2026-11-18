@@ -57,6 +57,11 @@ Done (all committed):
 - [x] Least squares timed (9000 x 3000 complex, 4 rhs): CSNE 2.1 s, our QR 4.1 s, `qr_multiply` 4.3 s, `qr` economic 8.2 s, numpy `lstsq` 8.5 s, scipy `lstsq` gelsd 8.6 s, gelsy 10.9 s, gelss 182 s. `qr_multiply` refactors for each rhs (the cube solves up to three waves per factorisation). Logged paths: CSNE in every cube and almond run except the cube at three wavelengths with J >= 9 (QR). Kept both; rewritten with `scipy.linalg.qr(mode="raw")`, `cho_factor`, `cho_solve` (bitwise identical). Gram by `zherk` kept: NumPy 5.4 s against 3.0 s and a copy of A.
 - [x] Replaced: `np.cross` for the magnetic matrix, `sla.solve` in `bem.efie`, `sla.orth` in `cone`, the almond kernel on `lines.dipoles` (25 lines shorter, kernel 1.4-1.7x faster, total time unchanged). Package 1788 -> 1767 lines.
 - [x] Not done (reasons in the file): NumPy for the cube's point kernel (20-30x slower), Lebedev rule (moves the torus test points of Table 4), `np.unique` in `mirror_grid` (reorders the Bempp mesh), `bempp.shapes` meshes (no symmetric structure), a Mie library.
+**The author (18 Nov, verbatim):** "is it worth the speed improvement over the simplicity where we have implemented functions? no way at all to make the libraries' functions skip the extra work? look into it" -> `notes/speed_vs_simplicity_18nov.md` (sent). Answer: keep all; no code change.
+- [x] Library routes: `lstsq` drivers cannot skip the SVD / pivoting; LAPACK `gels` (plain QR) is reachable as `scipy.linalg.lapack.zgels`: 3.95 s with `zgels_lwork`, 23 s with SciPy's default workspace, ours 3.83 s; no library has CSNE (1.8 s).
+- [x] Cube, standard wave, J = 4..9, totals CSNE / QR / lstsq: 4.7/6.6/7.1, 6.8/11.3/13.3, 11.3/17.8/22.1, 16.5/28.1/35.3, 23.9/46.2/61.8, 35.7/68.1/- s; QR at J = 10 killed for lack of memory (one more copy). In the Bempp comparison (stored times scaled): standard wave crossover 1.5e-4 (CSNE), 8.2e-5 (QR), 7.1e-5 (lstsq); MFS at Bempp's best error 36 / 69 / 93 s (Bempp 131 s); general wave with lstsq: no crossover (MFS slower wherever both reach).
+- [x] Line quadrature without the moment panels (Gauss panels only, minimum level 3): fields to 3e-9, J = 6 / 8 assembly 7.4 -> 15.0 / 13.6 -> 26.1 s, totals 11.0 -> 19.0 / 23.9 -> 38.2 s (level >= 4: 30.5 / 58.2 s). Both dropped: 2.1-2.4x; standard wave crossover 7.3e-5, general wave none.
+- [x] Almond kernel in NumPy: 16.8 s per class against 0.31 s (54x).
 
 Open (authors):
 - [ ] Merge into `main` without squashing (Colab links, CI badge and pip install point to `main`); push the local tag `research-scripts` (= 9f5a721)? Asked.
@@ -2637,6 +2642,7 @@ Open, in the order I would take them:
 - 18 Nov. Second timing run (item 83): crossings with Bempp at 1.5e-4 (standard wave), 1.4e-4 (general wave), 3.0e-4 (two wavelengths), 5.7e-4 (three); torus MFS 7e-12 in 2 s against Bempp 5e-4 in 19 s.
 - 18 Nov. Package simplification B: 1872 -> 1788 lines; after the readability edits Bempp fields equal to the old ones to 2e-15, almond RCS to 1e-13 dB, cube to 2e-15; tests incl. Bempp pass (8 in 38 s), tables identical, edge residual recomputed to 4e-13 of the stored one. Kept.
 - 18 Nov. Library pass: SciPy lstsq (any driver) 2-5x slower than our CSNE, qr_multiply as fast as our QR but refactors per rhs; cube J = 9: 39 s, factorisation 18 s; NumPy point kernel 20-30x slower than numba; almond kernel on the shared dipole function 1.4-1.7x faster, nose-on totals unchanged. Package 1767 lines; all results identical.
+- 18 Nov. Speed against simplicity: CSNE buys 1.4-1.9x on the cube (QR) and 1.5-2.6x (lstsq); the moment panels 1.6x at J = 8; both together 2.1-2.4x; without them the MFS is no longer faster than Bempp on the general wave at any common accuracy. Kept.
 
 ## 6. Write-up session
 
