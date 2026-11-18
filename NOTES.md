@@ -133,8 +133,16 @@ best, then drop the curve without symmetry and the caveat.
       below it); the summary table holds the smooth bodies and the almond
       only. 40 preprint pages, 24 in the journal layout.
 - [x] R13 Almond cost comparison at a second frequency (item 85).
-- [ ] R14 Next: a last independent read of Sections 5.5 and 7 after the
-      restructuring; then look again for the weakest point.
+- [x] R14 Last independent check of Section 7 and Table 5: table
+      confirmed; six wording points applied (Bempp's "most accurate run"
+      is the end of its lower envelope, so a plateau run does not count
+      against it; "in the same time at three wavelengths"; "level at
+      1.5e-4, 3e-4, 5e-4"; general wave costs about 1.5 times the
+      standard wave, about twice at J = 10; Table 4 shows both sphere
+      runs).
+- [ ] R15 Look again for the weakest point (candidates in the notes of
+      R13); keep the status sheet current when something of substance
+      changes.
 
 **Still open for the authors**: the author's pass over the text; T20
 (Timo); final timing on a fixed machine; copy to `sap6/mfs-paper` (ask

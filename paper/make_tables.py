@@ -145,7 +145,7 @@ def summary(env=None):
     d = np.load(os.path.join(V, "fig_cost_sphere.npz"))
     first = "Sphere"
     for u, t, e in d["mfs"]:
-        if int(u) in (1200,):
+        if int(u) in (1200, 3600):
             rows.append(f"    {first} & MFS & {int(u)} & {tm(t)} & {sci(e)} \\\\")
             first = ""
     u, t, e = d["bem"][-1][:3]
@@ -208,9 +208,20 @@ def cube_cases():
     write("cube_cases", rows)
 
 
+def envelope(runs):
+    """Lower envelope of (time, error) runs: those that are at least 3% more accurate than every faster run."""
+    out, best = [], np.inf
+    for t, e in sorted(runs):
+        if e < 0.97 * best:
+            out.append((t, e))
+            best = e
+    return out
+
+
 def cube_ends():
     """Both ends of the comparison on the cube, for the four cases: the time each code needs for an error
-    of about 1e-3 (its fastest run with at most 1.2e-3), the most accurate run of Bempp, and the first level of the
+    of about 1e-3 (its fastest run with at most 1.2e-3), the most accurate run of Bempp (the
+    end of its lower envelope: a slower run that gains less than 3% is not counted), and the first level of the
     MFS that is more accurate than that."""
     d = np.load(os.path.join(V, "fig_cost_cube.npz"))
     ref = d["ref_E"]
@@ -225,7 +236,7 @@ def cube_ends():
     for label, mfs, bem in cases:
         tb = min(t for t, e in bem if e <= 1.2e-3)                    # "an error of about 1e-3": at most 1.2e-3
         tm_ = min(t for t, e, J in mfs if e <= 1.2e-3)
-        bt, be = min(bem, key=lambda r: r[1])
+        bt, be = envelope(bem)[-1]                                   # the last run that still gains 3% in accuracy
         better = [r for r in mfs if r[1] < be]
         mt, me, mJ = min(better, key=lambda r: r[0])
         rows.append(f"    {label} & {tm(tb)} & {tm(tm_)} & {sci(be)} & {tm(bt)} & {sci(me)} & {tm(mt)} \\\\")
