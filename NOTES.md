@@ -23,7 +23,44 @@ tangential E_sc = -tangential E_inc on the surface, least-squares collocation.
   one machine (item 83). If one part is re-run, re-run all
   (`validation/time_paper.sh`, three hours).
 
-### Seventh session, 2026-11-18 (READ THIS FIRST)
+### Seventh session, part two: the humanising pass (18 Nov, READ FIRST)
+
+**The author (18 Nov, verbatim):** "continue, but since you are not Fable
+5.2, I want you to focus on making the paper more natural and using my
+wording from the thesis where it's accurate to do so. Right now, the paper
+unfortunately sounds LLM generated. Utilise skills like the one I sent
+earlier and this to make it sound more natural, approachable, readable.
+https://github.com/matsuikentaro1/humanizer_academic / focus also on
+organising the results we showed, and make sure it actually shows that MFS
+is an effective method (the last few changes felt like bempp took a lead
+for the cube?). brainstorm ways to streamline the paper so the main results
+are easily digestible. Doesn't need to be a super long paper."
+**Then, mid-turn:** "Don't rewrite the paper, I don't think that's
+necessary, just do a humanising pass. Use my thesis to get my style of
+writing."
+-> No restructuring and no content change without the author's go-ahead.
+The pass edits sentences only. The style profile is
+`paper/style_profile.md`; the thesis is checked out at `/home/user/mfs-paper`
+(the repo `sap6/mfs-paper`, read-only; never push). The two humanizer skills
+are github.com/matsuikentaro1/humanizer_academic (SKILL.md and its
+`scripts/humanizer_check.py`, which counts numbers added or removed) and
+github.com/AIScientists-Dev/academic-humanizer.
+
+**Work list (tick off here):**
+- [x] H1 Style profile from the thesis (`paper/style_profile.md`).
+- [x] H2 First pass over all sections; a script confirmed that no number,
+      citation or reference changed (commit 51ea8ac).
+- [ ] H3 Independent read for remaining machine-like sentences; apply.
+- [ ] H4 Rebuild, export for Overleaf, send PDF and
+      `paper/humanising_pass_18nov.md` (before/after, and ideas for
+      presenting the results, NOT done: headline table "MFS time at
+      Bempp's best accuracy" (sphere 0.10 s vs 86 s, torus 0.16 vs 71,
+      almond 2.5 vs 22, cube 37 vs 131, 66 vs 133, 66 vs 137, 53 vs 132),
+      swap the halves of Table 5, lighter Bempp markers in the cube
+      panels, optional cuts of about three pages).
+- [ ] H5 Status sheet and highlights in the same voice.
+
+### Seventh session, 2026-11-18 (first part)
 
 **Standing instruction (the author, verbatim, 17 Nov):** "don't stop unless
 I explicitly say, as I'm working on other projects this week. [...] You can
