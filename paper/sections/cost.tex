@@ -1,7 +1,7 @@
 \section{Comparison with a boundary element code}
 \label{sec:cost}
 
-In this section we compare accuracy against computing time for the MFS and for Bempp (\autoref{fig:costall} and \autoref{tab:summary}). Bempp is a widely used boundary element library, and the comparison shows where the MFS stands against an established method of low order. Such a comparison is meaningful only if the established code is at its best, and we took the following steps towards this. The MFS, in contrast, is used with the layouts of the previous sections as they stand.
+In this section we compare accuracy against computing time for the MFS and for Bempp (\autoref{fig:costall}, \autoref{tab:summary} and \autoref{tab:cubeends}). Bempp is a widely used boundary element library, and the comparison shows where the MFS stands against an established method of low order. Such a comparison is meaningful only if the established code is at its best, and we took the following steps towards this. The MFS, in contrast, is used with the layouts of the previous sections as they stand.
 
 For Bempp we used its fastest assembly backend. For the cube we graded the meshes towards the edges, raised the quadrature orders, and scanned the grading together with the quadrature orders and the mesh size. For each accuracy the fastest of all these runs is shown, and we call it the best run. We also gave Bempp the symmetry that the MFS uses, which the library does not exploit by itself (\ref{app:bempp}). On the cube both codes use the three mirror planes and the rotation about the body diagonal, and on the almond both use the two mirror planes. On the torus both use the rotational symmetry: the sources of the MFS lie on rings, and the structured mesh of Bempp is mapped to itself by the rotation by one cell about the axis. The symmetry makes Bempp three to ten times faster on the cube and the almond and ten to twenty times faster on the torus, and it changes its result by less than its error (\ref{app:bempp}). Finally, timings on a shared machine drift, so the runs of the two codes that are compared were timed alternately, and each keeps its smallest time.
 
@@ -14,7 +14,7 @@ For Bempp we used its fastest assembly backend. For the cube we graded the meshe
 
 \begin{table}[htbp]
   \centering
-  \caption{Selected runs of \autoref{fig:costall}: unknowns, wall time and error, measured as in the figure. The sphere has $N = 400$ sources. For the cube the unknowns of the MFS are per parity class (two classes are solved). For all shapes those of Bempp are for the whole mesh, which the symmetry splits into smaller systems (\ref{app:bempp}); the grading exponent $g$ of the mesh and the quadrature orders for regular and singular integrals are as given.}
+  \caption{Selected runs of \autoref{fig:costall}(a)--(c): unknowns, wall time and error, measured as in the figure. The sphere has $N = 400$ sources. The unknowns of Bempp are those of the whole mesh, which the symmetry splits into smaller systems for the torus and the almond (\ref{app:bempp}). The cube is summarised in \autoref{tab:cubeends}.}
   \label{tab:summary}
   \small
   \begin{tabular}{llrrl}

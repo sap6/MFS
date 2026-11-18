@@ -138,8 +138,9 @@ def cube_bem_env():
     return env
 
 
-def summary(env):
-    """The table of selected runs in the cost section of the short paper."""
+def summary(env=None):
+    """The table of selected runs of the smooth bodies and the almond in the cost section
+    (the cube has its own tables: cube_mfs_short, cube_ends, cube_bem_env)."""
     rows = []
     d = np.load(os.path.join(V, "fig_cost_sphere.npz"))
     first = "Sphere"
@@ -170,26 +171,6 @@ def summary(env):
     i = len(d["bem"]) - 1
     r = d["bem"][i]
     rows.append(f"     & Bempp & {int(r[0])} & {tm(r[1])} & {sci(rel(d[f'bem_E{i}'], ref))} \\\\")
-    rows.append("    \\midrule")
-    d = np.load(os.path.join(V, "fig_cost_cube.npz"))
-    ref = d["ref_E"]
-    first = "Cube"
-    for J, t, unk, nrow, opt in d["dense"]:
-        if int(J) in (6, 8, 10):
-            rows.append(f"    {first} & MFS, $J = {int(J)}$ & {int(unk) // 2} & {tm(t)} & {sci(rel(d[f'dense_E{int(J)}'], ref))} \\\\")
-            first = ""
-    pick = []                                            # Bempp: for each target error the fastest run that reaches it, and the most accurate run
-    for target in (1e-3, 3.5e-4, 1.55e-4, 1.2e-4):
-        ok = [r for r in env if r[6] <= target]
-        if ok:
-            tmin = min(r[5] for r in ok)
-            r = min((r for r in ok if r[5] <= 1.1 * tmin), key=lambda r: r[6])      # among equally fast runs the more accurate
-            if not any(r is q for q in pick):
-                pick.append(r)
-    if len(env) and not any(env[-1] is q for q in pick):
-        pick.append(env[-1])
-    for r in pick:
-        rows.append(f"     & Bempp, $g = {r[0]:g}$, ${int(r[1])}/{int(r[2])}$ & {int(r[4])} & {tm(r[5])} & {sci(r[6])} \\\\")
     write("summary", rows)
 
 
