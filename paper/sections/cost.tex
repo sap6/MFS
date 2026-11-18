@@ -3,7 +3,7 @@
 
 In this section we compare accuracy against computing time for the MFS and for Bempp (\autoref{fig:costall} and \autoref{tab:summary}). Bempp is a widely used boundary element library, and the comparison shows where the MFS stands against an established method of low order. Such a comparison is meaningful only if the established code is at its best, and we took the following steps towards this. The MFS, in contrast, is used with the layouts of the previous sections as they stand.
 
-For Bempp we used its fastest assembly backend. For the cube we graded the meshes towards the edges, raised the quadrature orders, and scanned the grading together with the quadrature orders and the mesh size. For each accuracy the fastest of all these runs is shown, and we call it the best run. We also gave Bempp the symmetry that the MFS uses, which the library does not exploit by itself (\ref{app:bempp}). Both codes use the three mirror planes of the cube and of the torus and the two of the almond, and on the cube the rotation about the body diagonal as well. The symmetry makes Bempp SYMGAIN times faster and does not change its error. The one symmetry that only the MFS uses is the rotational symmetry of the torus, and \autoref{fig:costall}(b) therefore also shows the MFS without it. Finally, timings on a shared machine drift, so the runs of the two codes that are compared were timed alternately, and each keeps its smallest time.
+For Bempp we used its fastest assembly backend. For the cube we graded the meshes towards the edges, raised the quadrature orders, and scanned the grading together with the quadrature orders and the mesh size. For each accuracy the fastest of all these runs is shown, and we call it the best run. We also gave Bempp the symmetry that the MFS uses, which the library does not exploit by itself (\ref{app:bempp}). Both codes use the three mirror planes of the cube and of the torus and the two of the almond, and on the cube the rotation about the body diagonal as well. The symmetry makes Bempp three to ten times faster and does not change its error. The one symmetry that only the MFS uses is the rotational symmetry of the torus, and \autoref{fig:costall}(b) therefore also shows the MFS without it. Finally, timings on a shared machine drift, so the runs of the two codes that are compared were timed alternately, and each keeps its smallest time.
 
 \begin{figure}[htbp]
   \centering
@@ -14,7 +14,7 @@ For Bempp we used its fastest assembly backend. For the cube we graded the meshe
 
 \begin{table}[htbp]
   \centering
-  \caption{Selected runs of \autoref{fig:costall}: unknowns, wall time and error, measured as in the figure. The sphere has $N = 400$ sources. For the cube the unknowns of the MFS are per parity class (two classes are solved), and those of Bempp are for the whole mesh, which the mirror symmetry splits into eight blocks; the grading exponent $g$ of the mesh and the quadrature orders for regular and singular integrals are as given.}
+  \caption{Selected runs of \autoref{fig:costall}: unknowns, wall time and error, measured as in the figure. The sphere has $N = 400$ sources. For the cube the unknowns of the MFS are per parity class (two classes are solved). Those of Bempp are for the whole mesh, which the mirror symmetry splits into eight blocks for the torus and the cube and into four for the almond; the grading exponent $g$ of the mesh and the quadrature orders for regular and singular integrals are as given.}
   \label{tab:summary}
   \small
   \begin{tabular}{llrrl}
@@ -41,11 +41,11 @@ These errors are measured at a distance of one radius or more from the body. Clo
 
 \subsection{The cube}
 
-On the cube the comparison is closer, because the boundary element method handles edges well once the mesh is graded. On quasi-uniform meshes, as Bempp is distributed, its error is still $2\times10^{-3}$ after more than a minute, but its best runs on graded meshes are a different matter.
+On the cube the comparison is closer, because the boundary element method handles edges well once the mesh is graded. On quasi-uniform meshes, as Bempp is distributed, its error is still $2\times10^{-3}$ after almost a minute, but its best runs on graded meshes are a different matter.
 
 Down to an error of about $1.2\times10^{-4}$ the boundary element method is the faster of the two, by a factor that falls from about ten at an error of $10^{-3}$ to four at $3.5\times10^{-4}$. At $1.2\times10^{-4}$ the two are level, at about half a minute. Below that level the MFS is faster: it reaches $2\times10^{-5}$ in less time than the boundary element method needs for its smallest error, $8\times10^{-5}$, on the finest mesh that fits into memory. The variant of the MFS with one depth per octave (\autoref{sec:cuberesults}) moves the crossover to a larger error. It is level with the boundary element method at $3\times10^{-4}$ and up to twice as fast between $2\times10^{-4}$ and $1.4\times10^{-4}$, where it stalls.
 
-The other two cases of \autoref{sec:cubeother} are shown in \autoref{fig:cubecases}. At two wavelengths the picture is the same with the crossover at a larger error: the two methods are level near $2.5\times10^{-4}$, and at $2\times10^{-4}$ the MFS is about twice as fast. For the general wave the picture is different. Here the MFS needs eight factorisations instead of two, and the boundary element method is the faster of the two at every accuracy at which we ran both, by a factor that falls from about ten at an error of $10^{-3}$ to less than two at $1.4\times10^{-4}$.
+The other two cases of \autoref{sec:cubeother} are shown in \autoref{fig:cubecases}. At two wavelengths the picture is the same with the crossover at a larger error: the two methods are level near $2.5\times10^{-4}$, and at $2\times10^{-4}$ the MFS is about twice as fast. For the general wave the picture is that of the standard wave. The boundary element method is the faster of the two down to an error of about $1.2\times10^{-4}$, by a factor of about ten at an error of $10^{-3}$. Below that level the MFS is faster, and it continues to $1.7\times10^{-5}$, where the smallest error of the boundary element method is $1.1\times10^{-4}$.
 
 \subsection{What the comparison shows}
 
