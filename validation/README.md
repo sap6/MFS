@@ -20,6 +20,9 @@ of all eight classes and against the stored fields; `test_line_tree.py`
 checks the fast line quadrature against an adaptive rule (`line_kernel.py`).
 
 Self-check of a fresh installation: `python3 mie.py` (errors near 1e-14).
+All checks in one go, five minutes: `sh run_checks.sh` (Mie, torus, the cube
+solver against the direct solve and the stored field, the line quadrature,
+the cone exponents, and Bempp with symmetry against full solves).
 
 ## Figures and tables of the paper
 

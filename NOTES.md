@@ -140,9 +140,13 @@ best, then drop the curve without symmetry and the caveat.
       1.5e-4, 3e-4, 5e-4"; general wave costs about 1.5 times the
       standard wave, about twice at J = 10; Table 4 shows both sphere
       runs).
-- [ ] R15 Look again for the weakest point (candidates in the notes of
-      R13); keep the status sheet current when something of substance
-      changes.
+- [x] R15 Helpers: `paper/export_overleaf.sh` (self-contained copy and
+      zip for Overleaf, compiles on its own; sent to the author),
+      checklist "After a new timing run" in `paper/README.md`,
+      `validation/run_checks.sh` (all self-tests, five minutes) with the
+      new `test_bem_symmetry.py`.
+- [ ] R16 Look again for the weakest point; keep the status sheet
+      current when something of substance changes.
 
 **Still open for the authors**: the author's pass over the text; T20
 (Timo); final timing on a fixed machine; copy to `sap6/mfs-paper` (ask
