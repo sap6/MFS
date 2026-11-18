@@ -43,11 +43,27 @@ These errors are measured at a distance of one radius or more from the body. Clo
 
 On the cube the comparison is closer, because the boundary element method handles edges well once the mesh is graded. On quasi-uniform meshes, as Bempp is distributed, its error is still $2\times10^{-3}$ after three quarters of a minute, but its best runs on graded meshes are a different matter.
 
-Down to an error of about $1.5\times10^{-4}$ the boundary element method is the faster of the two, about ten times at an error of $10^{-3}$ and four times at $3.5\times10^{-4}$. Near $1.5\times10^{-4}$ the two are level: the MFS reaches $1.4\times10^{-4}$ in $24$ seconds, and the boundary element method reaches $1.5\times10^{-4}$ in $20$ seconds and $1.15\times10^{-4}$ in $30$ seconds. Below about $10^{-4}$ the MFS is ahead. It reaches $5.6\times10^{-5}$ in $38$ seconds and $2\times10^{-5}$ in $54$ seconds, which is less time than the boundary element method needs for its smallest error, $8\times10^{-5}$, on the finest mesh that fits into memory. The variant of the MFS with one depth per octave (\autoref{sec:cuberesults}) moves the crossover to a larger error. It is level with the boundary element method near $3\times10^{-4}$ and reaches $2.1\times10^{-4}$ in $8$ seconds and $1.35\times10^{-4}$ in $11$ seconds, where the boundary element method needs $11$ and $30$ seconds. Then it stalls.
+\autoref{tab:cubeends} gives both ends of the comparison for the four cases of the cube, and Figures~\ref{fig:cubecases} and~\ref{fig:costall}(d) show the curves. At an error of about $10^{-3}$ the boundary element method is the faster of the two in every case, about ten times at one wavelength, six times at two and four times at three. At the other end, the MFS reaches a smaller error than the most accurate boundary element run, on the finest mesh that fits into memory, and it does so in less time: with the level $J = 9$ at one wavelength, $J = 8$ at two and $J = 7$ at three.
 
-The other cases of \autoref{sec:cubeother} are shown in \autoref{fig:cubecases}. For the general wave the picture is that of the standard wave. The boundary element method is the faster of the two down to about $1.5\times10^{-4}$, eight to nine times at an error of $10^{-3}$. Near $1.5\times10^{-4}$ the two are level: the MFS reaches $1.6\times10^{-4}$ in $41$ seconds and the boundary element method $1.4\times10^{-4}$ in the same time. The smallest error of the boundary element method, $1.1\times10^{-4}$, takes $72$ seconds, and the MFS reaches $6\times10^{-5}$ in $66$ seconds and about $2\times10^{-5}$ in two minutes.
+\begin{table}[htbp]
+  \centering
+  \caption{Unit cube, both ends of the comparison. Left: wall time of the fastest run of each code with an error of about $10^{-3}$ (at most $1.2\times10^{-3}$). Right: the most accurate run of Bempp, and the first level of the MFS with a smaller error, each with its wall time. The first two cases are at one wavelength.}
+  \label{tab:cubeends}
+  \small
+  \setlength{\tabcolsep}{4pt}
+  \begin{tabular}{lrrlrlr}
+    \toprule
+     & \multicolumn{2}{c}{Time [s] for $10^{-3}$} & \multicolumn{2}{c}{Bempp, best run} & \multicolumn{2}{c}{MFS, first better level} \\
+    Case & Bempp & MFS & Error & [s] & Error & [s] \\
+    \midrule
+\tablebody{cube_ends}
+    \bottomrule
+  \end{tabular}
+\end{table}
 
-For the larger cubes the boundary element method stays ahead up to a larger accuracy. At two wavelengths it reaches $3.5\times10^{-4}$ in $14$ seconds and $2.3\times10^{-4}$ in $35$ seconds, and its smallest error, $1.9\times10^{-4}$, takes $61$ seconds. The MFS reaches $3.8\times10^{-4}$ in $24$ seconds and $1.5\times10^{-4}$ in $36$ seconds. At three wavelengths the boundary element method reaches $6.0\times10^{-4}$ in $13$ seconds and its smallest error, $5.2\times10^{-4}$, in $35$ seconds. The MFS reaches $4.5\times10^{-4}$ in $35$ seconds and $1.9\times10^{-4}$ in $53$ seconds. The error below which the MFS is ahead thus grows with the size of the cube, from about $10^{-4}$ at one wavelength to $2\times10^{-4}$ at two and $5\times10^{-4}$ at three.
+In between, the two methods are level near $1.5\times10^{-4}$ at one wavelength, for both waves. For the standard wave the MFS reaches $1.4\times10^{-4}$ in $24$ seconds, and the boundary element method reaches $1.5\times10^{-4}$ in $20$ seconds and $1.15\times10^{-4}$ in $30$ seconds. The error below which the MFS is ahead grows with the size of the cube, from about $10^{-4}$ at one wavelength to $2\times10^{-4}$ at two and $5\times10^{-4}$ at three. Beyond the range of the boundary element method the MFS continues, at one wavelength to $2\times10^{-5}$ in less than a minute.
+
+The variant of the MFS with one depth per octave (\autoref{sec:cuberesults}) moves the crossover to a larger error. It is level with the boundary element method near $3\times10^{-4}$ and reaches $2.1\times10^{-4}$ in $8$ seconds and $1.35\times10^{-4}$ in $11$ seconds, where the boundary element method needs $11$ and $30$ seconds. Then it stalls.
 
 \subsection{What the comparison shows}
 

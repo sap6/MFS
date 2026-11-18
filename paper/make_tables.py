@@ -227,6 +227,31 @@ def cube_cases():
     write("cube_cases", rows)
 
 
+def cube_ends():
+    """Both ends of the comparison on the cube, for the four cases: the time each code needs for an error
+    of about 1e-3 (its fastest run with at most 1.2e-3), the most accurate run of Bempp, and the first level of the
+    MFS that is more accurate than that."""
+    d = np.load(os.path.join(V, "fig_cost_cube.npz"))
+    ref = d["ref_E"]
+    jref = int(d["ref_info"][0])
+    std_mfs = [(r[1], rel(d[f"dense_E{int(r[0])}"], ref), int(r[0])) for r in d["dense"] if int(r[0]) >= 4 and int(r[0]) != jref]
+    std_bem = [(r[5], r[6]) for r in np.load(os.path.join(V, "bem_grading_scan_k1_final.npz"))["all"]]
+    cases = [("Standard wave", std_mfs, std_bem)]
+    for case, label in (("k1o", "General wave"), ("k2", "Two wavelengths"), ("k3", "Three wavelengths")):
+        c = np.load(os.path.join(V, f"cube_cases_{case}.npz"))
+        cases.append((label, [(r[5], r[6], int(r[1])) for r in c["mfs"]], [(r[5], r[6]) for r in c["bem"]]))
+    rows = []
+    for label, mfs, bem in cases:
+        tb = min(t for t, e in bem if e <= 1.2e-3)                    # "an error of about 1e-3": at most 1.2e-3
+        tm_ = min(t for t, e, J in mfs if e <= 1.2e-3)
+        bt, be = min(bem, key=lambda r: r[1])
+        better = [r for r in mfs if r[1] < be]
+        mt, me, mJ = min(better, key=lambda r: r[0])
+        rows.append(f"    {label} & {tm(tb)} & {tm(tm_)} & {sci(be)} & {tm(bt)} & {sci(me)} & {tm(mt)} \\\\")
+        print(f"    cube_ends {label}: 1e-3: Bempp {tb:.1f} s, MFS {tm_:.1f} s (ratio {tm_ / tb:.1f}); Bempp best {be:.2e} in {bt:.1f} s; MFS J = {mJ}: {me:.2e} in {mt:.1f} s")
+    write("cube_ends", rows)
+
+
 if __name__ == "__main__":
     sphere()
     torus()
@@ -234,4 +259,4 @@ if __name__ == "__main__":
     cube()
     summary(cube_bem_env())
     cube_cases()
-    # they are superseded by cube_cases() and their data are no longer re-timed.
+    cube_ends()
