@@ -119,3 +119,47 @@ would. Its findings, condensed; the status of each is tracked in
 
 Consistent wherever they appear: 2e-14, 7e-12, 2e-5, 8e-5, 0.14 dB, 4193,
 21-30%, the fit, tail share 5%, and all cross-references.
+
+# Second round, 18 November, after the second timing run
+
+## Number check (fresh agent, from the .npz files)
+
+Every table entry and quoted error matches the data. Problems are
+comparative claims that rest on log-log interpolation between sparse runs
+("staircase" = fastest run with error at most the target):
+
+1. General wave, "below that level the MFS is faster": no MFS run lies
+   between J = 8 (1.62e-4, 37.8 s) and J = 9 (6.0e-5, 74.3 s); Bempp has
+   1.44e-4 in 39.3 s and 1.08e-4 in 64.7 s. The crossing at 1.39e-4 exists
+   only by interpolation.
+2. Standard wave: the crossing at 1.46e-4 (24 s) holds under both
+   conventions; below it the MFS leads by only 1.12 at 1.15e-4
+   (interpolated) and by staircase Bempp wins between 1.40e-4 and 1.15e-4.
+   The lead is robust only below 1.1e-4 (1.6 to 1.9 at 8e-5).
+3. Three wavelengths, "level near 6e-4": at 6.0e-4 Bempp is still 2.1
+   times faster; the two are level only at 5.2 to 5.7e-4 (Bempp's last two
+   runs). "Four times at 1e-3" is 3.9 interpolated, 2.7 staircase.
+4. Summary table: two Bempp rows are not the best runs at their cost.
+5. Torus "2e-7" is fortuitous: the previous pair of meshes gives 1.2e-6.
+   Say "about 1e-6".
+Convention-dependent: "about ten at 1e-3" (9.9 / 7.1); two wavelengths
+level at 3.0e-4 / 2.3e-4; one depth per octave level at 3.1e-4 / 2.6e-4;
+"doubles with each wavelength" holds by interpolation only.
+Minor: fit within 4.2% with the printed coefficients; "a third of the
+time" is 0.44 to 0.30; Bempp's order on the finer meshes 0.99, 0.99, 0.77;
+the J = 10 references at two and three wavelengths have about 15% of the
+J = 8 error.
+
+## Consistency read (fresh agent)
+
+Leftovers of "the theorem locates the singularities": introduction
+(contribution 2, roadmap), heading of Section 4, "must be placed". The
+rule "enclose the singularities" against sources that reach them on cube
+and almond; "surfaces that leave the focal curve outside" against rows
+that approach it from inside; "the inner cube encloses the part of the
+skeleton ... as the rule for smooth bodies requires". Captions say
+"mirror symmetry" for the cube where the rotation is used too; "does not
+change its error" against "differs by 3e-5". Seams: repeated sentence in
+the cube comparison, the rate stated three times in one paragraph, a few
+dangling "it" and "this". LaTeX: appendix table links point to Table 1;
+Table 4 and eq. (4) are too wide; "Figures 10 and 7".
