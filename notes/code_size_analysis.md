@@ -1,5 +1,65 @@
 # How big is the code, and can it be simpler? (18 November)
 
+## Outcome
+
+**B is done. D is not done, on purpose (see below).**
+
+| | before B | after B |
+|---|---|---|
+| package `mfs/`, total lines | 1872 | **1780** (-92) |
+| of which code | 1170 | **1103** (-67) |
+| of which docstrings | 402 | 383 |
+
+B saved 92 lines, not the 150 I estimated. The difference is the docstrings:
+I kept the argument lists with shapes, as in your notebooks, instead of cutting
+each docstring to two lines. Merging the two Bempp solvers into one base class
+also saved less than I expected, because the mirror and rotation solves really
+are different.
+
+What B changed:
+
+- one symmetry helper (`core.class_part`, `core.classes_of`, `core.sign`) for
+  the cube, the almond and Bempp, in place of three copies;
+- one base class `bem.Symmetric` for the two symmetric Bempp solvers;
+- a shorter QR, without the rank-revealing branch;
+- SciPy's `BarycentricInterpolator` in place of a hand-written Lagrange
+  interpolation in `lines.py`;
+- the almond's source rows and tip tail made by one function, `source_rows`;
+- tighter docstrings.
+
+The results do not change:
+
+- the tests pass, including Bempp with symmetry (8 tests, 38 s);
+- every table is identical;
+- every figure redraws, and the recomputed edge residual agrees with the
+  stored one to 4e-13;
+- the Bempp fields agree with those before the change to 1e-15;
+- the almond's radar cross-section agrees to 1e-13 dB;
+- the four notebooks run with no errors.
+
+One known difference: the stored sphere runs used the SVD, and the package
+now uses QR. The two give the same errors except where rounding dominates
+(R_s <= 0.2 with N = 400), where they differ by up to a factor 2. This is
+noted in `figures/sphere.py`.
+
+### Why not D (moving `bem.py` out of the package)
+
+I don't think it is a good idea, and it would not be intuitive:
+
+- **Where readers look.** A reader who wants to know how we ran Bempp will
+  look in the package. `pip install "mfs[bempp]"` with
+  `from mfs import bem` is the usual pattern for an optional part of a
+  package. Code hidden in `figures/` looks like plotting.
+- **Who uses it.** The figure scripts and the tests both import it. If it
+  sat in `figures/`, the tests would import from a folder of plotting
+  scripts, and the scripts would import from each other.
+- **The comparison is part of the paper.** The paper's claim is that the MFS
+  is faster than Bempp with the same symmetries. A referee who doubts it
+  should find the Bempp side as easy to run as the MFS side.
+- **It is already marked.** The module docstring and the README both say it
+  is the boundary element side of the comparison and not part of the method.
+  It is a separate module, and it needs a separate install.
+
 ## Your original
 
 The seven thesis notebooks hold **1851 lines** of code cells:
@@ -17,90 +77,50 @@ solved with `lstsq`.
 
 Before today the paper's code was `validation/`: 67 scripts and **7301 lines**.
 
-## Now
+## Now (after B)
 
 | | total lines | code | docstrings | comments | blank |
 |---|---|---|---|---|---|
-| package `mfs/` | 1872 | 1170 | 402 | 53 | 247 |
-| figure scripts `figures/` | 859 | 605 | 109 | 38 | 107 |
-| tests | 85 | 52 | 5 | 8 | 20 |
-| notebooks (code cells) | 147 | 131 | 0 | 7 | 9 |
+| package `mfs/` | 1780 | 1103 | 383 | 55 | 239 |
+| figure scripts `figures/` | 848 | 604 | 97 | 38 | 109 |
+| tests | 84 | 52 | 5 | 8 | 19 |
+| notebooks (code cells) | 150 | 134 | 0 | 7 | 9 |
 
 The plotting that sat inside your notebooks is now in `figures/`, so the
 package itself holds only computation.
 
-## Where the 1170 lines of package code go
+Lines of code in each module:
 
-1. **The method, as the paper describes it: about 640 lines.** The thesis
-   method code was 579 lines, so this is about the same size, for a harder
-   problem: exterior scattering, the edge lines and tails, the tip tail, and
-   the symmetry.
+| module | what it does | code |
+|---|---|---|
+| `core` | kernels, plane wave, symmetry helpers, QR and semi-normal equations, cross-sections | 108 |
+| `mie` | the Mie series | 34 |
+| `sphere` | the sphere | 11 |
+| `torus` | the torus, mode by mode | 69 |
+| `cube` | layout, tails, symmetry classes, solve | 186 |
+| `lines` | the fast line quadrature of the cube (speed only) | 182 |
+| `almond` | geometry, source rows and tip tail, compiled kernel, radar cross-section | 187 |
+| `cone` | the exponents of Appendix A | 103 |
+| `bem` | the Bempp side of the comparison, with the same symmetries | 221 |
 
-   | | lines |
-   |---|---|
-   | kernels and helpers | 62 |
-   | Mie series | 34 |
-   | sphere | 11 |
-   | torus | 69 |
-   | cube: layout, tails, symmetry classes, solve | 194 |
-   | almond: geometry, source rows, tip tail, boundary points, RCS | 165 |
-   | cone exponents (Appendix A) | 103 |
-
-   The symmetry is not optional. Without it the cube at J = 10 would need
-   a dense matrix of about 176 GB, and the finest torus runs one of about
-   85 GB.
-
-2. **Speed: about 270 lines.** These make the cube 25 times faster with
-   identical fields (notes item 41).
-
-   | | lines |
-   |---|---|
-   | the fast line quadrature, `lines.py` | 191 |
-   | the compiled kernel of the almond | 43 |
-   | QR without forming Q, and the semi-normal equations | 42 |
-
-   Section 7 compares wall times with Bempp, and these timings depend on
-   this code. Without it the MFS would be slower than Bempp on the cube
-   at every accuracy.
-
-3. **The Bempp comparison: 261 lines** (`bem.py`). This is the boundary
-   element side, with the same symmetries as the MFS. It is not part of the
-   method.
-
-## Options
+## The options as I first wrote them
 
 **A. Keep it as it is.** 1872 lines.
 
-**B. Same results, same speed: about 150 lines fewer (to about 1700).**
+**B. Same results, same speed: about 150 lines fewer.** (Done: 92 fewer.)
 
-- Shorten the module docstrings to two or three lines with a pointer to the
-  paper section (about -60). They now repeat the paper.
-- Merge the two symmetric Bempp solvers (mirrors and rotation) into one
-  (about -40).
-- Use one symmetry helper for the cube, the almond and Bempp (about -15).
-- Smaller merges elsewhere (about -30).
+**C. Simpler but slower: about 450 lines fewer (to about 1400).** Replace
+the fast line quadrature with plain NumPy Gauss panels, the compiled almond
+kernel with NumPy, and QR and the semi-normal equations with
+`scipy.linalg.lstsq`. The results stay the same, but the cube becomes 5 to
+25 times slower and the almond 2 to 5 times. The repository would then no
+longer reproduce the timings of Section 7, and the cube comparison would
+read worse for the MFS than the paper says. Not recommended.
 
-The tests would show that nothing changes.
+**D. Move `bem.py` into `figures/`.** Not recommended (see above).
 
-**C. Simpler but slower: about 450 lines fewer (to about 1400).**
-
-- Do everything in B.
-- Replace the fast line quadrature with plain NumPy Gauss panels.
-- Replace the compiled almond kernel with NumPy.
-- Replace QR and the semi-normal equations with `scipy.linalg.lstsq`.
-
-The results stay the same, but the cube becomes 5 to 25 times slower and
-the almond 2 to 5 times. The repository would then no longer reproduce the
-timings of Section 7, and the cube comparison would read worse for the MFS
-than the paper says.
-
-**D. Move `bem.py` into `figures/`.** This adds or removes no lines, but
-the package would then hold only the method (about 1600 lines, or about 1450
-with B). A reader would see that the comparison code is separate.
-
-## My recommendation
-
-B and D. Going below about 1400 lines would mean losing either the speed the
+Going below about 1400 lines would mean losing either the speed that the
 paper's comparison rests on or the symmetry that makes the large runs fit in
-memory. The method itself is already about the size of your thesis's method
-code.
+memory. Without the symmetry the cube at J = 10 would need a dense matrix of
+about 176 GB. The method itself is already about the size of your thesis's
+method code.

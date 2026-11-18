@@ -4,7 +4,7 @@ electric and magnetic dipoles, points on a sphere, tangent bases, the
 least-squares solver and the far field.
 """
 import numpy as np
-from scipy.linalg import blas, lapack, lstsq, solve_triangular
+from scipy.linalg import blas, lapack, solve_triangular
 
 
 def plane_wave(x, k, d, p):
@@ -108,32 +108,49 @@ def rel(a, b):
     return float(np.linalg.norm(a - b) / np.linalg.norm(b))
 
 
+# Symmetry: a wave splits into parts of definite parity under a group of reflections
+
+def sign(cls, R):
+    """Sign of the parity class cls (one sign per axis) under the reflection R (a vector of signs)"""
+    return float(np.prod([s for s, r in zip(cls, R) if r < 0]))
+
+
+def class_part(x, k, d, p, refl, cls):
+    """
+    (1/|G|) Σ_R sign(cls, R) R E(R x): the part of the wave E = p e^{ik d·x} with the parities cls
+      refl: the reflections of the group G, shape (|G|, 3)
+      d, p: shape (3,) for one wave, or (W, 3) for W waves
+      Returns an array of shape (M, 3), or (M, W, 3)
+    """
+    E = sum(sign(cls, R) * np.atleast_2d(p)[None] * R * np.exp(1j * k * ((x * R) @ np.atleast_2d(d).T))[:, :, None]
+            for R in refl) / len(refl)
+    return E[:, 0] if np.ndim(d) == 1 else E
+
+
+def classes_of(k, d, p, refl):
+    """The parity classes that the wave (d, p) excites; a class is labelled by its signs, like the reflections"""
+    x = np.random.default_rng(0).uniform(-0.5, 0.5, (40, 3))
+    return [tuple(R) for R in refl if np.abs(class_part(x, k, d, p, refl, tuple(R))).max() > 1e-12]
+
+
 # Least squares
 
 class QR:
-    """
-    Householder QR of A with implicit column scaling, kept in the factored form
-    of LAPACK so that each right-hand side costs one application of Q^H
-    """
+    """Householder QR of A with its columns scaled to unit norm, without forming Q (LAPACK geqrf and unmqr)"""
     def __init__(self, A):
-        A = np.array(A, dtype=complex, order="F")    # a copy that LAPACK may overwrite
+        A = np.array(A, dtype=complex, order="F")       # a copy that LAPACK may overwrite
         self.scale = np.linalg.norm(A, axis=0)
         A /= self.scale
         self.n = A.shape[1]
         lwork = int(lapack.zgeqrf_lwork(*A.shape)[0].real)
         self.qr, self.tau, _, _ = lapack.zgeqrf(A, lwork=lwork, overwrite_a=True)
-        self.R = np.triu(self.qr[:self.n])
-        self.dR = np.abs(np.diag(self.R))
 
-    def solve(self, b, residual=False, cond=1e-12):
+    def solve(self, b, residual=False):
         """Minimiser of |A c - b| (and the norm of the residual, if asked for)"""
         B = np.array(b.reshape(len(b), -1), dtype=complex, order="F")
         lwork = int(lapack.zunmqr("L", "C", self.qr, self.tau, B, -1)[1][0].real)
-        y = lapack.zunmqr("L", "C", self.qr, self.tau, B, lwork, overwrite_c=True)[0].reshape(b.shape)
-        if self.dR.min() > cond * self.dR.max():
-            c = solve_triangular(self.R, y[:self.n])
-        else:                                          # numerically rank deficient: rank-revealing solve
-            c = lstsq(self.R, y[:self.n], lapack_driver="gelsy", cond=cond)[0]
+        y = lapack.zunmqr("L", "C", self.qr, self.tau, B, lwork, overwrite_c=True)[0].reshape(b.shape)   # Q^H b
+        c = solve_triangular(self.qr[:self.n], y[:self.n])                                               # R c = Q^H b
         c = c / (self.scale if c.ndim == 1 else self.scale[:, None])
         return (c, np.linalg.norm(y[self.n:], axis=0)) if residual else c
 

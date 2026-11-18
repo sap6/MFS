@@ -13,7 +13,7 @@ parity classes, each solved on a quarter of the body.
 import numpy as np
 from numba import njit, prange
 
-from .core import cross_sections, factor, sphere_rule, tangent_basis
+from .core import class_part, cross_sections, factor, sphere_rule, tangent_basis
 
 L = 0.2524                                                  # length [m]
 T0, T1 = -0.416667, 0.58333                                 # rear end and tip, in units of L
@@ -117,20 +117,26 @@ def row_etas(n_mid, n_F):
     return list(mid) + [ETA_F - 2 * GAP * 0.5 ** j for j in range(n_F + 1)]
 
 
-def source_rows(n_mid, n_F, s=0.7, tip_cut=0.004, hmax=np.inf):
+def source_rows(n_mid, n_F, s=0.7, tip_cut=0.004, hmax=np.inf, tip_end=4e-7):
     """
-    Source points of the layout n_mid:n_F, in the quarter y >= 0 of the mid-plane
+    Source points of the layout n_mid:n_F in the quarter y >= 0 of the mid-plane, and the tail at the tip
       s: spacing along a row, as a fraction of the distance to the surface
-      Rows follow the outline in the front half and confocal ellipses in the rear half,
-      and stop tip_cut · L before the tip
+      Rows follow the outline in the front half and confocal ellipses in the rear half. The free
+      points stop tip_cut · L before the tip; the tail continues each row to tip_end · L from it
+      Returns the points (N, 3), and the tail: points (N_t, 3), row index (N_t,) and the distance
+      to the tip relative to the cut (N_t,)
     """
-    pts = []
-    for eta in row_etas(n_mid, n_F):
-        # Front half: y = eta a(x)
+    x0, xt = L * (T1 - tip_cut), L * T1
+    pts, tail = [], []
+    for i, eta in enumerate(row_etas(n_mid, n_F)):
+        # Front half: y = eta a(x), up to the cut, then the tail
         x = 0.5 * min(s * surf_dist(0.0, eta * semi_axes(0.0)[0]), hmax)
-        while x < L * (T1 - tip_cut):
+        while x < L * (T1 - tip_end):
             y = eta * semi_axes(x)[0]
-            pts.append((x, y))
+            if x < x0:
+                pts.append((x, y, 0.0))
+            else:
+                tail.append((x, y, 0.0, i, (xt - x) / (xt - x0)))
             x += min(s * surf_dist(x, y), hmax)
 
         # Rear half: the ellipse through the same point of the widest section, confocal with the focal ellipse
@@ -140,30 +146,10 @@ def source_rows(n_mid, n_F, s=0.7, tip_cut=0.004, hmax=np.inf):
             ds = min(s * surf_dist(x, y), hmax)
             dpsi = ds / np.sqrt((Amu * np.cos(psi)) ** 2 + (eta * B_ * np.sin(psi)) ** 2)
             if not first and y > 0.3 * ds:
-                pts.append((x, y))
+                pts.append((x, y, 0.0))
             psi, first = psi + (0.5 * dpsi if first else dpsi), False
-    pts = np.array(pts)
-    return np.column_stack((pts, np.zeros(len(pts))))
-
-
-def tip_tail(n_mid, n_F, s=0.7, tip_cut=0.004, hmax=np.inf, tip_end=4e-7):
-    """
-    Continuation of every row from its end towards the tip, by the same spacing rule
-      Returns points (N, 3), row index (N,) and the distance to the tip relative to the cut (N,)
-    """
-    x0, xt = L * (T1 - tip_cut), L * T1
-    pts, row, rr = [], [], []
-    for i, eta in enumerate(row_etas(n_mid, n_F)):
-        x = 0.5 * min(s * surf_dist(0.0, eta * semi_axes(0.0)[0]), hmax)
-        while x < x0:
-            x += min(s * surf_dist(x, eta * semi_axes(x)[0]), hmax)
-        while x < L * (T1 - tip_end):
-            y = eta * semi_axes(x)[0]
-            pts.append((x, y, 0.0))
-            row.append(i)
-            rr.append((xt - x) / (xt - x0))
-            x += s * surf_dist(x, y)
-    return np.array(pts), np.array(row), np.array(rr)
+    tail = np.array(tail)
+    return np.array(pts), (tail[:, :3], tail[:, 3].astype(int), tail[:, 4])
 
 
 def tail_matrix(x, tail, k, T, cls, n_e=2, n_m=1):
@@ -237,12 +223,6 @@ def collocation(s=0.35, hmax=0.012, tip_cut=0.002, end_cut=0.02):
     return pts, np.array(wts), nrm
 
 
-def class_part(x, k, d, p, cls):
-    """Part of the waves (d, p) (one per row of d) with the parities cls, at x: (M, waves, 3)"""
-    _, sig = parity_class(*cls)
-    return sum(s * p[None] * R * np.exp(1j * k * ((x * R) @ d.T))[:, :, None] for R, s in zip(REFL, sig)) / 4
-
-
 def solve_class(k, y, cls, d, p, tail=None, s_col=0.35, ratio=2.5):
     """
     Least-squares MFS for one parity class and any number of waves (d, p), shapes (W, 3)
@@ -262,7 +242,7 @@ def solve_class(k, y, cls, d, p, tail=None, s_col=0.35, ratio=2.5):
     if tail is not None:
         A = np.concatenate((A, tail_matrix(x, tail, k, T, cls)), axis=1)
     A *= sw
-    b = -np.einsum("mab,mwb->maw", T, class_part(x, k, d, p, cls)).reshape(-1, len(d)) * sw
+    b = -np.einsum("mab,mwb->maw", T, class_part(x, k, d, p, REFL, (1, *cls))).reshape(-1, len(d)) * sw
 
     # Solve for all waves at once
     c, res = factor(np.ascontiguousarray(A)).solve(b, residual=True)
@@ -285,7 +265,7 @@ def nose_on(k, n_mid, n_F, pts=None):
       scattering cross-sections (ext, sca), and the shape of the matrix
     """
     d, p = np.array([[-1.0, 0, 0]]), np.array([[0.0, 1, 0]])
-    y = source_rows(n_mid, n_F)
+    y, _ = source_rows(n_mid, n_F)
     c, _, shape = solve_class(k, y, (-1, 1), d, p)
     E = None if pts is None else (matrix(pts, y, k) @ c[:, 0]).reshape(-1, 3)
     ext, sca = cross_sections(lambda dirs: far(k, y, c[:, 0], dirs, (-1, 1)), k, d[0], p[0], sphere_rule(48, 96))
@@ -302,8 +282,7 @@ def rcs(freq, n_mid=6, n_F=3, step=0.5, s=0.5, s_col=0.3):
     """
     k = 2 * np.pi * freq * 1e9 / C0
     hmax = 2 * np.pi / k / 4
-    y = source_rows(n_mid, n_F, s=s, hmax=hmax)
-    tail = tip_tail(n_mid, n_F, s=s, hmax=hmax)
+    y, tail = source_rows(n_mid, n_F, s=s, hmax=hmax)
     phi = np.radians(np.arange(0.0, 180.0 + 1e-9, step))
     d = -np.column_stack((np.cos(phi), np.sin(phi), 0 * phi))
     out = {"phi_deg": np.degrees(phi)}

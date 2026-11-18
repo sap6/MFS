@@ -22,7 +22,7 @@ if "--run" in sys.argv:
     T = np.tile([[1.0, 0, 0], [0, 0, 1.0]], (len(x), 1, 1))
     out = {"rho": rho, "J": J}
     for name, tails in (("tail", True), ("notail", False)):
-        c = cube.Cube(J, tails=tails, classes=cube.classes_of(2 * np.pi, d, p))
+        c = cube.Cube(J, tails=tails, classes=core.classes_of(2 * np.pi, d, p, cube.REFL))
         coef, _, _ = c.solve(d, p)
         A = c.matrix(x, T, list(coef))
         E = sum(A[i][:, :c.unknowns[cl]] @ coef[cl] for i, cl in enumerate(coef)).reshape(-1, 2)

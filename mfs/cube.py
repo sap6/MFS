@@ -1,20 +1,14 @@
 """
-Scattering by the perfectly conducting unit cube [-1/2, 1/2]³ (Section 5 of
-the paper). By Theorem 1 the sources lie on the skeleton: the twelve bisector
-planes of the edges. The layout has
-  * edge lines: on the bisector plane of each edge, lines parallel to the edge
-    at the depths d_j = 0.2 q^j down to d_min = 0.2 · 2^{-J}, each carrying an
-    electric and a magnetic dipole density (Legendre modes in a stretched variable);
+Scattering by the perfectly conducting unit cube [-1/2, 1/2]³ (Section 5 of the paper).
+By Theorem 1 the sources lie on the skeleton, the twelve bisector planes of the edges:
+  * edge lines parallel to each edge at the depths d_j = 0.2 q^j down to d_min = 0.2 · 2^{-J},
+    each with an electric and a magnetic dipole density (Legendre modes in a stretched variable);
   * vertex points: electric and magnetic dipoles on the body diagonals at the same depths;
   * base points: an 8 × 8 grid of electric dipoles on each face of an inner cube;
-  * singular tails: nine more lines below d_min (and nine points below the
-    deepest vertex point), tied together with weights from the edge and
-    vertex exponents, so that they add one set of coefficients each.
-
-The cube is symmetric under the three mirrors x → -x, y → -y, z → -z, so a
-wave splits into eight parity classes, each solved with the sources and
-boundary points of one octant, and under the rotation about the body
-diagonal, so that only four class matrices are ever needed.
+  * singular tails: nine more lines below d_min (and nine points below the deepest vertex
+    point), tied with weights from the edge and vertex exponents.
+The three mirror planes split a wave into eight parity classes, each solved on one octant,
+and the rotation about the body diagonal means that only four class matrices are ever needed.
 """
 import itertools
 import time
@@ -22,7 +16,7 @@ import time
 import numpy as np
 
 from . import lines
-from .core import cross_sections, dyadic, factor, magnetic, sphere_rule
+from .core import class_part, classes_of, cross_sections, dyadic, factor, magnetic, sign, sphere_rule
 
 H = 0.5                                                          # half side length
 REFL = [np.array(r, float) for r in itertools.product((1, -1), repeat=3)]
@@ -31,22 +25,6 @@ ROT = np.eye(3)[[1, 2, 0]]                                       # a third of a 
 NU, TAU = 0.45417, 0.8400                                        # smallest electric and magnetic exponents of the corner
 TAIL_E = {"e": (2 / 3, 5 / 3), "m": (4 / 3, 7 / 3)}              # edge tail exponents: (along the edge, along the bisector)
 RULE = sphere_rule(40, 80)                                       # quadrature on the unit sphere, for the optical theorem
-
-
-def sign(cls, R):
-    """Sign of the class cls under the reflection R"""
-    return float(np.prod([s for s, r in zip(cls, R) if r < 0]))
-
-
-def class_part(x, k, d, p, cls):
-    """Part of the wave p e^{ik d·x} with the parities cls, at the points x (M, 3)"""
-    return sum(sign(cls, R) * (p * R)[None, :] * np.exp(1j * k * ((x * R) @ d))[:, None] for R in REFL) / 8
-
-
-def classes_of(k, d, p):
-    """The parity classes that the wave (d, p) excites"""
-    x = np.random.default_rng(0).uniform(-0.5, 0.5, (40, 3))
-    return [c for c in CLASSES if np.abs(class_part(x, k, d, p, c)).max() > 1e-12]
 
 
 def orbits(classes):
@@ -97,8 +75,7 @@ class Line:
             # Local frame (along the edge, along the bisector, normal to it) and weights r^e
             self.rot = np.zeros((3, 3))
             self.rot[0, ax] = 1.0
-            self.rot[1, self.b] = self.rot[1, self.c] = 1 / np.sqrt(2)
-            self.rot[2, self.b], self.rot[2, self.c] = 1 / np.sqrt(2), -1 / np.sqrt(2)
+            self.rot[1:, [self.b, self.c]] = np.array([[1, 1], [1, -1]]) / np.sqrt(2)
             e = np.array(TAIL_E[kind] + (2.0,))                  # the normal component is not used
             self.w = r[None, :, None] ** e[None, None, :]
             self.w[:, -1, :] /= 1 - 0.5 ** e                     # the last line carries the rest of the sheet
@@ -232,10 +209,10 @@ class Cube:
     def solve(self, d, p, only=None):
         """Coefficients of each class for the wave (d, p), the relative boundary residual, and |b|²"""
         coef, r2, b2 = {}, 0.0, 0.0
-        for c in classes_of(self.k, d, p):
+        for c in classes_of(self.k, d, p, REFL):
             if only is not None and c not in only:
                 continue
-            b = -np.einsum("mab,mb->ma", self.T, class_part(self.x, self.k, d, p, c)).reshape(-1) * np.repeat(self.rw, 2)
+            b = -np.einsum("mab,mb->ma", self.T, class_part(self.x, self.k, d, p, REFL, c)).reshape(-1) * np.repeat(self.rw, 2)
             coef[c], res = self.fac[c].solve(b, residual=True)
             r2, b2 = r2 + float(res) ** 2, b2 + np.linalg.norm(b) ** 2
         return coef, np.sqrt(r2 / b2), b2
@@ -263,7 +240,7 @@ def solve(J, d=(0, 0, -1.0), p=(0, 1.0, 0), pts=None, k=2 * np.pi, max_gb=6.0, *
     """
     d, p = np.asarray(d, float), np.asarray(p, float)
     t0 = time.time()
-    orbit = orbits(classes_of(k, d, p))
+    orbit = orbits(classes_of(k, d, p, REFL))
     todo, E, sols, info = list(orbit), 0, [], dict(unknowns=[], t_assemble=0.0, t_factor=0.0)
     while todo:
         g = len(todo)

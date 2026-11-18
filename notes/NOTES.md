@@ -1,7 +1,7 @@
 # Project notes
 
-Last updated: 2026-11-18, 10:40 UTC (symmetry in both codes on every body including the rotation of the torus; cube validated at three wavelengths; referee-style report worked through; all timings re-measured). All scripts are in
-`validation/`. Companion files: `DERIVATIONS.md` (proofs and exponent tables),
+Last updated: 2026-11-18, evening (the code for readers: package `mfs/`, figure scripts, notebooks; see "part three" below). The research scripts named in the items are in
+`validation/` at commit 9f5a721. Companion files: `DERIVATIONS.md` (proofs and exponent tables),
 `LITERATURE.md` (T6), `PAPER_OUTLINE.md` (T7). Problem throughout:
 exterior scattering of a plane wave by a perfectly conducting (PEC) body,
 tangential E_sc = -tangential E_inc on the surface, least-squares collocation.
@@ -49,6 +49,10 @@ Done (all committed):
 - [x] Independent review (fresh agent, against the thesis notebooks): applied (commit e94e370). Real bugs it found: the Colab cell used an editable install, which a running kernel cannot import (now sys.path and absolute paths); `cube.solve` kept every group's factors alive (now freed); `data/cube_cases_k1_ref.npz` was missing. Also: `figures/cone_exponents.py` for Table A.1 (reproduces it), Bempp imported after `mfs.bem` everywhere (OpenCL memory), warm-up runs before timing, shared helpers, names, README entry-point table, data README columns, CI on Python 3.10 and 3.13 with `git diff --exit-code paper/tables`.
 - [x] Smoke tests of the `--run` paths in a scratch copy: sphere, edge residual, near field, the comparison runs for sphere, torus and almond (errors identical to the stored ones; times within the usual 20-40% drift), torus sources (identical), cube comparison on a tiny case.
 - [x] Summary for the author: `notes/code_for_readers_18nov.md`.
+
+**The author (18 Nov, verbatim):** "Does it have to be 2000 lines? How much was my original? Can it be simpler? Do an analysis and let me know." -> `notes/code_size_analysis.md` (options A-D, sent). **Reply (verbatim):** "B, if it keeps the code readable. D sounds good and streamlined, but do you honestly think it's a good idea? Is it intuitive for bempp code not to be in the package?"
+- [x] B done: package 1872 -> 1780 lines (code 1170 -> 1103). Shared symmetry helpers in `core` (cube, almond, Bempp), one base class `bem.Symmetric` for the two symmetric Bempp solvers, shorter QR, SciPy's barycentric interpolation in `lines`, `almond.source_rows` returns the tip tail too. Tests (with Bempp), tables, figures, notebooks unchanged; recomputed edge residual equal to the stored one to 4e-13. The estimate had been about 150 lines: the argument lists of the docstrings were kept (thesis style).
+- [x] D not done, and the author was told why: `mfs.bem` as an optional module (`pip install "mfs[bempp]"`) is where a reader looks for the Bempp side; the tests and the figure scripts import it; its docstring and the README already say it is the comparison, not the method.
 
 Open (authors):
 - [ ] Merge into `main` without squashing (Colab links, CI badge and pip install point to `main`); push the local tag `research-scripts` (= 9f5a721)? Asked.
@@ -2627,6 +2631,7 @@ Open, in the order I would take them:
 - 18 Nov. Bempp scan at three wavelengths: 1.03e-3 in 6.2 s, 6.0e-4 in 13 s, 5.2e-4 in 35 s (smallest). MFS 4.5e-4 in 35 s, 1.9e-4 in 53 s. Crossing at 5.7e-4.
 - 18 Nov. Cube solver against Householder QR: fields equal to 9e-14 at J = 8.
 - 18 Nov. Second timing run (item 83): crossings with Bempp at 1.5e-4 (standard wave), 1.4e-4 (general wave), 3.0e-4 (two wavelengths), 5.7e-4 (three); torus MFS 7e-12 in 2 s against Bempp 5e-4 in 19 s.
+- 18 Nov. Package simplification B: 1872 -> 1780 lines; tests incl. Bempp pass (8 in 38 s), tables identical, edge residual recomputed to 4e-13 of the stored one. Kept.
 
 ## 6. Write-up session
 

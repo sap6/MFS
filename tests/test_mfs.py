@@ -54,7 +54,7 @@ def test_cube_rotation():
     d, p = core.wave(60, 25, 35)
     pts = 2.0 * core.fibonacci(50)
     E, _, info = cube.solve(2, d, p, pts=pts)
-    full = cube.Cube(2, classes=cube.classes_of(K, d, p))
+    full = cube.Cube(2, classes=core.classes_of(K, d, p, cube.REFL))
     coef, _, _ = full.solve(d, p)
     assert len(info["unknowns"]) == 4 and len(coef) == 8
     assert core.rel(E, full.field(coef, pts)) < 1e-10

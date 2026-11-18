@@ -63,8 +63,7 @@ def cube_layout(J=6, fname="fig_cube_layout"):
 
 def almond_layout(n_mid=6, n_F=3, fname="fig_almond_layout"):
     """Figure 8: the source layout of the almond, n_mid:n_F = 6:3"""
-    y = almond.source_rows(n_mid, n_F)
-    tpts, row, rr = almond.tip_tail(n_mid, n_F)
+    y, (tpts, row, rr) = almond.source_rows(n_mid, n_F)
     L = almond.L
     # Outline of the mid-plane section: the front half from semi_axes(), the rear half an ellipse
     xf = np.linspace(0, L * 0.58333, 400)

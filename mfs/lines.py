@@ -2,45 +2,27 @@
 Fields of the line sources of the cube (Section 5.1 and Appendix B of the
 paper), assembled straight into the matrices of the parity classes.
 
-A line at depth d carries a dipole density that is a polynomial in the
-stretched variable u in [-1, 1], with t(u) = H tanh(λu/2) along the edge and
-λ = ln((2H - d)/d). Each matrix entry is the integral of a dipole field
-against one Legendre mode. Most of the work is shared between targets:
-
-  * [-1, 1] is cut into a binary tree of panels with fixed nodes and, for
-    each node, weights against all modes, computed once per line. The four
-    coarsest levels use PM Gauss nodes in t and exact moments of the Lagrange
-    polynomials, so a distant target needs PM kernel values for the whole
-    line; the finer levels use NG Gauss nodes in u.
-  * a target descends the tree until a panel is no longer than its distance
-    from the target, and uses the nodes of the panels it accepts.
-  * the electric and the magnetic line at the same position share the kernel
-    values, and the nine lines of a singular tail are summed with their
-    weights before the modes are accumulated.
-  * the eight mirror images of a target are summed with the signs of each
-    parity class before anything is written.
+A line at depth d carries a dipole density that is a polynomial in the stretched
+variable u in [-1, 1], with t(u) = H tanh(λu/2) along the edge and λ = ln((2H - d)/d).
+Each matrix entry is the integral of a dipole field against one Legendre mode, and
+most of the work is shared between targets:
+  * [-1, 1] is cut into a binary tree of panels whose nodes and weights against all
+    modes are computed once per line (exact moments in t on the four coarsest levels,
+    so a distant target needs only PM kernel values for the whole line);
+  * a target descends the tree until a panel is no longer than its distance from it;
+  * the electric and magnetic line share the kernel values, the nine lines of a tail
+    are summed with their weights, and the eight mirror images of a target are summed
+    with the signs of each parity class before anything is written.
 """
 import numpy as np
 from numba import njit, prange
+from scipy.interpolate import BarycentricInterpolator
 
 LMOM = 4          # the four coarsest levels use moments (panel widths 2, 1, 1/2, 1/4 in u)
 PM, NG = 12, 8    # nodes of a moment panel and of a Gauss panel, for a line of one wavelength
 LHARD = 40        # deepest level of the descent
 
 _TREES = {}       # the tables of each line, built once by build_tree
-
-
-def _lagrange(tn, t):
-    """Values of the Lagrange polynomials on the nodes tn at the points t, shape (len(t), len(tn))"""
-    w = np.array([1.0 / np.prod(tn[j] - np.delete(tn, j)) for j in range(len(tn))])
-    diff = t[:, None] - tn[None, :]
-    exact = diff == 0.0
-    diff[exact] = 1.0
-    L = w[None, :] / diff
-    L /= L.sum(axis=1, keepdims=True)
-    rows = exact.any(axis=1)
-    L[rows] = exact[rows].astype(float)
-    return L
 
 
 def nodes(k, H):
@@ -87,7 +69,7 @@ def build_tree(lam, d, n, H, k):
                 u = (0.5 * (e[:-1] + e[1:])[:, None] + 0.5 * (e[1:] - e[:-1])[:, None] * gf).ravel()
                 w = (0.5 * (e[1:] - e[:-1])[:, None] * gwf).ravel()
                 w = w * H * 0.5 * lam / np.cosh(0.5 * lam * u) ** 2 / d
-                L = _lagrange(tn, H * np.tanh(0.5 * lam * u))                 # (fine, pm)
+                L = BarycentricInterpolator(tn, np.eye(pm))(H * np.tanh(0.5 * lam * u))   # Lagrange polynomials, (fine, pm)
                 V = leg.legvander(u, n - 1)                                   # (fine, n)
                 ts.append(tn)
                 Ws.append(L.T @ (V * w[:, None]))

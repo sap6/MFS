@@ -3,7 +3,10 @@ Figure 1: the unit sphere at k = 2π, error against the Mie series.
 Left: against √N for four source radii. Right: against the source radius for N = 400.
 
     python figures/sphere.py          # the figure, from data/sphere_convergence.json
-    python figures/sphere.py --run    # solve again (about two minutes)
+    python figures/sphere.py --run    # solve again (about five minutes)
+
+The stored runs used the SVD; the package uses QR, which gives the same errors except
+where rounding dominates (R_s <= 0.2 with N = 400), where they differ by up to a factor 2.
 """
 import json
 import sys
