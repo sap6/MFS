@@ -2003,6 +2003,11 @@ towards the MFS field.
       1.15e-3, 37 s 4.5e-4, 52 s 1.9e-4. So Bempp is faster down to about
       5e-4 and does not go below; the crossover error roughly doubles with
       each wavelength (1.2e-4, 2.5e-4, 5e-4).
+      Extrapolating the two finest Bempp fields (18432 and 28800 dofs, g =
+      1.5, 6/8; 1.00e-3 and 5.7e-4 from the reference) with orders 1.2 to
+      1.5 gives a field 2.2e-4 from the new reference; against the old
+      scaled-depth reference the same extrapolation stayed at 5e-4 to
+      8e-4. So Bempp supports the new reference to about 2e-4.
     - **Least-squares solver against QR (referee A2)**: standard wave,
       J = 8: the field of the production solver (Cholesky of the Gram
       matrix with two refinement steps, `lsq.CSNE`) and that of
