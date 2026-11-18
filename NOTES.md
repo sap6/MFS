@@ -1,6 +1,6 @@
 # Project notes
 
-Last updated: 2026-11-18 (seventh session: symmetry in both codes on every body, general wave with four matrices, old cube path deleted, all timings re-measured). All scripts are in
+Last updated: 2026-11-18, 10:40 UTC (symmetry in both codes on every body including the rotation of the torus; cube validated at three wavelengths; referee-style report worked through; all timings re-measured). All scripts are in
 `validation/`. Companion files: `DERIVATIONS.md` (proofs and exponent tables),
 `LITERATURE.md` (T6), `PAPER_OUTLINE.md` (T7). Problem throughout:
 exterior scattering of a plane wave by a perfectly conducting (PEC) body,
@@ -11,16 +11,17 @@ tangential E_sc = -tangential E_inc on the surface, least-squares collocation.
 - Everything is committed and pushed on branch `ccr-116c520c-fts35f`. No
   pull request exists. Nothing was ever pushed to `sap6/mfs-paper`; it is
   still the thesis text (commit 4f8731f).
-- The paper is `paper/main.tex` (one document, 38 preprint pages, 23 in
-  the journal layout). Its numbers are those of items 65, 68 (errors) and
-  77 (times). Section 6 lists what the paper may and may not claim.
+- The paper is `paper/main.tex` (one document, 40 preprint pages, 23 in
+  the journal layout). Its numbers are those of items 65, 68, 79 (errors)
+  and 83 (times). Section 6 lists what the paper may and may not claim.
 - The blocks below are in reverse order of time. The newest one is
   authoritative; older blocks are kept as the record and are superseded
   where they disagree with it (in particular every time and every
-  "faster / slower than Bempp" before item 77).
+  "faster / slower than Bempp" before item 83, and everything on three
+  wavelengths before item 79).
 - Before changing any number in a table: all times come from one run on
-  one machine (item 77). If one part is re-run, re-run all
-  (`validation/time_paper.sh`, two and a half hours).
+  one machine (item 83). If one part is re-run, re-run all
+  (`validation/time_paper.sh`, three hours).
 
 ### Seventh session, 2026-11-18 (READ THIS FIRST)
 
@@ -116,13 +117,12 @@ best, then drop the curve without symmetry and the caveat.
       correctly, QR cross-check at J = 10); uncited references on edges
       (tabatadze2025, eisler1989, shifman1997); citations to verify
       (kangro2012 "proves", desmedt1986 for the cube corner).
-- [ ] R7 Three wavelengths into the paper: Bempp scan (running), timing,
-      third panel of the cases figure, Section 5.5, conclusion, appendix.
-- [ ] R8 Torus with rotational symmetry in both codes into the paper:
-      cost section, appendix, caption, table (after the timing run).
-- [ ] R9 Final `time_paper.sh` (three and a half hours; Bempp's set-up
-      changed, so every time is measured again), figures, tables, text,
-      then an independent number check as in item 77.
+- [x] R7 Three wavelengths is in the paper (Section 5.5, third panel,
+      cost section, conclusion, appendix).
+- [x] R8 Torus with rotational symmetry in both codes is in the paper.
+- [x] R9 `time_paper.sh` run again (item 83), figures, tables, text.
+- [ ] R10 Independent number check and consistency read of the edited
+      text (two agents, started 10:35 UTC); apply what they find.
 
 **Still open for the authors**: the author's pass over the text; T20
 (Timo); final timing on a fixed machine; copy to `sap6/mfs-paper` (ask
@@ -2028,6 +2028,51 @@ towards the MFS field.
       three wavelengths next to a Bempp test, and two classes with the QR
       fallback in one group. One heavy job at a time, and from J = 9 at
       three wavelengths one class at a time (`max_gb=2.5`).
+
+83. **Final timings of 18 November, second run (07:28-10:27 UTC, one
+    machine, Intel Xeon 2.1 GHz, four cores; `time_paper.sh`). These
+    replace item 77.** Errors as before. `validation/crossovers.py`
+    prints every ratio and crossing quoted in the paper (log-log
+    interpolation between neighbouring runs).
+    - **Cube, standard wave**: MFS J = 4..11: 5.1, 7.5, 11.3, 17.2, 24.2,
+      37.5, 54.2, 108 s; J = 12 (reference) timed once by `cube_duel.py`.
+      One depth per octave J = 4..9: 2.3, 3.0, 4.0, 5.6, 7.8, 11.1 s.
+      Bempp envelope: 0.6 s 1.46e-3; 1.2 s 7.9e-4; 1.7 s 5.4e-4; 2.7 s
+      4.3e-4; 4.1 s 3.3e-4; 7.3 s 2.6e-4; 10.9 s 2.1e-4; 13.8 s 1.94e-4;
+      15.9 s 1.63e-4; 19.7 s 1.51e-4; 29.8 s 1.15e-4; 60.6 s 8.1e-5.
+      **Bempp faster by 9.6 at 1e-3 and 4.5 at 3.5e-4; the curves cross at
+      1.5e-4 (24 s); the MFS is 1.1 to 1.2 times faster at 1.2e-4 to
+      1.4e-4, 1.9 times at 8.2e-5, and reaches 2.1e-5 in 54 s.** One
+      depth per octave: crosses at 3.1e-4; 1.6 times faster at 2e-4, 2.8
+      at 1.4e-4.
+    - **General wave**: MFS J = 4..10: 6.7, 10.2, 16.0, 24.8, 37.8, 74.3,
+      107 s (errors 5.74e-3 ... 1.74e-5 against J = 11). Bempp: 1.5 s
+      1.07e-3; 7.6 s 3.3e-4; 19 s 2.1e-4; 32 s 1.51e-4; 39 s 1.44e-4;
+      65 s 1.08e-4. **Bempp faster by 9.9 at 1e-3; cross at 1.4e-4
+      (42 s); MFS 1.3 times faster at 1.1e-4.**
+    - **Two wavelengths**: MFS J = 4..8: 7.5, 11.0, 16.1, 23.6, 36.2 s.
+      Bempp: 2.9 s 9.2e-4; 6.7 s 5.0e-4; 13.7 s 3.5e-4; 34.6 s 2.3e-4;
+      61 s 1.94e-4. **Cross at 3.0e-4 (26 s); MFS 1.75 times faster at
+      2e-4; Bempp 5.5 times faster at 1e-3.**
+    - **Three wavelengths** (12 more modes; errors against J = 10): MFS
+      J = 4..8: 10.9, 16.3, 23.6, 35.2, 52.9 s for 8.55e-3, 3.07e-3,
+      1.15e-3, 4.49e-4, 1.89e-4. Bempp: 2.7 s 2.3e-3; 4.2 s 1.5e-3; 6.2 s
+      1.03e-3; 13.1 s 6.0e-4; 34.6 s 5.2e-4 (its smallest). **Bempp
+      faster by 3.9 at 1e-3; cross at 5.7e-4 (32 s); below 5e-4 only the
+      MFS.** The error at which the two are level doubles with each
+      wavelength: 1.5e-4, 3.0e-4, 5.7e-4.
+    - **Torus, both with rotational symmetry, same work timed**: MFS
+      1440 / 3840 / 8064 / 21120 unknowns: 0.04 / 0.2 / 0.6 / 2.0 s for
+      5.0e-3 / 1.1e-4 / 5.0e-7 / 7.3e-12. Bempp 864 ... 153600 dofs: 0.28,
+      0.34, 0.44, 0.93, 1.6, 3.8, 6.9, 19 s for 1.0e-1, 3.3e-2, 1.7e-2,
+      8.2e-3, 4.2e-3, 2.0e-3, 1.0e-3, 5.1e-4. The MFS is 16 to 94 times
+      faster at errors where both exist. Gain of Bempp from the
+      rotation: 4704 dofs 4.8 -> 0.44 s, 9600 dofs 18.4 -> 0.93 s.
+    - Sphere: MFS 1200 unknowns 0.37 s (2.0e-9), 3600 unknowns 5.1 s
+      (2.3e-14); Bempp 9750 dofs 20 s (3.7e-3). Almond: MFS 4:1, 5:2,
+      6:3: about 1.7, 2.3, 3.3 s for 4.0e-3, 2.8e-4, 5.6e-5; Bempp 2268
+      ... 27324 dofs up to 22 s for 1.0e-3; the curves cross at 4.9e-3.
+      Quasi-uniform Bempp on the cube: 1.9e-3 after 46 s.
 
 ## 3. Current best commands
 
