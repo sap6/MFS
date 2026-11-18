@@ -1,3 +1,5 @@
+> **Superseded (18 November 2026).** This outline was the starting point of the write-up. The paper is `paper/main.tex`; its state and the open points are in `NOTES.md` (top block) and `paper/status_18nov.pdf`. Kept as the record of how the paper was planned.
+
 # Paper outline and critique (task T7), 2026-11-16
 
 > **2026-11-17: a first draft now exists in `paper/`** (see `NOTES.md`,

@@ -123,10 +123,15 @@ best, then drop the curve without symmetry and the caveat.
 - [x] R9 `time_paper.sh` run again (item 83), figures, tables, text.
 - [x] R10 Independent number check and consistency read: done and
       applied (item 84).
-- [ ] R11 A two-page status sheet for the authors (what changed in
-      substance, what Timo should check), sent as a PDF.
-- [ ] R12 Highlights and `PAPER_OUTLINE.md` brought up to date or
-      marked as superseded; `explainer/` likewise.
+- [x] R11 Status sheet for the authors: `paper/status_18nov.pdf`, sent.
+- [x] R12 Highlights checked (still correct); `PAPER_OUTLINE.md` marked
+      as superseded; `explainer/index.html` is the state of 16 November
+      and is not updated (the status sheet replaces it).
+- [x] R12b Cost section: the cube comparison is a short paragraph and a
+      generated table of both ends (`make_tables.cube_ends`: time for
+      about 1e-3; the most accurate Bempp run and the first MFS level
+      below it); the summary table holds the smooth bodies and the almond
+      only. 40 preprint pages, 24 in the journal layout.
 - [ ] R13 Next weakest point: look for it after R11-R12 (candidates:
       the paper is at the upper end of the length target; the almond has
       a cost comparison at one frequency only; a fourth cube size).
