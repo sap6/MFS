@@ -7,6 +7,8 @@ differences from the finest layout, J = 12.
     python figures/cube_convergence.py --run    # solve again (about 15 minutes; Bempp: half an hour more)
 """
 import gc
+import os
+import pickle
 import sys
 import time
 
@@ -17,19 +19,33 @@ from mfs import core, cube
 
 if "--run" in sys.argv:
     # The paper's layout (two depths per octave), one depth per octave, no tails, and the usual layout (an inner cube)
+    t_start, max_s = time.time(), float(os.environ.get("MFS_MAX_SECONDS", 0))
+    ck_path = data("cube_convergence.ckpt.pkl")
+    st = pickle.load(open(ck_path, "rb")) if os.path.exists(ck_path) else {"mfs": {}, "bem": {}}
     pts = 2.0 * core.fibonacci(400)
-    cube.solve(2, pts=pts)                                                  # warm-up: compilation is not timed
-    out = {"pts": pts}
+    did, warmed = False, False
     for name, Js, kw in (("dense", range(3, 13), {}), ("tail", range(3, 10), dict(q=0.5)),
                          ("notail", (4, 6, 8), dict(tails=False)), ("plain", (4, 6, 8, 10), None)):
-        rows = []
         for J in Js:
+            if (name, J) in st["mfs"]:
+                continue
+            if did and max_s and time.time() - t_start > (20 if (kw is not None and J >= 10) else max_s):
+                pickle.dump(st, open(ck_path, "wb"))
+                sys.exit(2)
+            if not warmed:
+                cube.solve(2, pts=pts)                                      # warm-up: compilation is not timed
+                warmed = True
             gc.collect()
             E, t, info = cube.solve(None, pts=pts, n_base=J) if kw is None else cube.solve(J, pts=pts, **kw)
-            rows.append((J, t, sum(info["unknowns"]), info["rows"], info["optical"]))
-            out[f"{name}_E{J}"] = E
+            st["mfs"][name, J] = ((J, t, sum(info["unknowns"]), info["rows"], info["optical"]), E)
+            pickle.dump(st, open(ck_path, "wb"))
+            did = True
             print(name, J, f"{t:.1f} s", flush=True)
-        out[name] = np.array(rows)
+    out = {"pts": pts}
+    for name, Js in (("dense", range(3, 13)), ("tail", range(3, 10)), ("notail", (4, 6, 8)), ("plain", (4, 6, 8, 10))):
+        out[name] = np.array([st["mfs"][name, J][0] for J in Js])
+        for J in Js:
+            out[f"{name}_E{J}"] = st["mfs"][name, J][1]
     out["ref_E"], out["ref_info"] = out["dense_E12"], np.array([12, *out["dense"][-1][1:], 0.0])
     np.savez(data("cube_convergence.npz"), **out)
 
@@ -37,16 +53,27 @@ if "--run" in sys.argv:
     from mfs import bem                         # before bempp: it lets the OpenCL driver see all of the memory
     bempp = bem.bempp
     bempp.GLOBAL_PARAMETERS.quadrature.regular, bempp.GLOBAL_PARAMETERS.quadrature.singular = 4, 6
-    rows, _ = [], bem.efie(bempp.shapes.cube(length=1, origin=(-0.5, -0.5, -0.5), h=0.4), 2 * np.pi, *core.wave(), pts)
+    warmed_b = False
     for h in (0.3, 0.1, 0.07, 0.05, 0.04):
+        if h in st["bem"]:
+            continue
+        if did and max_s and time.time() - t_start > (20 if h <= 0.04 else max_s):
+            pickle.dump(st, open(ck_path, "wb"))
+            sys.exit(2)
+        if not warmed_b:
+            bem.efie(bempp.shapes.cube(length=1, origin=(-0.5, -0.5, -0.5), h=0.4), 2 * np.pi, *core.wave(), pts)
+            warmed_b = True
         gc.collect()
         t0 = time.time()
         E, N = bem.efie(bempp.shapes.cube(length=1, origin=(-0.5, -0.5, -0.5), h=h), 2 * np.pi, *core.wave(), pts)
         t = time.time() - t0
-        rows.append((N, t, E, h))
+        st["bem"][h] = (N, t, E, h)
+        pickle.dump(st, open(ck_path, "wb"))
+        did = True
         print("bempp uniform", h, N, f"{t:.1f} s", flush=True)
-    ndof, t, E, h = zip(*rows)
+    ndof, t, E, h = zip(*(st["bem"][h] for h in (0.3, 0.1, 0.07, 0.05, 0.04)))
     np.savez(data("cube_bempp_uniform.npz"), ndof=ndof, t=t, E=E, h=h)
+    os.remove(ck_path)
 
 # Errors against the reference, as a function of the unknowns of the whole cube
 res = np.load(data("cube_convergence.npz"))

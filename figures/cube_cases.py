@@ -14,6 +14,8 @@ For a fair comparison both codes run on the same machine with nothing else,
 each run twice, alternately, and each keeps its smallest time.
 """
 import gc
+import os
+import pickle
 import sys
 import time
 
@@ -61,34 +63,64 @@ if "--scan" in sys.argv or "--run" in sys.argv:
         np.savez(data(f"cube_scan_{case}.npz"), rows=np.array(rows))
     else:
         # The reference, then the MFS levels and the Bempp runs near the lower envelope of the scan, alternately
-        cube.solve(2, d, p, pts, k)                                         # warm-up: compilation is not timed
-        gc.collect()
-        E, t, info = cube.solve(J_REF[case], d, p, pts, k, **layout(J_REF[case]))
-        print(f"{case} ref J={J_REF[case]}: {t:.1f} s, opt={info['optical']:.1e}", flush=True)
-        info = [J_REF[case], t, max(info["unknowns"]), info["rows"], info["optical"], info["ext"]]
-        np.savez(data(f"cube_cases_{case}_ref.npz"), E=E, pts=pts, info=info)
-        rows = [tuple(r) for r in np.load(data(f"cube_scan_{case}.npz"))["rows"]]
-        bempp_run(case, 1.0, 4, 6, 4, E)
-        cand = [r for r in rows if not any(q[5] <= 0.5 * r[5] and q[6] <= r[6] for q in rows)]
+        t_start, max_s = time.time(), float(os.environ.get("MFS_MAX_SECONDS", 0))
+        ck_path = data(f"cube_cases_{case}.ckpt.pkl")
         runs = [(2, J) for J in LEVELS[case]] + [(1, J) for J in LEVELS_ONE]   # (depths per octave, level)
-        t_mfs, t_bem, res = {r: [] for r in runs}, {r[:4]: [] for r in cand}, {}
+        rows = [tuple(r) for r in np.load(data(f"cube_scan_{case}.npz"))["rows"]]
+        cand = [r for r in rows if not any(q[5] <= 0.5 * r[5] and q[6] <= r[6] for q in rows)]
+        st = pickle.load(open(ck_path, "rb")) if os.path.exists(ck_path) else {
+            "E": None, "t_mfs": {r: [] for r in runs}, "t_bem": {r[:4]: [] for r in cand}, "res": {}}
+        did, warm_m, warm_b = False, False, False
+        if st["E"] is None:
+            cube.solve(2, d, p, pts, k)                                     # warm-up: compilation is not timed
+            warm_m = True
+            gc.collect()
+            E, t, info = cube.solve(J_REF[case], d, p, pts, k, **layout(J_REF[case]))
+            print(f"{case} ref J={J_REF[case]}: {t:.1f} s, opt={info['optical']:.1e}", flush=True)
+            info = [J_REF[case], t, max(info["unknowns"]), info["rows"], info["optical"], info["ext"]]
+            np.savez(data(f"cube_cases_{case}_ref.npz"), E=E, pts=pts, info=info)
+            st["E"] = E
+            pickle.dump(st, open(ck_path, "wb"))
+            did = True
+        E, t_mfs, t_bem, res = st["E"], st["t_mfs"], st["t_bem"], st["res"]
         for rep in range(2):
             for nd, J in runs:
+                if len(t_mfs[nd, J]) > rep:
+                    continue
+                if did and max_s and time.time() - t_start > (20 if (nd == 2 and J >= 9) else max_s):
+                    pickle.dump(st, open(ck_path, "wb"))
+                    sys.exit(2)
+                if not warm_m:
+                    cube.solve(2, d, p, pts, k)
+                    warm_m = True
                 gc.collect()
                 EJ, t, info = cube.solve(J, d, p, pts, k, q=2 ** -0.5 if nd == 2 else 0.5, **layout(J))
                 t_mfs[nd, J].append(t)
                 res[nd, J] = (max(info["unknowns"]), sum(info["unknowns"]), info["rows"], rel(EJ, E), info["optical"])
+                pickle.dump(st, open(ck_path, "wb"))
+                did = True
                 print(f"{case} pass {rep + 1} MFS ({nd}, {J}): {t:.2f} s, err={res[nd, J][3]:.2e}", flush=True)
             for r in cand:
+                if len(t_bem[r[:4]]) > rep:
+                    continue
+                if did and max_s and time.time() - t_start > (20 if r[3] >= 48 else max_s):
+                    pickle.dump(st, open(ck_path, "wb"))
+                    sys.exit(2)
+                if not warm_b:
+                    bempp_run(case, 1.0, 4, 6, 4, E)
+                    warm_b = True
                 b = bempp_run(case, *r[:4], E)
                 t_bem[r[:4]].append(b[5])
                 res[r[:4]] = b
+                pickle.dump(st, open(ck_path, "wb"))
+                did = True
                 print(f"{case} pass {rep + 1} Bempp {r[:4]}: {b[5]:.2f} s, err={b[6]:.2e}", flush=True)
         mfs = np.array([(nd, J, *res[nd, J][:3], min(t_mfs[nd, J]), *res[nd, J][3:]) for nd, J in runs])
         bem = np.array([(*res[key][:5], min(t_bem[key]), res[key][6]) for key in t_bem])
         best = envelope([(r[5], r[6]) for r in bem])                     # (time, error) of the lower envelope
         env = np.array([r for r in bem if (r[5], r[6]) in set(map(tuple, best))])
         np.savez(data(f"cube_cases_{case}.npz"), mfs=mfs, bem=bem, env=env[np.argsort(env[:, 5])])
+        os.remove(ck_path)
 
 # The figure: three panels (the standard wave is panel (d) of Figure 10)
 plt.rcParams["font.size"] = 8.5
