@@ -1,5 +1,5 @@
 """
-Figure 10 and Table 4: error of the scattered field against wall time on four
+Figure 10 and Table 4: error of the scattered field against wall time on two
 cores, for the MFS and for Bempp: (a) the unit sphere, against the Mie series;
 (b) the torus and (c) the almond, against the finest MFS run; (d) the cube
 (data of cube_convergence.py and cube_cases.py k1). Both codes use the same
@@ -11,6 +11,7 @@ on the almond, and the mirrors and the rotation on the cube.
 
 Run alone on the machine: times include assembly, solution and the field at the test points.
 """
+import gc
 import sys
 import time
 
@@ -24,6 +25,7 @@ K = 2 * np.pi
 
 
 def timed(f, *args):
+    gc.collect()
     t0 = time.time()
     out = f(*args)
     return out, time.time() - t0
@@ -121,7 +123,7 @@ for ax in axs.ravel():
     ax.legend(frameon=False, fontsize=6.8, loc="upper right" if ax is axs[1, 0] else "lower left", handlelength=2.6)
     ax.xaxis.set_minor_formatter(matplotlib.ticker.NullFormatter())
 for ax in axs[1]:
-    ax.set_xlabel("wall time [s]  (4 cores)")
+    ax.set_xlabel("wall time [s]  (2 cores)")
 for ax in axs[:, 0]:
     ax.set_ylabel("relative error of the scattered field")
 finish(fig, axs, "fig_cost_all")

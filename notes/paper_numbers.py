@@ -1,8 +1,10 @@
 """Every number of Sections 5 and 7 that depends on the cube runs, computed from data/ (python notes/paper_numbers.py)"""
+import os
+
 import numpy as np
 from scipy.optimize import brentq
 
-D = "/home/user/MFS/data/"
+D = os.path.join(os.path.dirname(__file__), "..", "data", "")
 rel = lambda a, b: float(np.linalg.norm(a - b) / np.linalg.norm(b))
 
 

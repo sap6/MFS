@@ -2657,6 +2657,12 @@ Open, in the order I would take them:
 - 18 Nov. Speed against simplicity: CSNE buys 1.4-1.9x on the cube (QR) and 1.5-2.6x (lstsq); the moment panels 1.6x at J = 8; both together 2.1-2.4x; without them the MFS is no longer faster than Bempp on the general wave at any common accuracy. Kept.
 - 18 Nov. Faster MFS, fairly: one depth per octave J = 6..9 (standard wave) 3.7, 5.3, 7.2, 10.1 s for 9.4e-4, 4.1e-4, 2.1e-4, 1.35e-4 (Bempp's best 1.2, ~3, 10.9, 19.9 s); general wave J = 5..9 3.9, 5.4, 8.2, 11.7, 16.7 s for 2.8e-3 .. 1.9e-4; (6, 0.15) grid: two depths J = 4..8 same errors, 1.3-1.45x faster; one depth 1.2-1.4x. Envelope of both layouts: crossover 3.2e-4 (standard), ~3e-4 (general).
 - 19 Nov. Grading as the paper states + no duplicate images + both layouts: crossovers 4.1e-4 / 5.1e-4 / 7.3e-4 / 1.6e-3 (standard, general, two, three wavelengths) against 1.5e-4 / 1.4e-4 / 3.0e-4 / 5e-4. Adopted; data re-run.
+- 19 Nov. Torus MFS skipping unexcited Fourier modes (matching Bempp's Cyclic): 44x160 solve 2.20 s -> 1.12 s, field equal to 8.8e-15. Kept.
+- 19 Nov. `core.field` evaluated by 2D BLAS instead of the 4-tensor G: sphere (1200 dipoles) 0.140 s -> 0.051 s (rel 2.5e-14), torus (56x240) 3.01 s -> 0.42 s (rel 4.1e-15). Kept.
+- 19 Nov. Unrolled SIMD panel kernel + even/odd mode permutation in `lines.py`: Cube(6) assembly 5.20 s -> 4.95 s (5% on total solve, +130 lines, +2 GB JIT). Rejected.
+- 19 Nov. Stride-2 mode skipping in `_tree_kernel`: breaks unit-stride vectorisation (J = 8 standard 31.85 s -> 31.44 s, general 67.1 s -> 69.2 s). Rejected.
+- 19 Nov. One CSNE refinement step instead of two: J = 8 coefficients 1.8e-10 vs 3.6e-11 from QR, saves < 1% time. Rejected.
+- 19 Nov. Zero-copy slice views in `Cube.__init__`, `zgeqrf` without R copy in `QR`, and 1 GB OpenCL row chunks in `bem.py` (diff 2.2e-19): 41472-dof Bempp and J = 12 MFS run cleanly in 8 GB RAM. Kept.
 
 ## 6. Write-up session
 

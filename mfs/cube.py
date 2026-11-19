@@ -11,6 +11,7 @@ The three mirror planes split a wave into eight parity classes, each solved on o
 and the rotation about the body diagonal means that only four class matrices are ever needed.
 """
 import itertools
+import os
 import time
 
 import numpy as np
@@ -170,7 +171,7 @@ class Cube:
         t0 = time.time()
         A = self.matrix(self.x, self.T * self.rw[:, None, None], self.classes)
         self.t_assemble, t0 = time.time() - t0, time.time()
-        self.fac = {c: factor(np.ascontiguousarray(A[i][:, :self.unknowns[c]])) for i, c in enumerate(self.classes)}
+        self.fac = {c: factor(A[i, :, :self.unknowns[c]]) for i, c in enumerate(self.classes)}
         self.t_factor = time.time() - t0
 
     def matrix(self, x, T, classes):
@@ -230,14 +231,17 @@ class Cube:
         return self.field(coef, rfar * dirs) * rfar * np.exp(-1j * self.k * rfar)
 
 
-def solve(J, d=(0, 0, -1.0), p=(0, 1.0, 0), pts=None, k=2 * np.pi, max_gb=6.0, **layout):
+def solve(J, d=(0, 0, -1.0), p=(0, 1.0, 0), pts=None, k=2 * np.pi, max_gb=None, **layout):
     """
     One plane wave at level J, using the mirror planes and the rotation about the body diagonal
       pts: points where the scattered field is wanted
-      max_gb: if the class matrices would exceed this, they are built in groups
+      max_gb: if the class matrices would exceed this, they are built in groups (default: half of RAM)
       Returns the field at pts, the wall time, and a dictionary of checks
       (unknowns, boundary residual, extinction cross-section, optical-theorem mismatch)
     """
+    if max_gb is None:
+        ram = os.sysconf("SC_PHYS_PAGES") * os.sysconf("SC_PAGE_SIZE") / 2 ** 30 if hasattr(os, "sysconf") else 12.0
+        max_gb = min(6.0, (0.32 if (k > 5 * np.pi and (J or 0) >= 9) else 0.55) * ram)
     d, p = np.asarray(d, float), np.asarray(p, float)
     t0 = time.time()
     orbit = orbits(classes_of(k, d, p, REFL))

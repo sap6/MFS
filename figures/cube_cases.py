@@ -13,6 +13,7 @@ of each case.
 For a fair comparison both codes run on the same machine with nothing else,
 each run twice, alternately, and each keeps its smallest time.
 """
+import gc
 import sys
 import time
 
@@ -34,7 +35,7 @@ def setup(case):
     """Wavenumber, wave, test points, and the layout keywords of a level"""
     S, angles = CASES[case]
     d, p = core.wave(*angles) if angles else core.wave()
-    layout = lambda J: dict(extra_modes=EXTRA[S], max_gb=2.5 if (S == 3 and J >= 9) else (8.5 if case == "k1o" else 6.0))
+    layout = lambda J: dict(extra_modes=EXTRA[S])
     return 2 * np.pi * S, d, p, 2.0 * core.fibonacci(400), layout
 
 
@@ -44,6 +45,7 @@ def bempp_run(case, g, reg, sing, n, ref):
     bempp = bem.bempp
     k, d, p, pts, _ = setup(case)
     bempp.GLOBAL_PARAMETERS.quadrature.regular, bempp.GLOBAL_PARAMETERS.quadrature.singular = int(reg), int(sing)
+    gc.collect()
     t0 = time.time()
     E, N = bem.cube(int(n), g, k, d, p, pts)
     return (g, reg, sing, n, N, time.time() - t0, rel(E, ref))
@@ -60,7 +62,9 @@ if "--scan" in sys.argv or "--run" in sys.argv:
     else:
         # The reference, then the MFS levels and the Bempp runs near the lower envelope of the scan, alternately
         cube.solve(2, d, p, pts, k)                                         # warm-up: compilation is not timed
+        gc.collect()
         E, t, info = cube.solve(J_REF[case], d, p, pts, k, **layout(J_REF[case]))
+        print(f"{case} ref J={J_REF[case]}: {t:.1f} s, opt={info['optical']:.1e}", flush=True)
         info = [J_REF[case], t, max(info["unknowns"]), info["rows"], info["optical"], info["ext"]]
         np.savez(data(f"cube_cases_{case}_ref.npz"), E=E, pts=pts, info=info)
         rows = [tuple(r) for r in np.load(data(f"cube_scan_{case}.npz"))["rows"]]
@@ -70,13 +74,16 @@ if "--scan" in sys.argv or "--run" in sys.argv:
         t_mfs, t_bem, res = {r: [] for r in runs}, {r[:4]: [] for r in cand}, {}
         for rep in range(2):
             for nd, J in runs:
+                gc.collect()
                 EJ, t, info = cube.solve(J, d, p, pts, k, q=2 ** -0.5 if nd == 2 else 0.5, **layout(J))
                 t_mfs[nd, J].append(t)
                 res[nd, J] = (max(info["unknowns"]), sum(info["unknowns"]), info["rows"], rel(EJ, E), info["optical"])
+                print(f"{case} pass {rep + 1} MFS ({nd}, {J}): {t:.2f} s, err={res[nd, J][3]:.2e}", flush=True)
             for r in cand:
                 b = bempp_run(case, *r[:4], E)
                 t_bem[r[:4]].append(b[5])
                 res[r[:4]] = b
+                print(f"{case} pass {rep + 1} Bempp {r[:4]}: {b[5]:.2f} s, err={b[6]:.2e}", flush=True)
         mfs = np.array([(nd, J, *res[nd, J][:3], min(t_mfs[nd, J]), *res[nd, J][3:]) for nd, J in runs])
         bem = np.array([(*res[key][:5], min(t_bem[key]), res[key][6]) for key in t_bem])
         best = envelope([(r[5], r[6]) for r in bem])                     # (time, error) of the lower envelope

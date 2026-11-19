@@ -6,6 +6,7 @@ differences from the finest layout, J = 12.
     python figures/cube_convergence.py          # the figure, from data/
     python figures/cube_convergence.py --run    # solve again (about 15 minutes; Bempp: half an hour more)
 """
+import gc
 import sys
 import time
 
@@ -23,6 +24,7 @@ if "--run" in sys.argv:
                          ("notail", (4, 6, 8), dict(tails=False)), ("plain", (4, 6, 8, 10), None)):
         rows = []
         for J in Js:
+            gc.collect()
             E, t, info = cube.solve(None, pts=pts, n_base=J) if kw is None else cube.solve(J, pts=pts, **kw)
             rows.append((J, t, sum(info["unknowns"]), info["rows"], info["optical"]))
             out[f"{name}_E{J}"] = E
@@ -37,9 +39,12 @@ if "--run" in sys.argv:
     bempp.GLOBAL_PARAMETERS.quadrature.regular, bempp.GLOBAL_PARAMETERS.quadrature.singular = 4, 6
     rows, _ = [], bem.efie(bempp.shapes.cube(length=1, origin=(-0.5, -0.5, -0.5), h=0.4), 2 * np.pi, *core.wave(), pts)
     for h in (0.3, 0.1, 0.07, 0.05, 0.04):
+        gc.collect()
         t0 = time.time()
         E, N = bem.efie(bempp.shapes.cube(length=1, origin=(-0.5, -0.5, -0.5), h=h), 2 * np.pi, *core.wave(), pts)
-        rows.append((N, time.time() - t0, E, h))
+        t = time.time() - t0
+        rows.append((N, t, E, h))
+        print("bempp uniform", h, N, f"{t:.1f} s", flush=True)
     ndof, t, E, h = zip(*rows)
     np.savez(data("cube_bempp_uniform.npz"), ndof=ndof, t=t, E=E, h=h)
 

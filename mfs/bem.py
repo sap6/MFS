@@ -38,10 +38,39 @@ def plane_wave_trace(x, n, domain_index, result, parameters):
     result[2] = e0 * n[1] - e1 * n[0]
 
 
+def assemble_rows(div, k, rep=None, max_gb=1.0):
+    """Rows of the EFIE matrix on div (all of them, or the representatives rep), in OpenCL buffers of at most max_gb"""
+    N, l2g = div.global_dof_count, div.local2global
+    if rep is None and 16 * N * N <= max_gb * 2 ** 30:
+        curl = bempp.function_space(div.grid, "SNC", 0)
+        return np.asarray(bempp.operators.boundary.maxwell.electric_field(div, div, curl, k).weak_form().to_dense())
+    rep = np.arange(N) if rep is None else rep
+    chunks = np.array_split(rep, max(1, int(np.ceil(16.0 * len(rep) * N / (max_gb * 2 ** 30)))))
+    A = None if len(chunks) == 1 else np.empty((len(rep), N), complex, order="F" if len(rep) == N else "C")
+    pos = 0
+    for rc in chunks:
+        in_c = np.zeros(N, bool)
+        in_c[rc] = True
+        sup = np.nonzero(in_c[l2g].any(axis=1))[0].astype(np.uint32)
+        test = bempp.function_space(div.grid, "SNC", 0, support_elements=sup, include_boundary_dofs=False)
+        full_of = np.full(test.global_dof_count, -1)
+        ok = test.local_multipliers[sup] != 0                   # local functions that are not degrees of freedom have multiplier 0
+        full_of[test.local2global[sup][ok]] = l2g[sup][ok]
+        rows = np.nonzero(in_c[full_of])[0]
+        rows = rows[np.argsort(full_of[rows])]
+        block = np.asarray(bempp.operators.boundary.maxwell.electric_field(div, div, test, k).weak_form().to_dense())
+        if A is None:
+            return block[rows]
+        A[pos:pos + len(rc)] = block[rows]
+        del block
+        pos += len(rc)
+    return A
+
+
 def efie(grid, k, d, p, pts):
     """Plain EFIE solve on any mesh, no symmetry: the field at pts and the number of unknowns"""
     div, curl = bempp.function_space(grid, "RWG", 0), bempp.function_space(grid, "SNC", 0)
-    A = np.asarray(bempp.operators.boundary.maxwell.electric_field(div, div, curl, k).weak_form().to_dense())
+    A = assemble_rows(div, k)
     par = np.concatenate(([k], d, p))
     b = bempp.GridFunction(div, fun=plane_wave_trace, dual_space=curl, function_parameters=par).projections(curl)
     J = sla.solve(A, b, overwrite_a=True, check_finite=False)
@@ -70,9 +99,8 @@ def mirror_grid(pts, tris, refl):
     """
     key, verts, elems = {}, [], []
     for R in refl:
-        loc = []
-        for x in pts * R:
-            kk = tuple(np.round(x, 12) + 0.0)
+        loc, img = [], pts * R
+        for x, kk in zip(img, map(tuple, (np.round(img, 12) + 0.0).tolist())):
             if kk not in key:
                 key[kk] = len(verts)
                 verts.append(x)
@@ -80,7 +108,7 @@ def mirror_grid(pts, tris, refl):
         t = np.array(loc)[tris]
         elems.append(t if np.prod(R) > 0 else t[:, ::-1])
     verts = np.array(verts)
-    vmap = np.array([[key[tuple(np.round(x * R, 12) + 0.0)] for x in verts] for R in refl])
+    vmap = np.array([[key[kk] for kk in map(tuple, (np.round(verts * R, 12) + 0.0).tolist())] for R in refl])
     return bempp.Grid(verts.T, np.concatenate(elems).T.astype(np.uint32)), vmap, len(tris)
 
 
@@ -144,24 +172,11 @@ class Symmetric:
     def __init__(self, grid, vmap, emap, k):
         self.k = k
         self.div = div = bempp.function_space(grid, "RWG", 0)
-        self.N, l2g = div.global_dof_count, div.local2global
+        self.N = div.global_dof_count
         self.perm, self.sgn = action(div, vmap, emap)
         self.rep = np.nonzero(self.perm.min(axis=0) == np.arange(self.N))[0]   # one RWG function per orbit
-
-        # Test space: the Nédélec functions on the elements that carry the representatives, and their rows
-        in_rep = np.zeros(self.N, bool)
-        in_rep[self.rep] = True
-        support = np.nonzero(in_rep[l2g].any(axis=1))[0].astype(np.uint32)
-        self.test = bempp.function_space(grid, "SNC", 0, support_elements=support, include_boundary_dofs=False)
-        full_of = np.full(self.test.global_dof_count, -1)
-        ok = self.test.local_multipliers[support] != 0        # local functions that are not degrees of freedom have multiplier 0
-        full_of[self.test.local2global[support][ok]] = l2g[support][ok]
-        rows = np.nonzero(in_rep[full_of])[0]
-        self.rows = rows[np.argsort(full_of[rows])]
-
-        # Assemble those rows only
         t0 = time.time()
-        self.A = np.asarray(bempp.operators.boundary.maxwell.electric_field(div, div, self.test, k).weak_form().to_dense())
+        self.A = assemble_rows(div, k, self.rep)
         self.t_assemble = time.time() - t0
         self.curl = bempp.function_space(grid, "SNC", 0)        # all the test functions, for the right-hand side
 
@@ -202,7 +217,7 @@ class Mirror(Symmetric):
             B = sp.coo_matrix((coef.ravel(), (cols.ravel(), orbit)), shape=(self.N, len(self.rep)))
             keep = np.nonzero(np.abs(B.tocsc()).sum(axis=0).A1 > 1e-12)[0]
             cols, coef = np.ascontiguousarray(cols[:, keep]), np.ascontiguousarray(coef[:, keep])
-            lu = sla.lu_factor(fold(self.A, self.rows[keep], cols, coef), overwrite_a=True, check_finite=False)
+            lu = sla.lu_factor(fold(self.A, keep, cols, coef), overwrite_a=True, check_finite=False)
             self.lu[c] = (keep, cols, coef, lu)
         return self.lu[c]
 
@@ -237,10 +252,10 @@ class Cyclic(Symmetric):
         inv = (G - np.arange(G)) % G
         bq = np.fft.fft(self.sgn[inv][:, rep] * b[self.perm[inv][:, rep]], axis=0) / G
         size = np.linalg.norm(bq, axis=1)
-        J, cols = np.zeros(self.N, complex), np.ascontiguousarray(self.perm[:, rep])
+        J, rows, cols = np.zeros(self.N, complex), np.arange(len(rep)), np.ascontiguousarray(self.perm[:, rep])
         for q in np.nonzero(size > tol * size.max())[0]:
             coef = np.exp(-2j * np.pi * q * np.arange(G) / G)[:, None] * self.sgn[:, rep]
-            y = sla.solve(fold(self.A, self.rows, cols, coef), bq[q], overwrite_a=True, check_finite=False)
+            y = sla.solve(fold(self.A, rows, cols, coef), bq[q], overwrite_a=True, check_finite=False)
             np.add.at(J, cols, coef * y[None, :])
         return J
 
@@ -277,6 +292,9 @@ def cube(n, g, k, d, p, pts):
         if only:
             Q = np.linalg.matrix_power(ROT, j)
             E = E + sym.field(sym.solve(Q.T @ d, Q.T @ p, only), pts @ Q) @ Q.T
+            for c in only:
+                if j == orbit[c][-1]:
+                    sym.lu.pop(c, None)
     return E, sym.N
 
 

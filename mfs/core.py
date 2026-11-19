@@ -88,15 +88,22 @@ def tangent_basis(n):
 
 def field(pts, y, alpha, k, batch=400):
     """
-    E_N(x) = Σ_j G(x, y_j) α_j, evaluated in batches
+    E_N(x) = Σ_j G(x, y_j) α_j, evaluated in batches without forming the 4-tensor G
       pts  : (P, 3) evaluation points
       y    : (N, 3) source points
       alpha: (N, 3) coefficients
       Returns an array of shape (P, 3)
     """
     out = np.empty((len(pts), 3), complex)
+    ya = np.sum(y * alpha, axis=1)
     for i in range(0, len(pts), batch):
-        out[i:i + batch] = np.einsum("pnab,nb->pa", dyadic(pts[i:i + batch], y, k), alpha)
+        xb = pts[i:i + batch]
+        r = np.linalg.norm(xb[:, None] - y[None], axis=2)
+        kr = k * r
+        g = np.exp(1j * kr) / r
+        fI = (1 + 1j / kr - 1 / kr ** 2) * g
+        w = (1 + 3j / kr - 3 / kr ** 2) * (g / r ** 2) * (xb @ alpha.T - ya)   # f_R ((x - y_j) · α_j) / r²
+        out[i:i + batch] = fI @ alpha - xb * w.sum(axis=1)[:, None] + w @ y
     return out
 
 
@@ -139,18 +146,19 @@ def classes_of(k, d, p, refl):
 class QR:
     """Householder QR of A with its columns scaled to unit norm; Q is kept as its reflectors, not formed"""
     def __init__(self, A):
-        A = np.array(A, dtype=complex, order="F")       # a copy that LAPACK may overwrite
         self.scale = np.linalg.norm(A, axis=0)
+        A = np.array(A, dtype=complex, order="F")       # a copy that LAPACK may overwrite
         A /= self.scale
-        (self.qr, self.tau), self.R = sla.qr(A, mode="raw", overwrite_a=True, check_finite=False)
+        lwork = int(lapack.zgeqrf(A, lwork=-1)[2][0].real)
+        self.qr, self.tau, _, _ = lapack.zgeqrf(A, lwork=lwork, overwrite_a=1)
 
     def solve(self, b, residual=False):
         """Minimiser of |A c - b| (and the norm of the residual, if asked for)"""
         B = np.array(b.reshape(len(b), -1), dtype=complex, order="F")
         lwork = int(lapack.zunmqr("L", "C", self.qr, self.tau, B, -1)[1][0].real)
         y = lapack.zunmqr("L", "C", self.qr, self.tau, B, lwork, overwrite_c=True)[0].reshape(b.shape)   # Q^H b
-        n = len(self.R)
-        c = sla.solve_triangular(self.R, y[:n]) / (self.scale if y.ndim == 1 else self.scale[:, None])  # R c = Q^H b
+        n = self.qr.shape[1]
+        c = sla.solve_triangular(self.qr[:n, :n], y[:n], check_finite=False) / (self.scale if y.ndim == 1 else self.scale[:, None])
         return (c, np.linalg.norm(y[n:], axis=0)) if residual else c
 
 

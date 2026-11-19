@@ -100,10 +100,12 @@ def solve(torus, k, rhs, ns, nphi, a_s, rings=2):
     B = np.einsum("ipca,ipjab->ipcjb", T, G) * sw[:, None, None, None, None]
     b = np.einsum("ipca,ipa->ipc", T, rhs(x.reshape(-1, 3)).reshape(nc, nphi, 3)) * sw[:, None, None]
 
-    # Fourier transform over the rotation, then one least-squares problem per mode
+    # Fourier transform over the rotation, then one least-squares problem per excited mode
     Bh, bh = np.fft.fft(B, axis=1), np.fft.fft(b, axis=1)
-    ah = np.array([lstsq(Bh[:, m].reshape(2 * nc, 3 * ns), bh[:, m].reshape(-1))[0].reshape(ns, 3)
-                   for m in range(nphi)])
+    size = np.linalg.norm(bh, axis=(0, 2))
+    ah = np.zeros((nphi, ns, 3), complex)
+    for m in np.nonzero(size > 1e-12 * size.max())[0]:
+        ah[m] = lstsq(Bh[:, m].reshape(2 * nc, 3 * ns), bh[:, m].reshape(-1))[0].reshape(ns, 3)
 
     # Back to the dipoles: alpha_q = (1/nphi) Σ_m ah_m e^{2πi mq/nphi}, from cylindrical to Cartesian components
     y, ph = ring_points(rho, z, nphi)
