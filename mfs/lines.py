@@ -12,7 +12,9 @@ most of the work is shared between targets:
   * a target descends the tree until a panel is no longer than its distance from it;
   * the electric and magnetic line share the kernel values, the nine lines of a tail
     are summed with their weights, and the eight mirror images of a target are summed
-    with the signs of each parity class before anything is written.
+    with the signs of each parity class before anything is written;
+  * a line is its own mirror image across the plane through its middle, so four of the
+    eight images repeat the other four (mode n times (-1)^n) and are not computed.
 """
 import numpy as np
 from numba import njit, prange
@@ -125,6 +127,8 @@ def _tree_kernel(x, T, refl, ax, b, c, pos, rot, w, tq, W, off, tlo, thi, ltab, 
         Tm, xm, e, Wq = np.empty((nc, 3)), np.empty(3), np.empty(3), np.empty(n)
         stack_l, stack_i = np.empty(2 * LHARD + 8, np.int64), np.empty(2 * LHARD + 8, np.int64)
         for r in range(nr):
+            if refl[r, ax] < 0:                                # the line is its own mirror image across x_ax = 0, so this
+                continue                                       # image repeats image r with x_ax kept, up to the parity the class keeps
             # The image of the target and of its rows
             for j in range(3):
                 xm[j] = x[m, j] * refl[r, j]
@@ -198,9 +202,10 @@ def _tree_kernel(x, T, refl, ax, b, c, pos, rot, w, tq, W, off, tlo, thi, ltab, 
                                 for a in range(nc):
                                     vr, vi = 0.0, 0.0
                                     for r in range(nr):
-                                        vr += sgn[cl, r] * accr[r, kind, s, a, cc, kk]
-                                        vi += sgn[cl, r] * acci[r, kind, s, a, cc, kk]
-                                    A[cl, m * nc + a, col] += vr + 1j * vi
+                                        if refl[r, ax] > 0:
+                                            vr += sgn[cl, r] * accr[r, kind, s, a, cc, kk]
+                                            vi += sgn[cl, r] * acci[r, kind, s, a, cc, kk]
+                                    A[cl, m * nc + a, col] += 2.0 * (vr + 1j * vi)
 
 
 def tree_add(x, T, refl, ax, b, c, pos, lam, d, n, k, H, A, cmap, sgn, rot=None, w=None):
