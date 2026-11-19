@@ -149,11 +149,11 @@ class Cube:
             for c in CLASSES}
         self.unknowns = {c: int(kp.sum()) for c, kp in self.keep.items()}
 
-        # Boundary points in the octant: graded tensor grids, ng nodes per panel,
-        # rows weighted by sqrt(area) · (distance to the edge)^{1/2}
+        # Boundary points in the octant: graded tensor grids, ng nodes per panel, panels halving
+        # towards the edges until they are shorter than d_min; rows weighted by sqrt(area) · (distance to the edge)^{1/2}
         ng = 4 if q > 0.6 else 3
         d_min = self.depths[-1] if len(self.depths) else 0.2
-        levels = max(2, int(np.ceil(np.log(d_min / (2 * H)) / np.log(0.5))) + 1)
+        levels = max(2, int(np.ceil(np.log2(H / d_min))))
         s, w = graded_nodes(levels, ng)
         U, V = [g.ravel() for g in np.meshgrid(s[s > 0], s[s > 0], indexing="ij")]
         W = np.outer(w[s > 0], w[s > 0]).ravel()
