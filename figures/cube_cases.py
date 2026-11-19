@@ -62,14 +62,15 @@ if "--scan" in sys.argv or "--run" in sys.argv:
         rows = [bempp_run(case, g, reg, sing, n, ref) for reg, sing, ns in QUAD for g in GS for n in ns]
         np.savez(data(f"cube_scan_{case}.npz"), rows=np.array(rows))
     else:
-        # The reference, then the MFS levels and the Bempp runs near the lower envelope of the scan, alternately
+        # The reference, then the MFS levels and the best-graded Bempp run of each (quadrature, mesh), alternately
         t_start, max_s = time.time(), float(os.environ.get("MFS_MAX_SECONDS", 0))
         ck_path = data(f"cube_cases_{case}.ckpt.pkl")
         runs = [(2, J) for J in LEVELS[case]] + [(1, J) for J in LEVELS_ONE]   # (depths per octave, level)
         rows = [tuple(r) for r in np.load(data(f"cube_scan_{case}.npz"))["rows"]]
-        cand = [r for r in rows if not any(q[5] <= 0.5 * r[5] and q[6] <= r[6] for q in rows)]
-        st = pickle.load(open(ck_path, "rb")) if os.path.exists(ck_path) else {
-            "E": None, "t_mfs": {r: [] for r in runs}, "t_bem": {r[:4]: [] for r in cand}, "res": {}}
+        cand = [min((r for r in rows if r[1:4] == k), key=lambda r: r[6]) for k in dict.fromkeys(r[1:4] for r in rows)]
+        st = pickle.load(open(ck_path, "rb")) if os.path.exists(ck_path) else {"E": None, "t_mfs": {}, "t_bem": {}, "res": {}}
+        st["t_mfs"] = {r: st["t_mfs"].get(r, []) for r in runs}
+        st["t_bem"] = {r[:4]: st["t_bem"].get(r[:4], []) for r in cand}
         did, warm_m, warm_b = False, False, False
         if st["E"] is None:
             cube.solve(2, d, p, pts, k)                                     # warm-up: compilation is not timed
@@ -87,7 +88,9 @@ if "--scan" in sys.argv or "--run" in sys.argv:
             for nd, J in runs:
                 if len(t_mfs[nd, J]) > rep:
                     continue
-                if did and max_s and time.time() - t_start > (20 if (nd == 2 and J >= 9) else max_s):
+                est = 300 if (nd == 2 and J >= 11) else 280 if (nd == 2 and J >= 9 and k > 5 * np.pi) else 220 if (nd == 2 and J >= 10) else 150 if (nd == 2 and J >= 9) else 90
+                need = 1.25 * t_mfs[nd, J][0] + 10 if t_mfs[nd, J] else est
+                if did and max_s and time.time() - t_start + need > max_s:
                     pickle.dump(st, open(ck_path, "wb"))
                     sys.exit(2)
                 if not warm_m:
@@ -103,7 +106,9 @@ if "--scan" in sys.argv or "--run" in sys.argv:
             for r in cand:
                 if len(t_bem[r[:4]]) > rep:
                     continue
-                if did and max_s and time.time() - t_start > (20 if r[3] >= 48 else max_s):
+                est = 330 if (r[3] >= 48 and r[1] >= 8) else 220 if r[3] >= 48 else 180 if (r[3] >= 40 and r[1] >= 8) else 115 if r[3] >= 40 else 80 if r[3] >= 32 else 45
+                need = 1.25 * t_bem[r[:4]][0] + 10 if t_bem[r[:4]] else est
+                if did and max_s and time.time() - t_start + need > max_s:
                     pickle.dump(st, open(ck_path, "wb"))
                     sys.exit(2)
                 if not warm_b:
