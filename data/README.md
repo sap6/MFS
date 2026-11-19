@@ -2,8 +2,8 @@
 
 The results behind the figures and tables of the paper, written by the
 `--run` option of the scripts in `../figures/`. Errors are relative 2-norms of
-the scattered field at the test points; times are wall-clock seconds on four
-cores (Intel Xeon, 2.1 GHz). Some files hold extra keys or records from the
+the scattered field at the test points; times are wall-clock seconds on two
+cores (Intel Xeon Platinum 8481C, 2.2 GHz, 8 GB RAM). Some files hold extra keys or records from the
 original runs (for example the k = 4π runs in `sphere_convergence.json`); the
 scripts use only those listed here. To look inside one:
 
@@ -24,5 +24,5 @@ scripts use only those listed here. To look inside one:
 | `cost_sphere.npz` | `mfs`, `bem`: rows (unknowns, time, error against Mie) (Figure 10a, Table 4) |
 | `cost_torus.npz` | `mfs`: rows (unknowns, time, error, boundary residual, optical mismatch, coefficient norm); `bem`: (unknowns, time, error); `ref`: the finest run (unknowns, residual, optical mismatch, extinction cross-section) (Figure 10b) |
 | `cost_almond.npz` | `mfs`: rows (sources, unknowns, time, optical mismatch) and the fields `mfs_E<i>` of the layouts 3:0 to 8:5; `bem`: (unknowns, time) and the fields `bem_E<i>` (Figure 10c) |
-| `almond_rcs_<f>GHz.npz` | almond: monostatic cross-section `sigma_HH`, `sigma_VV` [m²] at 361 look angles `phi_deg` (Figure 9, Table 3) |
+| `almond_rcs_<f>GHz.npz` | almond, `f` in `3.5`, `5.125`, `7.0`, `10.25`: monostatic cross-section `sigma_HH`, `sigma_VV` [m²] at 361 look angles `phi_deg` (Figure 9, Table 3) |
 | `austin_almond/` | measurements and reference simulation of the Austin RCS Benchmark Suite, problem III-A, unmodified, with their licences |

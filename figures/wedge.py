@@ -9,7 +9,6 @@ import numpy as np
 from matplotlib.patches import Arc, FancyArrowPatch
 from style import BLUE, BODY, HERE, INK, MUTED, ORANGE, plt
 
-plt.rcParams.update({"mathtext.fontset": "cm"})
 fig, ax = plt.subplots(figsize=(3.3, 3.1))
 L = 1.0
 ax.fill([-L, 0, 0, -L], [-L, -L, 0, 0], color=BODY, lw=0)                       # the conductor: the quadrant x, y < 0
@@ -31,9 +30,9 @@ ax.text(0.19, 0.53, r"$\psi$", color=MUTED, ha="center", va="center")
 ax.text(0.80, 0.80, r"$\psi = 0$", color=MUTED, ha="left", va="bottom")
 ax.text(0.04, -0.93, r"$\phi = 0$", ha="left", va="center")
 ax.text(-0.96, 0.05, r"$\phi = 3\pi/2$", ha="left", va="bottom")
-ax.text(-0.52, -0.87, "wall of the\nskeleton,\n" + r"$\psi = \pm\pi$", color=BLUE, ha="left", va="center", fontsize=8)
-ax.text(0.45, 0.15, "exterior", color=MUTED, ha="center", va="center", fontsize=8)
-ax.text(-0.74, -0.42, "conductor", color=MUTED, ha="center", va="center", fontsize=8)
+ax.text(-0.56, -0.81, "wall of the\nskeleton,\n" + r"$\psi = \pm\pi$", color=BLUE, ha="left", va="center", fontsize=8.5)
+ax.text(0.45, 0.15, "exterior", color=MUTED, ha="center", va="center", fontsize=8.5)
+ax.text(-0.74, -0.42, "conductor", color=MUTED, ha="center", va="center", fontsize=8.5)
 # The two continuations into the conductor
 for (x0, y0), (x1, y1), rad in (((0.15, -0.32), (-0.24, -0.33), 0.3), ((-0.32, 0.15), (-0.33, -0.24), -0.3)):
     ax.add_patch(FancyArrowPatch((x0, y0), (x1, y1), connectionstyle=f"arc3,rad={rad}", arrowstyle="-|>", mutation_scale=8,

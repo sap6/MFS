@@ -4,12 +4,12 @@ Boundary residual and coefficient norm against the radius of the source torus;
 the dotted lines mark the conjectured bound a_s = R - sqrt(R² - a²).
 
     python figures/torus_sources.py          # the figure, from data/torus_sources.npz
-    python figures/torus_sources.py --run    # solve again (about five minutes)
+    python figures/torus_sources.py --run    # solve again (about a minute)
 """
 import sys
 
 import numpy as np
-from style import BLUE, GREEN, MUTED, ORANGE, data, finish, plt
+from style import BLUE, GREEN, ORANGE, data, finish, plt
 
 from mfs import core, torus
 
@@ -32,17 +32,17 @@ if "--run" in sys.argv:
 
 # The figure
 res = np.load(data("torus_sources.npz"))
-fig, axes = plt.subplots(1, 2, figsize=(9.4, 3.9))
+fig, axes = plt.subplots(1, 2, figsize=(6.5, 2.7))
 for a, (col, mk, ls) in TUBES.items():
     r = res[f"a{a:g}"]
     for ax, j in zip(axes, (1, 2)):
-        ax.semilogy(r[:, 0], r[:, j], color=col, marker=mk, ls=ls, lw=1.5, ms=5, label=f"a/R = {a:g}")
+        ax.semilogy(r[:, 0], r[:, j], color=col, marker=mk, ls=ls, lw=1.4, ms=4.5, mec="white", mew=0.6, label=rf"$a/R = {a:g}$")
         ax.axvline((1 - np.sqrt(1 - a * a)) / a, color=col, lw=0.9, ls=":")
 axes[0].set_ylabel("boundary residual")
-axes[1].set_ylabel(r"coefficient norm $\|\alpha\|$")
+axes[1].set_ylabel(r"coefficient norm $\|\boldsymbol{\alpha}\|$")
 for ax in axes:
     ax.set_xlabel(r"source torus radius $a_s/a$")
-axes[0].legend(frameon=False, fontsize=8.5)
-axes[1].set_title(r"dotted: $a_s = R-\sqrt{R^2-a^2}$ (focal ring)", fontsize=9, color=MUTED)
-axes[0].set_title("19200 unknowns, k = 2$\\pi$", fontsize=9, color=MUTED)
+axes[1].legend(frameon=False, fontsize=8, loc="upper right")
+axes[0].set_title(r"$19200$ unknowns, $k = 2\pi$", loc="left", fontsize=8.5)
+axes[1].set_title(r"dotted: $a_s = R-\sqrt{R^2-a^2}$ (focal ring)", loc="left", fontsize=8.5)
 finish(fig, axes, "fig_torus_sources")

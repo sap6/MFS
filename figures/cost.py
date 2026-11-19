@@ -53,9 +53,10 @@ if "--run" in sys.argv:
         Eref = ref.field(pts)
         rows = []
         for ns, nphi in ((6, 20), (8, 28), (12, 40), (16, 52), (20, 64), (24, 80), (28, 96), (36, 128), (44, 160)):
-            t0 = time.time()
-            sol = torus.scatter(K, d, p, ns, nphi)
-            E, t = sol.field(pts), time.time() - t0                  # the checks below are not timed
+            def _run(ns=ns, nphi=nphi):
+                sol = torus.scatter(K, d, p, ns, nphi)
+                return sol, sol.field(pts)
+            (sol, E), t = timed(_run)                                  # the checks below are not timed
             checks = (torus.residual(sol, d, p), torus.optical(sol, d, p)[1], np.linalg.norm(sol.alpha))
             rows.append((3 * ns * nphi, t, rel(E, Eref), *checks))
         bems = [(N, t, rel(E, Eref)) for n in (12, 20, 28, 40, 56, 80, 112, 160, 224)
@@ -82,19 +83,19 @@ if "--run" in sys.argv:
         np.savez(data("cost_almond.npz"), mfs=np.array(rows), bem=np.array(brows), **out)
 
 # The figure
-plt.rcParams["font.size"] = 8.5
-fig, axs = plt.subplots(2, 2, figsize=(7.4, 5.4))
+fig, axs = plt.subplots(2, 2, figsize=(6.5, 4.8))
 ax = axs[0, 0]
 res = np.load(data("cost_sphere.npz"))
 curve(ax, res["mfs"][:, 1], res["mfs"][:, 2], BLUE, "o", "-", "MFS")
 curve(ax, res["bem"][:, 1], res["bem"][:, 2], ORANGE, "D", "-.", "Bempp")
-ax.set_title("(a) sphere, two wavelengths across (against Mie)", loc="left", fontsize=8.5)
+ax.set_title(r"(a) unit sphere, $k = 2\pi$ (against Mie)", loc="left", fontsize=8.5)
 
 ax = axs[0, 1]
 res = np.load(data("cost_torus.npz"))
 curve(ax, res["mfs"][:, 1], res["mfs"][:, 2], BLUE, "o", "-", "MFS")
 curve(ax, res["bem"][:, 1], res["bem"][:, 2], ORANGE, "D", "-.", "Bempp, with symmetry")
-ax.set_title("(b) torus", loc="left", fontsize=8.5)
+ax.set_title(r"(b) torus, $R = 1$, $a = 0.5$", loc="left", fontsize=8.5)
+ax.set_xlim(right=250)
 
 ax = axs[1, 0]
 res = np.load(data("cost_almond.npz"))
@@ -102,13 +103,14 @@ ref = res[f"mfs_E{len(res['mfs']) - 1}"]
 curve(ax, res["mfs"][:-1, 2], [rel(res[f"mfs_E{i}"], ref) for i in range(len(res["mfs"]) - 1)], BLUE, "o", "-", "MFS")
 curve(ax, res["bem"][:, 1], [rel(res[f"bem_E{i}"], ref) for i in range(len(res["bem"]))], ORANGE, "D", "-.", "Bempp, with symmetry")
 ax.set_title("(c) almond, 1.19 GHz, nose-on", loc="left", fontsize=8.5)
-ax.set_xticks([2, 5, 10, 20])
+ax.set_xticks([2, 5, 10, 20, 50])
 ax.xaxis.set_major_formatter(matplotlib.ticker.FuncFormatter(lambda v, pos: f"{v:g}"))
 
 ax = axs[1, 1]
 res = np.load(data("cube_convergence.npz"))
 ref, jref = res["ref_E"], int(res["ref_info"][0])
-for key, col, mk, ls, lab in (("dense", BLUE, "o", "-", "MFS"), ("tail", NAVY, "h", (0, (6, 1.5)), "MFS, one depth per octave")):
+for key, col, mk, ls, lab in (("dense", BLUE, "o", "-", "MFS (two depths per octave)"),
+                              ("tail", NAVY, "h", (0, (6, 1.5)), "MFS, one depth per octave")):
     rows = [r for r in res[key] if r[0] >= 4 and not (key == "dense" and int(r[0]) == jref)]
     curve(ax, [r[1] for r in rows], [rel(res[f"{key}_E{int(r[0])}"], ref) for r in rows], col, mk, ls, lab)
 u = np.load(data("cube_bempp_uniform.npz"))
@@ -117,10 +119,14 @@ curve(ax, u["t"][keep], [rel(E, ref) for E in u["E"][keep]], ORANGE, "D", "-.", 
 env = np.load(data("cube_cases_k1.npz"))["env"]
 curve(ax, env[:, 5], env[:, 6], RUST, "X", (0, (3, 1)), "Bempp, graded, with symmetry")
 ax.set_title("(d) cube, side one wavelength", loc="left", fontsize=8.5)
-ax.set_ylim(8e-7, 3e-2)
+ax.set_ylim(1.5e-7, 3e-2)
 
-for ax in axs.ravel():
-    ax.legend(frameon=False, fontsize=6.8, loc="upper right" if ax is axs[1, 0] else "lower left", handlelength=2.6)
+locs = {(0, 0): ("lower left", None), (0, 1): ("center right", (1.01, 0.48)),
+        (1, 0): ("upper right", None), (1, 1): ("lower left", (0.0, -0.01))}
+for idx, ax in np.ndenumerate(axs):
+    loc, anchor = locs[idx]
+    ax.legend(frameon=False, fontsize=7.5, loc=loc, bbox_to_anchor=anchor,
+              handlelength=1.9, handletextpad=0.45, labelspacing=0.35)
     ax.xaxis.set_minor_formatter(matplotlib.ticker.NullFormatter())
 for ax in axs[1]:
     ax.set_xlabel("wall time [s]  (2 cores)")

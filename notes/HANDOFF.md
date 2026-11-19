@@ -41,103 +41,28 @@ experiment log). The essentials:
   4. The comparison uses both MFS layouts (two and one depths per octave), as
      Bempp's curve uses the best of its scan.
 
-  Measured crossovers with Bempp (the MFS is faster below):
+  Measured crossovers with Bempp on the 2-core Intel Xeon Platinum 8481C (8 GB RAM) machine (the MFS is faster below):
 
-  | case | now | before |
+  | case | best MFS layout (1 or 2 depths/octave) | two depths/octave alone |
   |---|---|---|
-  | standard wave | 4.1e-4 | 1.5e-4 |
-  | general wave | 5.1e-4 | 1.4e-4 |
-  | two wavelengths | 7.3e-4 | 3.0e-4 |
-  | three wavelengths | 1.6e-3 | 5e-4 |
+  | standard wave (`k1`) | 4.5e-4 | 1.8e-4 |
+  | general wave (`k1o`) | 3.9e-4 | 1.5e-4 |
+  | two wavelengths (`k2`) | 8.6e-4 | 4.0e-4 |
+  | three wavelengths (`k3`) | 2.2e-3 | 1.0e-3 |
 
-  Bempp's stored times were re-checked today and agree within 5%.
+## 3. Completed on 19 November 2026
 
-## 3. Unfinished: do this first
-
-**3.1 Re-run the data of Figure 7 and Table 5** (both codes, alternately,
-both MFS layouts). The script is ready. The stored rows are still the old
-two-depth runs, relabelled to the new format; the figure is unchanged until
-the re-run.
-
-    python figures/cube_cases.py --run k1     # then k1o, k2, k3: about 1 to 1.5 hours each
-    python figures/cube_cases.py && python figures/cost.py && python figures/tables.py
-
-- Run nothing else at the same time: the times are the result.
-- Background tasks in this environment are stopped after 2 hours, and the
-  container restarted once. So start the runs detached, one case at a time
-  (`setsid nohup ... &`), check on them, and commit each case when it ends.
-- Each run first writes `data/cube_cases_<case>_ref.npz` (the reference),
-  then `data/cube_cases_<case>.npz` at the end.
-- Already re-run and committed: `cube_convergence` (Figure 6, Table 2,
-  Figure 10d), `edge_residual` (Figure 5), the almond timings (Figure 10c,
-  Table 4).
-
-**3.2 Update the numbers in the text.** The tables are generated; the text is
-not. `python notes/paper_numbers.py` prints every number of Sections 5 and 7
-that depends on the cube runs, from `data/`. Change only numbers and leave the prose to the author's style.
-List every change for the author.
-
-- **Section 5.4** (known now, from `data/cube_convergence.npz`):
-  - "from 5.1e-3 at J = 4 to 2.1e-5 at J = 10" becomes 5.3e-3 and 2.0e-5;
-    the factor of 2.4 to 2.7 per level is unchanged.
-  - Equation (rootexp): 0.46 and 0.0474 become **0.48 and 0.0480** (within
-    5%).
-  - J = 11: 5.8e-6 ("6e-6" stays).
-  - One depth per octave: 56 to 68% of the unknowns, so "about 60%" stays;
-    "between a third and a half of the time" becomes **between a quarter and
-    a half**; "within 20% down to J = 7" stays.
-  - Without tails, 4.9e-2, 2.2e-2 and 9.5e-3: unchanged.
-  - Reference: J = 11 and 12 differ by 5.8e-6, and its optical mismatch is
-    8.6e-7 ("6e-6" and "9e-7" stay; the error of the reference is still
-    about 4e-6).
-- **Section 5.4, after 3.1:** "Bempp's finest mesh differs from the
-  reference by 6e-5" and the extinction cross-sections (2.92786 against
-  2.92798).
-- **Section 5.5, after 3.1:** the general-wave, two- and three-wavelength
-  errors per level, the cost ratios, and the references' own errors.
-- **Section 7, after 3.1:**
-  - the paragraph "In between, the two methods are level near 1.5e-4 ... 3e-4
-    at two and 5e-4 at three ... 24 s ... 20 s ... 30 s ... 2e-5 in less than
-    a minute";
-  - the paragraph on one depth per octave ("near 3e-4 ... 8 s ... 11 s ...
-    11 and 30 s");
-  - "At an error of about 1e-3, the boundary element method is the faster ...
-    ten times at one wavelength, six times at two and four times at three"
-    (at three wavelengths the MFS may now be faster);
-  - "its most accurate run ... the MFS reaches a smaller error in half of
-    that time or less, with J = 9 ... J = 8 at three".
-
-  The comparison should now be described as "the best MFS layout against the
-  best Bempp configuration at each accuracy".
-- **Figure 7 caption:** mention the two MFS curves (two depths per octave,
-  and one depth per octave).
-- **Conclusion:** check "confirms the field to 6e-5" and "about 4e-6" after
-  3.1.
-
-**3.3 Re-check the claims from separate runs that used the old grading**
-(Section 5.4), and change the text only if the new number differs:
-
-- one depth per octave stalls between 1.3e-4 and 1.8e-4 at J = 10 to 12;
-- at J = 9 the field changes by less than 3e-6 when the modes, the tails, the
-  base grid or the boundary grid are refined;
-- adding the next term of each edge expansion to the tail changes the error
-  by less than 5%, and lowering the bisector exponents by one makes it 4
-  times worse at J = 6 and 10 times at J = 8 (`cube.TAIL_E`);
-- at two wavelengths, J = 8 changes by 8e-6 with four more modes;
-- at three wavelengths, 8 or 16 modes in place of 12 change the field by
-  3e-4 or 2e-4, and 6e-5.
-
-**3.4 Re-run the notebooks** `notebooks/3_cube.ipynb` and `4_almond.ipynb`
-(their times changed):
-
-    jupyter nbconvert --to notebook --execute --inplace notebooks/3_cube.ipynb notebooks/4_almond.ipynb
-
-**3.5 Rebuild the paper:**
-
-    cd paper && latexmk -pdf main.tex
-
-Also build `main_3p.tex` (the journal layout), read the result and send the
-PDF to the author.
+- **3.1 Re-run of Figure 7 and Table 5 (`data/cube_cases_{k1,k1o,k2,k3}.npz`):** Done in 2 alternating passes on 2 cores (8 GB RAM), including `k3` after fixing peak-memory copies in `core.QR` / `core.CSNE` and setting `cube.solve` to assemble one class at a time when `k > 5 pi` and `J >= 8`. Tables (`paper/tables/*.tex`) and all 11 figures regenerated and visually checked.
+- **3.2 Numbers in the text (`paper/sections/*.tex`):** Updated throughout from `notes/paper_numbers.py` and verified by an independent review pass.
+- **3.3 Standalone claim re-checks with the new boundary grading:**
+  - One depth per octave at `J = 10, 11, 12`: `1.27e-4`, `1.44e-4`, `1.78e-4` (stalls between `1.3e-4` and `1.8e-4`, unchanged).
+  - Refinements at `J = 9` vs `dense_E9`: `+4` modes `9.9e-7`, `12x12` base `1.1e-7`, `14` tail steps `7.3e-7`, `+2` boundary edge levels `3.43e-6` (`+2` levels & `hmax = 0.07`: `3.43e-6`) -> updated `< 3e-6` to `< 4e-6`.
+  - Tail exponents at `J = 6, 8`: adding next edge term changes error by `-1.6%` (`J = 6`) and `-3.1%` (`J = 8`, `< 5%`); lowering bisector exponents by 1 increases error by `3.37x` at `J = 6` and `7.60x` at `J = 8` (updated in `cube.tex`); adding 2nd vertex exponent at `J = 6` changes error by `-0.15%` (`< 1%`).
+  - Two wavelengths (`k = 4 pi`), `J = 8` (`+8` vs `+4` modes): `9.5e-6` (`1e-5`).
+  - Three wavelengths (`k = 6 pi`): `+8` vs `+12` modes changes `J = 7` by `3.18e-4` (`3e-4`) and `J = 8` by `1.92e-4` (`2e-4`); `+16` vs `+12` modes changes `J = 7` by `7.36e-5` (`7e-5`).
+  - Almond at `3.5 GHz` (`s = 0.5`, 2 alternating passes): MFS `5:2` reaches `4.2e-5` in `5.7 s` (`6:3`: `8.3e-6` in `9.3 s`), while Bempp reaches `3.1e-3` in `8.4 s` and `1.1e-3` in `64 s`.
+- **3.4 Notebooks (`notebooks/1_sphere.ipynb` .. `4_almond.ipynb`):** Cell 1 updated for both Colab and local execution; all four re-executed cleanly.
+- **3.5 Manuscript & Overleaf bundle:** `paper/main.pdf` (45 pages, preprint), `main_3p.pdf` (26 pages, JCP `3p`), and `paper/mfs-paper-overleaf.zip` built with zero warnings or overfull boxes; all appendix hyperlinks fixed (`\theHsection`).
 
 ## 4. Decisions only the author can make (asked, not yet answered)
 

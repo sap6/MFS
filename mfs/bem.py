@@ -9,19 +9,19 @@ the rows of one test function per orbit are assembled: an eighth of the matrix f
 quarter for the almond, 1/G for the torus (rotation by one of G cells). The result is the
 Galerkin solution of the full mesh, to rounding.
 """
-import gc
 import itertools
 import os
 import time
 
-if "HWLOC_SYNTHETIC" not in os.environ:      # let the OpenCL CPU driver see all of the memory (before bempp is imported)
-    gb = int(0.9 * os.sysconf("SC_PHYS_PAGES") * os.sysconf("SC_PAGE_SIZE") / 2 ** 30)
-    os.environ["HWLOC_SYNTHETIC"] = f"node:1(memory={gb}GB) core:{os.cpu_count()} pu:1"
+if "HWLOC_SYNTHETIC" not in os.environ and "SC_PHYS_PAGES" in getattr(os, "sysconf_names", ()):   # let OpenCL see all memory
+    pages = os.sysconf("SC_PHYS_PAGES")
+    if pages > 0:
+        gb = max(1, int(0.9 * pages * os.sysconf("SC_PAGE_SIZE") / 2 ** 30))
+        os.environ["HWLOC_SYNTHETIC"] = f"node:1(memory={gb}GB) core:{os.cpu_count() or 1} pu:1"
 
 import bempp_cl.api as bempp
 import numpy as np
 import scipy.linalg as sla
-import scipy.sparse as sp
 from numba import njit, prange
 
 from .almond import CENTRE, L, T0, T1, semi_axes
@@ -224,9 +224,7 @@ class Mirror(Symmetric):
             coef = np.array([sign(c, R) for R in self.refl])[:, None] * self.sgn[:, self.rep]
             cols = self.perm[:, self.rep]
             # An orbit on a mirror plane cancels out of some classes
-            orbit = np.tile(np.arange(len(self.rep)), len(self.refl))
-            B = sp.coo_matrix((coef.ravel(), (cols.ravel(), orbit)), shape=(self.N, len(self.rep)))
-            keep = np.nonzero(np.abs(B.tocsc()).sum(axis=0).A1 > 1e-12)[0]
+            keep = np.nonzero(np.abs((coef * (cols == self.rep)).sum(axis=0)) > 1e-12)[0]
             cols, coef = np.ascontiguousarray(cols[:, keep]), np.ascontiguousarray(coef[:, keep])
             lu = sla.lu_factor(fold(self.A, keep, cols, coef), overwrite_a=True, check_finite=False)
             self.lu[c] = (keep, cols, coef, lu)
@@ -251,7 +249,7 @@ class Cyclic(Symmetric):
     into G systems, one for each order q about the axis; the orders that the wave does not
     excite are skipped.
     """
-    def solve(self, d, p, tol=1e-10):
+    def solve(self, d, p, tol=1e-12):
         """RWG coefficients of the current for the wave p e^{ik d·x}: one solve for each order q that it excites"""
         G, rep, b = self.G, self.rep, self.trace(d, p)
 
@@ -323,11 +321,12 @@ def torus_grid(R, a, n):
 def torus(n, k, d, p, pts, R=1.0, a=0.5):
     """Torus with the rotational symmetry of its mesh: the rotation by one cell about the axis"""
     grid, m = torus_grid(R, a, n)
-    def maps():
+    def maps():                                                 # freed in Symmetric.__init__ before assembly
         q = np.arange(m, dtype=np.int32)[:, None]
         i, j = np.divmod(np.arange(n * m, dtype=np.int32), m)
         vmap = i[None, :] * m + (j[None, :] + q) % m           # vertex (i, j) → (i, j + q)
-        return vmap, 2 * vmap[:, np.repeat(np.arange(n * m, dtype=np.int32), 2)] + np.tile(np.arange(2, dtype=np.int32), n * m)[None, :]
+        c = np.arange(n * m, dtype=np.int32)
+        return vmap, 2 * vmap[:, np.repeat(c, 2)] + np.tile(np.arange(2, dtype=np.int32), n * m)[None, :]
     sym = Cyclic(grid, *maps(), k)
     return sym.field(sym.solve(d, p), pts), sym.N
 

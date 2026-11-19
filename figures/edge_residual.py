@@ -33,12 +33,12 @@ if "--run" in sys.argv:
 
 # The figure
 res = np.load(data("edge_residual.npz"))
-fig, ax = plt.subplots(figsize=(5.2, 3.4))
+fig, ax = plt.subplots(figsize=(4.5, 3.0))
 ax.loglog(res["rho"], res["notail"], "--", color=GREEN, lw=1.6, label="edge sources, no tail")
 ax.loglog(res["rho"], res["tail"], "-", color=BLUE, lw=1.6, label="edge sources and tail")
 ax.axvline(res["dJ"], color=MUTED, lw=0.7, ls=":")
-ax.text(res["dJ"] * 1.15, ax.get_ylim()[0] * 2.5, r"$d_{\min}$", color=MUTED, fontsize=8)
-ax.set(xlabel="distance to the edge", ylabel="tangential residual  $|\\mathbf{t}\\cdot(\\mathbf{E}_N+\\mathbf{E}^{\\rm inc})|$")
-ax.legend(frameon=False, fontsize=8, loc="lower left")
+ax.text(res["dJ"] * 1.15, 1.6e-5, r"$d_{\min}$", color=MUTED, fontsize=8.5)
+ax.set(xlabel=r"distance $\rho$ to the edge", ylabel=r"tangential residual  $|\mathbf{t}\cdot(\mathbf{E}_N+\mathbf{E}^{\mathrm{inc}})|$")
+ax.legend(frameon=False, fontsize=8.5, loc="lower left")
 ax.set_title(f"Unit cube, $J = {int(res['J'])}$: residual on a face near an edge", loc="left", fontsize=9)
 finish(fig, ax, "fig_edge_residual")

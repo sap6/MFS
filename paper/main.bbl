@@ -157,7 +157,7 @@ J.~T. Kelley, D.~A. Chamulak, C.~C. Courtney, A.~E. Yilmaz, {R}ye {C}anyon
   {\path{doi:10.1109/MAP.2019.2955702}}.
 
 \bibitem{betcke2021}
-T.~Betcke, M.~W. Scroggs, Bempp-cl: A fast {P}ython based just-in-time
+T.~Betcke, M.~W. Scroggs, Bempp-cl: a fast {P}ython based just-in-time
   compiling boundary element library, J. Open Source Softw. 6~(59) (2021) 2879.
 \newblock \href {https://doi.org/10.21105/joss.02879}
   {\path{doi:10.21105/joss.02879}}.
@@ -247,13 +247,14 @@ R.~F. Millar, Singularities of two-dimensional exterior solutions of the
   {\path{doi:10.1017/S0305004100046545}}.
 
 \bibitem{khavinson2014}
-D.~Khavinson, E.~Lundberg, A tale of ellipsoids in potential theory, Notices of
-  the American Mathematical Society 61~(2) (2014) 148--156.
+D.~Khavinson, E.~Lundberg, A tale of ellipsoids in potential theory, Notices
+  Amer. Math. Soc. 61~(2) (2014) 148--156.
 \newblock \href {https://doi.org/10.1090/noti1082}
   {\path{doi:10.1090/noti1082}}.
 
 \bibitem{vanbladel1996}
-J.~Van~Bladel, Singular Electromagnetic Fields and Sources, IEEE Press, 1996.
+J.~G. Van~Bladel, Singular Electromagnetic Fields and Sources, IEEE Press,
+  1996.
 \newblock \href {https://doi.org/10.1109/9780470546420}
   {\path{doi:10.1109/9780470546420}}.
 

@@ -64,9 +64,9 @@ Each shape has one entry point:
 | Shape | Call | Returns |
 |---|---|---|
 | sphere | `sphere.solve(N, k, R)` | source points and coefficients; the field is `core.field(pts, y, alpha, k)` |
-| torus | `torus.scatter(k, d, p, n_rings, n_per_ring)` | a solution with `.field(pts)` and `.far(dirs)` |
+| torus | `torus.scatter(k, d, p, ns, nphi)` | a solution with `.field(pts)` and `.far(dirs)` |
 | cube | `cube.solve(J, d, p, pts)` | the field at `pts`, the time, and checks (unknowns, residual, optical theorem) |
-| almond | `almond.nose_on(k, n_mid, n_F, pts)`, `almond.rcs(freq_GHz)` | the field, or the radar cross-section against the azimuth |
+| almond | `almond.nose_on(k, n_mid, n_F, pts)`, `almond.rcs(freq)` | the field, or the radar cross-section against the azimuth |
 
 ## The figures and tables of the paper
 
@@ -74,19 +74,20 @@ Every figure and table has a script in [`figures/`](figures). Run on its own,
 the script draws the figure in seconds from the results in [`data/`](data).
 With `--run` it computes those results again and overwrites `data/`
 (`git checkout data` restores the paper's results); the times below are on
-four cores. The runs that involve Bempp need `pip install -e ".[bempp]"`.
+two cores (Intel Xeon Platinum 8481C at 2.2 GHz, 8 GB RAM). The runs that
+involve Bempp need `pip install -e ".[bempp]"`.
 
 | In the paper | Script | To compute again |
 |---|---|---|
 | Figure 1: the sphere | [`figures/sphere.py`](figures/sphere.py) | 2 minutes |
-| Figure 2: the source torus | [`figures/torus_sources.py`](figures/torus_sources.py) | 5 minutes |
+| Figure 2: the source torus | [`figures/torus_sources.py`](figures/torus_sources.py) | 1 minute |
 | Figures 3 and 8: source layouts | [`figures/layouts.py`](figures/layouts.py) | (a drawing) |
 | Figure 4: the wedge at an edge | [`figures/wedge.py`](figures/wedge.py) | (a sketch) |
 | Figure 5: the residual near an edge | [`figures/edge_residual.py`](figures/edge_residual.py) | 1 minute |
-| Figure 6, Table 2: convergence on the cube | [`figures/cube_convergence.py`](figures/cube_convergence.py) | 15 minutes, Bempp 30 more |
-| Figure 7, Table 5: other waves and larger cubes | [`figures/cube_cases.py`](figures/cube_cases.py) | hours (`--scan`, `--run`) |
-| Figure 9, Table 3: almond radar cross-section | [`figures/almond_rcs.py`](figures/almond_rcs.py) | 10 minutes |
-| Figure 10, Table 4: comparison with Bempp | [`figures/cost.py`](figures/cost.py) | 5 to 20 minutes per shape |
+| Figure 6, Table 2: convergence on the cube | [`figures/cube_convergence.py`](figures/cube_convergence.py) | 12 minutes, Bempp 4 more |
+| Figure 7, Table 5: other waves and larger cubes | [`figures/cube_cases.py`](figures/cube_cases.py) | 1 hour per case (`--run`; `--scan` 2 hours) |
+| Figure 9, Table 3: almond radar cross-section | [`figures/almond_rcs.py`](figures/almond_rcs.py) | 15 minutes |
+| Figure 10, Table 4: comparison with Bempp | [`figures/cost.py`](figures/cost.py) | 3 to 5 minutes per shape |
 | Figure 11: the field near the surface | [`figures/nearfield.py`](figures/nearfield.py) | a few minutes |
 | Tables 2, 4, 5, C.1 | [`figures/tables.py`](figures/tables.py) | seconds |
 | Table A.1, vertex exponents | [`figures/cone_exponents.py`](figures/cone_exponents.py) | 5 minutes |

@@ -3,7 +3,7 @@ Figure 1: the unit sphere at k = 2π, error against the Mie series.
 Left: against √N for four source radii. Right: against the source radius for N = 400.
 
     python figures/sphere.py          # the figure, from data/sphere_convergence.json
-    python figures/sphere.py --run    # solve again (about five minutes)
+    python figures/sphere.py --run    # solve again (about two minutes)
 
 The stored runs used the SVD; the package uses QR, which gives the same errors except
 where rounding dominates (R_s <= 0.2 with N = 400), where they differ by up to a factor 2.
@@ -37,22 +37,22 @@ if "--run" in sys.argv:
 
 # The figure, from the k = 2π runs
 res = [r for r in json.load(open(data("sphere_convergence.json"))) if abs(r["k"] - K) < 1e-9]
-fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(7.4, 2.9))
+fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(6.5, 2.7))
 for (col, mk, ls), R in zip(((BLUE, "o", "-"), (ORANGE, "D", "-."), (GREEN, "s", "--"), (PURPLE, "^", ":")), (0.3, 0.5, 0.7, 0.9)):
     s = sorted((r for r in res if r["sweep"] == "N" and r["R"] == R), key=lambda r: r["N"])
     ax1.semilogy([np.sqrt(r["N"]) for r in s], [r["mid"] for r in s], ls, color=col, marker=mk, ms=4.5, lw=1.4,
                  mec="white", mew=0.6, label=f"$R_s = {R}$")
 ax1.set(xlabel=r"$\sqrt{N}$", ylabel="relative error against Mie")
-ax1.set_title(r"$k = 2\pi$: error against the number of sources", loc="left", fontsize=8.5)
-ax1.legend(frameon=False, fontsize=7.5, loc="lower left")
+ax1.set_title(r"$k = 2\pi$: error against $\sqrt{N}$", loc="left", fontsize=8.5)
+ax1.legend(frameon=False, fontsize=8, loc="lower left")
 
 s = sorted((r for r in res if r["sweep"] == "R"), key=lambda r: r["R"])
 R = [r["R"] for r in s]
 ax2.semilogy(R, [r["mid"] for r in s], "-", color=BLUE, marker="o", ms=4.5, lw=1.4, mec="white", mew=0.6, label="error of the field")
 ax2.semilogy(R, [r["bc"] for r in s], "-.", color=ORANGE, marker="D", ms=4.5, lw=1.4, mec="white", mew=0.6, label="boundary residual")
 ax2.semilogy(R, [r["alpha_norm"] for r in s], ":", color=MUTED, marker="s", ms=4, lw=1.2, mec="white", mew=0.5,
-             label="coefficient norm")
-ax2.set(xlabel="source radius $R_s$")
-ax2.set_title(rf"$k = 2\pi$, $N = {s[0]['N']}$: dependence on the source radius", loc="left", fontsize=8.5)
-ax2.legend(frameon=False, fontsize=7.5, loc="upper center")
+             label=r"coefficient norm $\|\boldsymbol{\alpha}\|$")
+ax2.set(xlabel="source radius $R_s$", ylabel=r"error, residual, $\|\boldsymbol{\alpha}\|$")
+ax2.set_title(rf"$k = 2\pi$, $N = {s[0]['N']}$: dependence on $R_s$", loc="left", fontsize=8.5)
+ax2.legend(frameon=False, fontsize=7.8, loc="upper right")
 finish(fig, (ax1, ax2), "fig_sphere")

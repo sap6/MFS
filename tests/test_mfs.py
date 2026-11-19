@@ -76,9 +76,18 @@ def test_cone():
 
 @pytest.mark.skipif(not os.environ.get("MFS_TEST_BEMPP"), reason="set MFS_TEST_BEMPP=1 to test the Bempp comparison")
 def test_bempp_symmetry():
-    # The symmetric boundary element solve equals the full one (Appendix C)
+    # The symmetric boundary element solves (Cyclic on torus, Mirror + rotation on cube) match the full ones (Appendix C)
     from mfs import bem
     pts = 2.0 * core.fibonacci(50)
-    E_sym, N = bem.torus(8, K, D, P, pts)
+    E_sym, _ = bem.torus(8, K, D, P, pts)
     E_full, _ = bem.efie(bem.torus_grid(1.0, 0.5, 8)[0], K, D, P, pts)
     assert core.rel(E_sym, E_full) < 1e-10
+    dw, pw = core.wave(60, 25, 35)
+    Ec_sym, _ = bem.cube(4, 1.5, K, dw, pw, pts)
+    s = np.array([0.0, 0.5 * (1 - 0.5 ** 1.5), 0.5])
+    v = np.array([[x, y, z] for a in range(3) for b, c in [((a + 1) % 3, (a + 2) % 3)]
+                  for i in range(3) for j in range(3) for x, y, z in [np.insert([s[i], s[j]], a, 0.5)]])
+    tr = [(b + i * 3 + j, b + (i + 1) * 3 + j, b + (i + 1) * 3 + j + 1) for b in (0, 9, 18) for i in range(2) for j in range(2)]
+    tr += [(b + i * 3 + j, b + (i + 1) * 3 + j + 1, b + i * 3 + j + 1) for b in (0, 9, 18) for i in range(2) for j in range(2)]
+    Ec_full, _ = bem.efie(bem.mirror_grid(v, np.array(tr), bem.group())[0], K, dw, pw, pts)
+    assert core.rel(Ec_sym, Ec_full) < 5e-5

@@ -89,9 +89,9 @@ def tangent_basis(n):
 def field(pts, y, alpha, k, batch=400):
     """
     E_N(x) = Σ_j G(x, y_j) α_j, evaluated in batches without forming the 4-tensor G
-      pts  : (P, 3) evaluation points
-      y    : (N, 3) source points
-      alpha: (N, 3) coefficients
+      pts  : evaluation points, shape (P, 3)
+      y    : source points, shape (N, 3)
+      alpha: coefficients, shape (N, 3)
       Returns an array of shape (P, 3)
     """
     out = np.empty((len(pts), 3), complex)
@@ -103,7 +103,7 @@ def field(pts, y, alpha, k, batch=400):
         g = np.exp(1j * kr) / r
         fI = (1 + 1j / kr - 1 / kr ** 2) * g
         w = (1 + 3j / kr - 3 / kr ** 2) * (g / r ** 2) * (xb @ alpha.T - ya)   # f_R ((x - y_j) · α_j) / r²
-        out[i:i + batch] = fI @ alpha - xb * w.sum(axis=1)[:, None] + w @ y
+        out[i:i + batch] = fI @ alpha - xb * w.sum(axis=1)[:, None] + w @ y    # Σ_j (f_I α_j - w_ij (x - y_j))
     return out
 
 
@@ -157,8 +157,8 @@ class QR:
         B = np.array(b.reshape(len(b), -1), dtype=complex, order="F")
         lwork = int(lapack.zunmqr("L", "C", self.qr, self.tau, B, -1)[1][0].real)
         y = lapack.zunmqr("L", "C", self.qr, self.tau, B, lwork, overwrite_c=True)[0].reshape(b.shape)   # Q^H b
-        n = self.qr.shape[1]
-        c = sla.solve_triangular(self.qr[:n, :n], y[:n], check_finite=False) / (self.scale if y.ndim == 1 else self.scale[:, None])
+        n, s = self.qr.shape[1], (self.scale if y.ndim == 1 else self.scale[:, None])
+        c = sla.solve_triangular(self.qr[:n, :n], y[:n], check_finite=False) / s                         # R c = Q^H b
         return (c, np.linalg.norm(y[n:], axis=0)) if residual else c
 
 
@@ -173,7 +173,7 @@ class CSNE:
         self.A = A
         if A.flags.f_contiguous:
             G = blas.zherk(1.0, A, trans=2, lower=0)           # upper triangle of A^H A, without copying A
-        else:
+        else:                                                  # A is C-ordered, so A.T is F-ordered: (A^H A)^T = conj(A^H A)
             G = blas.zherk(1.0, A.T, trans=0, lower=0)
             np.conj(G, out=G)
         self.scale = np.sqrt(np.real(np.diag(G)))              # column norms

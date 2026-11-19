@@ -35,13 +35,13 @@ if "--run" in sys.argv:
 
 # The figure
 res = np.load(data("sphere_nearfield.npz"))
-fig, ax = plt.subplots(figsize=(5.0, 3.3))
+fig, ax = plt.subplots(figsize=(4.4, 2.9))
 styles = {"mfs": [(BLUE, "o", "-"), (NAVY, "h", (0, (6, 1.5)))], "bem": [(ORANGE, "D", "-."), (RUST, "X", (0, (3, 1)))]}
-for key in [k for k in res if k != "delta"]:
+for key in ("mfs400", "mfs1200", "bem4824", "bem9750"):
     col, mk, ls = styles[key[:3]].pop(0)
     label = f"MFS, $N = {int(key[3:])}$" if key[:3] == "mfs" else f"Bempp, {int(key[3:])} unknowns"
     ax.loglog(res["delta"], res[key], linestyle=ls, color=col, marker=mk, ms=4.5, lw=1.4, mec="white", mew=0.6, label=label)
 ax.set_xlabel("distance from the surface")
 ax.set_ylabel("relative error against Mie")
-ax.legend(frameon=False, fontsize=8, loc="center", bbox_to_anchor=(0.5, 0.24), ncol=2)
+ax.legend(frameon=False, fontsize=8, loc="center", bbox_to_anchor=(0.5, 0.24), ncol=2, columnspacing=0.8, handlelength=2.2)
 finish(fig, ax, "fig_sphere_nearfield")

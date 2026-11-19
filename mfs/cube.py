@@ -186,7 +186,7 @@ class Cube:
             cmap[i, self.keep[c]] = np.arange(self.unknowns[c])
         T = np.eye(3)[None] if T is None else np.ascontiguousarray(T)
         nc = T.shape[1]
-        A = (np.zeros((len(x) * nc, nmax), complex, order="F")[None] if len(classes) == 1
+        A = (np.zeros((len(x) * nc, nmax), complex, order="F")[None] if len(classes) == 1   # F-ordered so QR can overwrite A[0]
              else np.zeros((len(classes), len(x) * nc, nmax), complex))
         sgn = np.array([[sign(c, R) for R in REFL] for c in classes])
         refl, x = np.array(REFL), np.ascontiguousarray(x)
@@ -241,12 +241,13 @@ def solve(J, d=(0, 0, -1.0), p=(0, 1.0, 0), pts=None, k=2 * np.pi, max_gb=None, 
       (unknowns, boundary residual, extinction cross-section, optical-theorem mismatch)
     """
     if max_gb is None:
-        ram = os.sysconf("SC_PHYS_PAGES") * os.sysconf("SC_PAGE_SIZE") / 2 ** 30 if hasattr(os, "sysconf") else 12.0
-        max_gb = min(6.0, (0.32 if (k > 5 * np.pi and (J or 0) >= 8) else 0.55) * ram)
+        pages = os.sysconf("SC_PHYS_PAGES") if "SC_PHYS_PAGES" in getattr(os, "sysconf_names", ()) else -1
+        ram = pages * os.sysconf("SC_PAGE_SIZE") / 2 ** 30 if pages > 0 else 12.0
+        max_gb = min(6.0, (0.32 if (k > 5 * np.pi and (J or 0) >= 8) else 0.55) * ram)      # one class at a time when QR may take over
     d, p = np.asarray(d, float), np.asarray(p, float)
     t0 = time.time()
     orbit = orbits(classes_of(k, d, p, REFL))
-    todo, E, sols, info = list(orbit), 0, [], dict(unknowns=[], t_assemble=0.0, t_factor=0.0)
+    todo, E, sols, info = list(orbit), (None if pts is None else 0), [], dict(unknowns=[], t_assemble=0.0, t_factor=0.0)
     while todo:
         g = len(todo)
         if g > 1:                                                # how many class matrices fit into max_gb
