@@ -90,7 +90,7 @@ if "--scan" in sys.argv or "--run" in sys.argv:
                     continue
                 est = 300 if (nd == 2 and J >= 11) else 280 if (nd == 2 and J >= 9 and k > 5 * np.pi) else 220 if (nd == 2 and J >= 10) else 150 if (nd == 2 and J >= 9) else 90
                 need = 1.25 * t_mfs[nd, J][0] + 10 if t_mfs[nd, J] else est
-                if did and max_s and time.time() - t_start + need > max_s:
+                if did and max_s and (warm_b or time.time() - t_start + need > max_s):
                     pickle.dump(st, open(ck_path, "wb"))
                     sys.exit(2)
                 if not warm_m:
@@ -108,7 +108,7 @@ if "--scan" in sys.argv or "--run" in sys.argv:
                     continue
                 est = 330 if (r[3] >= 48 and r[1] >= 8) else 220 if r[3] >= 48 else 180 if (r[3] >= 40 and r[1] >= 8) else 115 if r[3] >= 40 else 80 if r[3] >= 32 else 45
                 need = 1.25 * t_bem[r[:4]][0] + 10 if t_bem[r[:4]] else est
-                if did and max_s and time.time() - t_start + need > max_s:
+                if did and max_s and (warm_m or time.time() - t_start + need > max_s):
                     pickle.dump(st, open(ck_path, "wb"))
                     sys.exit(2)
                 if not warm_b:

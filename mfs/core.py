@@ -145,9 +145,9 @@ def classes_of(k, d, p, refl):
 
 class QR:
     """Householder QR of A with its columns scaled to unit norm; Q is kept as its reflectors, not formed"""
-    def __init__(self, A):
+    def __init__(self, A, overwrite=False):
         self.scale = np.linalg.norm(A, axis=0)
-        A = np.array(A, dtype=complex, order="F")       # a copy that LAPACK may overwrite
+        A = A if (overwrite and A.flags.f_contiguous) else np.array(A, dtype=complex, order="F")
         A /= self.scale
         lwork = int(lapack.zgeqrf(A, lwork=-1)[2][0].real)
         self.qr, self.tau, _, _ = lapack.zgeqrf(A, lwork=lwork, overwrite_a=1)
@@ -171,7 +171,11 @@ class CSNE:
     """
     def __init__(self, A, max_cond=1e7):
         self.A = A
-        G = np.conj(blas.zherk(1.0, A.T, trans=0, lower=0))    # upper triangle of A^H A, without copying A
+        if A.flags.f_contiguous:
+            G = blas.zherk(1.0, A, trans=2, lower=0)           # upper triangle of A^H A, without copying A
+        else:
+            G = blas.zherk(1.0, A.T, trans=0, lower=0)
+            np.conj(G, out=G)
         self.scale = np.sqrt(np.real(np.diag(G)))              # column norms
         G /= self.scale[:, None] * self.scale[None, :]
         self.R = sla.cho_factor(G, overwrite_a=True, check_finite=False)   # raises LinAlgError if not positive definite
@@ -192,12 +196,13 @@ class CSNE:
         return (c, np.linalg.norm(b - self.A @ c, axis=0)) if residual else c
 
 
-def factor(A):
+def factor(A, overwrite=False):
     """Semi-normal equations if A is well conditioned, QR otherwise"""
     try:
         return CSNE(A)
     except np.linalg.LinAlgError:
-        return QR(A)
+        pass
+    return QR(A, overwrite=overwrite)
 
 
 # Far field and cross-sections
