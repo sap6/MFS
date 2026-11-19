@@ -1,6 +1,7 @@
 """
-Figure 7 and Table 5: the unit cube, error against wall time for the MFS and for
-Bempp with the same symmetry, in four cases: the standard wave at one wavelength
+Figure 7 and Table 5: the unit cube, error against wall time for the MFS (the layout of
+the paper, two depths per octave, and one depth per octave) and for Bempp with the
+same symmetry, in four cases: the standard wave at one wavelength
 (k1, panel (d) of Figure 10), a general wave (k1o), and the standard wave at two
 and three wavelengths (k2, k3). Errors are differences from the MFS reference
 of each case.
@@ -16,12 +17,13 @@ import sys
 import time
 
 import numpy as np
-from style import BLUE, RUST, data, envelope, finish, plt, rel
+from style import BLUE, NAVY, RUST, data, envelope, finish, plt, rel
 
 from mfs import core, cube
 
 CASES = {"k1": (1, None), "k1o": (1, (60, 25, 35)), "k2": (2, None), "k3": (3, None)}   # wavelengths per side, wave
-LEVELS = {"k1": range(4, 12), "k1o": range(4, 11), "k2": range(4, 10), "k3": range(4, 10)}
+LEVELS = {"k1": range(4, 12), "k1o": range(4, 11), "k2": range(4, 10), "k3": range(4, 10)}   # two depths per octave
+LEVELS_ONE = range(4, 10)                                # one depth per octave
 J_REF = {"k1": 12, "k1o": 11, "k2": 10, "k3": 10}
 EXTRA = {1: 0, 2: 4, 3: 12}                              # modes added to every line at two and three wavelengths
 GS = (1.25, 1.5, 1.6, 1.75, 1.9, 2.0, 2.25)              # Bempp: grading exponents, quadrature orders and meshes
@@ -64,17 +66,18 @@ if "--scan" in sys.argv or "--run" in sys.argv:
         rows = [tuple(r) for r in np.load(data(f"cube_scan_{case}.npz"))["rows"]]
         bempp_run(case, 1.0, 4, 6, 4, E)
         cand = [r for r in rows if not any(q[5] <= 0.5 * r[5] and q[6] <= r[6] for q in rows)]
-        t_mfs, t_bem, res = {J: [] for J in LEVELS[case]}, {r[:4]: [] for r in cand}, {}
+        runs = [(2, J) for J in LEVELS[case]] + [(1, J) for J in LEVELS_ONE]   # (depths per octave, level)
+        t_mfs, t_bem, res = {r: [] for r in runs}, {r[:4]: [] for r in cand}, {}
         for rep in range(2):
-            for J in LEVELS[case]:
-                EJ, t, info = cube.solve(J, d, p, pts, k, **layout(J))
-                t_mfs[J].append(t)
-                res[J] = (max(info["unknowns"]), sum(info["unknowns"]), info["rows"], rel(EJ, E), info["optical"])
+            for nd, J in runs:
+                EJ, t, info = cube.solve(J, d, p, pts, k, q=2 ** -0.5 if nd == 2 else 0.5, **layout(J))
+                t_mfs[nd, J].append(t)
+                res[nd, J] = (max(info["unknowns"]), sum(info["unknowns"]), info["rows"], rel(EJ, E), info["optical"])
             for r in cand:
                 b = bempp_run(case, *r[:4], E)
                 t_bem[r[:4]].append(b[5])
                 res[r[:4]] = b
-        mfs = np.array([(1, J, *res[J][:3], min(t_mfs[J]), *res[J][3:]) for J in LEVELS[case]])
+        mfs = np.array([(nd, J, *res[nd, J][:3], min(t_mfs[nd, J]), *res[nd, J][3:]) for nd, J in runs])
         bem = np.array([(*res[key][:5], min(t_bem[key]), res[key][6]) for key in t_bem])
         best = envelope([(r[5], r[6]) for r in bem])                     # (time, error) of the lower envelope
         env = np.array([r for r in bem if (r[5], r[6]) in set(map(tuple, best))])
@@ -86,7 +89,10 @@ fig, axs = plt.subplots(1, 3, figsize=(7.6, 2.9), sharey=True)
 panels = (("k1o", "(a) one wavelength, general wave"), ("k2", "(b) two wavelengths"), ("k3", "(c) three wavelengths"))
 for ax, (case, title) in zip(axs, panels):
     res = np.load(data(f"cube_cases_{case}.npz"))
-    ax.loglog(res["mfs"][:, 5], res["mfs"][:, 6], "-", color=BLUE, marker="o", ms=5, lw=1.5, mec="white", mew=0.7, label="MFS")
+    for nd, col, mk, ls, label in ((2, BLUE, "o", "-", "MFS"), (1, NAVY, "h", (0, (6, 1.5)), "MFS, one depth per octave")):
+        m = res["mfs"][res["mfs"][:, 0] == nd]
+        if len(m):
+            ax.loglog(m[:, 5], m[:, 6], linestyle=ls, color=col, marker=mk, ms=5, lw=1.5, mec="white", mew=0.7, label=label)
     env = res["env"][res["env"][:, 6] < 2e-2]
     ax.loglog(env[:, 5], env[:, 6], linestyle=(0, (3, 1)), color=RUST, marker="X", ms=5, lw=1.5, mec="white", mew=0.7,
               label="Bempp, graded, with symmetry")
