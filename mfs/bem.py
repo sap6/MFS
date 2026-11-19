@@ -9,6 +9,7 @@ the rows of one test function per orbit are assembled: an eighth of the matrix f
 quarter for the almond, 1/G for the torus (rotation by one of G cells). The result is the
 Galerkin solution of the full mesh, to rounding.
 """
+import gc
 import itertools
 import os
 import time
@@ -38,17 +39,14 @@ def plane_wave_trace(x, n, domain_index, result, parameters):
     result[2] = e0 * n[1] - e1 * n[0]
 
 
-def assemble_rows(div, k, rep=None, max_gb=1.0):
+def assemble_rows(div, k, rep=None, max_gb=0.9):
     """Rows of the EFIE matrix on div (all of them, or the representatives rep), in OpenCL buffers of at most max_gb"""
     N, l2g = div.global_dof_count, div.local2global
     if rep is None and 16 * N * N <= max_gb * 2 ** 30:
         curl = bempp.function_space(div.grid, "SNC", 0)
         return np.asarray(bempp.operators.boundary.maxwell.electric_field(div, div, curl, k).weak_form().to_dense())
-    rep = np.arange(N) if rep is None else rep
-    chunks = np.array_split(rep, max(1, int(np.ceil(16.0 * len(rep) * N / (max_gb * 2 ** 30)))))
-    A = None if len(chunks) == 1 else np.empty((len(rep), N), complex, order="F" if len(rep) == N else "C")
-    pos = 0
-    for rc in chunks:
+
+    def _space(rc):
         in_c = np.zeros(N, bool)
         in_c[rc] = True
         sup = np.nonzero(in_c[l2g].any(axis=1))[0].astype(np.uint32)
@@ -57,12 +55,24 @@ def assemble_rows(div, k, rep=None, max_gb=1.0):
         ok = test.local_multipliers[sup] != 0                   # local functions that are not degrees of freedom have multiplier 0
         full_of[test.local2global[sup][ok]] = l2g[sup][ok]
         rows = np.nonzero(in_c[full_of])[0]
-        rows = rows[np.argsort(full_of[rows])]
+        return test, rows[np.argsort(full_of[rows])]
+
+    if rep is not None:
+        test, rows = _space(rep)
+        if 16 * test.global_dof_count * N <= max_gb * 2 ** 30:
+            return np.asarray(bempp.operators.boundary.maxwell.electric_field(div, div, test, k).weak_form().to_dense())[rows]
+        est_rows = test.global_dof_count
+        del test, rows
+    else:
+        rep, est_rows = np.arange(N), N
+    n_chunks = int(np.ceil(16.0 * est_rows * N / (max_gb * 2 ** 30))) + 1
+    A = np.empty((len(rep), N), complex, order="F" if len(rep) == N else "C")
+    pos = 0
+    for rc in np.array_split(rep, n_chunks):
+        test, rows = _space(rc)
         block = np.asarray(bempp.operators.boundary.maxwell.electric_field(div, div, test, k).weak_form().to_dense())
-        if A is None:
-            return block[rows]
         A[pos:pos + len(rc)] = block[rows]
-        del block
+        del block, test
         pos += len(rc)
     return A
 
@@ -144,7 +154,7 @@ def action(space, vmap, emap):
     first = np.full(N, ne)
     np.minimum.at(first, l2g, np.arange(ne)[:, None])
     l = np.argmax(l2g[first] == np.arange(N)[:, None], axis=1)
-    perm, sgn = np.zeros((len(vmap), N), np.int64), np.zeros((len(vmap), N))
+    perm, sgn = np.zeros((len(vmap), N), np.int32), np.zeros((len(vmap), N), np.int8)
     for q in range(len(vmap)):
         e2, p2 = emap[q][first], vmap[q][opp[first, l]]
         l2 = np.argmax(opp[e2] == p2[:, None], axis=1)
@@ -170,10 +180,11 @@ class Symmetric:
     test function per orbit are assembled; Mirror and Cyclic split a wave into its symmetry classes.
     """
     def __init__(self, grid, vmap, emap, k):
-        self.k = k
+        self.k, self.G = k, len(vmap)
         self.div = div = bempp.function_space(grid, "RWG", 0)
         self.N = div.global_dof_count
         self.perm, self.sgn = action(div, vmap, emap)
+        del vmap, emap
         self.rep = np.nonzero(self.perm.min(axis=0) == np.arange(self.N))[0]   # one RWG function per orbit
         t0 = time.time()
         self.A = assemble_rows(div, k, self.rep)
@@ -240,17 +251,14 @@ class Cyclic(Symmetric):
     into G systems, one for each order q about the axis; the orders that the wave does not
     excite are skipped.
     """
-    def __init__(self, grid, vmap, emap, k):
-        super().__init__(grid, vmap, emap, k)
-        self.G = len(vmap)
-
     def solve(self, d, p, tol=1e-10):
         """RWG coefficients of the current for the wave p e^{ik d·x}: one solve for each order q that it excites"""
         G, rep, b = self.G, self.rep, self.trace(d, p)
 
         # Part of b of each order q, on the orbits
         inv = (G - np.arange(G)) % G
-        bq = np.fft.fft(self.sgn[inv][:, rep] * b[self.perm[inv][:, rep]], axis=0) / G
+        ix = np.ix_(inv, rep)
+        bq = np.fft.fft(self.sgn[ix] * b[self.perm[ix]], axis=0) / G
         size = np.linalg.norm(bq, axis=1)
         J, rows, cols = np.zeros(self.N, complex), np.arange(len(rep)), np.ascontiguousarray(self.perm[:, rep])
         for q in np.nonzero(size > tol * size.max())[0]:
@@ -315,11 +323,12 @@ def torus_grid(R, a, n):
 def torus(n, k, d, p, pts, R=1.0, a=0.5):
     """Torus with the rotational symmetry of its mesh: the rotation by one cell about the axis"""
     grid, m = torus_grid(R, a, n)
-    q = np.arange(m)[:, None]
-    i, j = np.divmod(np.arange(n * m), m)
-    vmap = i[None, :] * m + (j[None, :] + q) % m               # vertex (i, j) → (i, j + q)
-    emap = 2 * vmap[:, np.repeat(np.arange(n * m), 2)] + np.tile(np.arange(2), n * m)[None, :]
-    sym = Cyclic(grid, vmap, emap, k)
+    def maps():
+        q = np.arange(m, dtype=np.int32)[:, None]
+        i, j = np.divmod(np.arange(n * m, dtype=np.int32), m)
+        vmap = i[None, :] * m + (j[None, :] + q) % m           # vertex (i, j) → (i, j + q)
+        return vmap, 2 * vmap[:, np.repeat(np.arange(n * m, dtype=np.int32), 2)] + np.tile(np.arange(2, dtype=np.int32), n * m)[None, :]
+    sym = Cyclic(grid, *maps(), k)
     return sym.field(sym.solve(d, p), pts), sym.N
 
 
