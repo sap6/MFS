@@ -65,7 +65,14 @@ Done (all committed):
 **The author (18 Nov, verbatim):** "for the next hour, can you look into any way to make MFS faster so that MFS can be faster than bempp earlier than now? but in no way that's unfair to bempp" -> `notes/faster_mfs_18nov.md` (sent). No code or paper change yet; the author decides.
 - [x] Lower envelope of the two MFS layouts (one / two depths per octave), the counterpart of Bempp's envelope: standard wave crossover 1.5e-4 -> 3.2e-4; general wave level at 3e-4, faster below except 1.4e-4 to 1.7e-4. Bempp's best runs re-timed alternately: within 5% of the stored times.
 - [x] (n_base, hmax) = (6, 0.15): same errors, 20-45% faster to J = 10 (both layouts); closes the general-wave band (two depths J = 8: 29.2 s instead of 40.8 s for 1.6e-4). (4, 0.25) breaks from J = 6-7.
-- [ ] If the author agrees: Figure 7 / Table 5 with both layouts (k2, k3 untested with one depth; about an hour each), new crossovers in the text.
+- [x] Second pass (the author, verbatim: "try and make the crossover even earlier without adding much code. you stopped early."):
+  - Grading as Section 5 states it ("panels halve ... until they are shorter than d_min"): the code graded two levels further (smallest panel about d_min/6). One line. Two depths: J = 6, 8, 10 in 7.6, 18.0, 38.6 s for 7.8e-4, 1.3e-4, 1.9e-5 (were 10.1, 23.1, 54.2 s for 8.3e-4, 1.4e-4, 2.1e-5). New J = 12 against the stored reference: 3.2e-7. Three levels short: still fine (15% faster); four levels short: errors near 1 (optical 0.2-0.3 warns).
+  - Line kernel: four of the eight images repeat the other four (a line is its own mirror image across the plane through its middle; the class keeps exactly the columns where the copies add). Fields to 1e-13, cube 1.25-1.5x faster. The same in the almond kernel (sources on z = 0): fields 3e-16, RCS 1e-13 dB.
+  - Almond timing included the optical check (far field on 4609 directions, about 10%); Bempp's did not. Now `almond.optical`, untimed.
+  - Crossovers with both layouts (new grading, no duplicate images, grid (8, 0.1)), Bempp stored: standard 4.1e-4, general 5.1e-4, two wavelengths 7.3e-4, three 1.6e-3 (paper: 1.5e-4, 1.4e-4, 3.0e-4, ~5e-4). One depth stops converging above J = 7-8 at two and three wavelengths.
+  - Not adopted: interior panels 0.15 (J = 12: 2.3e-5 off the reference; fails at three wavelengths: errors 1e-2 to 1.5); quadrature 10/6 (10-15%, field 4e-7); 5 tail lines (5-15%, errors within 3%); tail ratio 1/4 (errors 2-3x).
+  - Re-run of all cube data started 19 Nov: cube_convergence done (fit 0.481 exp(-0.0480 sqrt N_u) within 4.8%; J = 4..11 errors 5.3e-3 .. 5.8e-6; times 1.9 .. 40 s; J = 12 70 s), committed 77cfb9f. cube_cases k1, k1o, k2, k3 (both layouts, both codes alternately), edge residual, almond timings: running.
+- [ ] After the re-run: text numbers of Sections 5 and 7 and the conclusion (list in `notes/faster_mfs_18nov.md`); re-check the claims from separate runs (one depth at J = 10-12, refinements at J = 9, tail exponents); notebooks 3 and 4; rebuild the paper.
 
 Open (authors):
 - [ ] Merge into `main` without squashing (Colab links, CI badge and pip install point to `main`); push the local tag `research-scripts` (= 9f5a721)? Asked.
@@ -2648,6 +2655,7 @@ Open, in the order I would take them:
 - 18 Nov. Library pass: SciPy lstsq (any driver) 2-5x slower than our CSNE, qr_multiply as fast as our QR but refactors per rhs; cube J = 9: 39 s, factorisation 18 s; NumPy point kernel 20-30x slower than numba; almond kernel on the shared dipole function 1.4-1.7x faster, nose-on totals unchanged. Package 1767 lines; all results identical.
 - 18 Nov. Speed against simplicity: CSNE buys 1.4-1.9x on the cube (QR) and 1.5-2.6x (lstsq); the moment panels 1.6x at J = 8; both together 2.1-2.4x; without them the MFS is no longer faster than Bempp on the general wave at any common accuracy. Kept.
 - 18 Nov. Faster MFS, fairly: one depth per octave J = 6..9 (standard wave) 3.7, 5.3, 7.2, 10.1 s for 9.4e-4, 4.1e-4, 2.1e-4, 1.35e-4 (Bempp's best 1.2, ~3, 10.9, 19.9 s); general wave J = 5..9 3.9, 5.4, 8.2, 11.7, 16.7 s for 2.8e-3 .. 1.9e-4; (6, 0.15) grid: two depths J = 4..8 same errors, 1.3-1.45x faster; one depth 1.2-1.4x. Envelope of both layouts: crossover 3.2e-4 (standard), ~3e-4 (general).
+- 19 Nov. Grading as the paper states + no duplicate images + both layouts: crossovers 4.1e-4 / 5.1e-4 / 7.3e-4 / 1.6e-3 (standard, general, two, three wavelengths) against 1.5e-4 / 1.4e-4 / 3.0e-4 / 5e-4. Adopted; data re-run.
 
 ## 6. Write-up session
 
