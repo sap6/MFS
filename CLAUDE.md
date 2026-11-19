@@ -5,7 +5,7 @@ Maxwell's Equations" into a JCP paper (authors: the repo owner and their
 supervisor Timo). Code lives here; the manuscript lives in `sap6/mfs-paper`
 (synced with Overleaf).
 
-**Read `notes/NOTES.md` before doing anything.** It holds what works, what
+**Read `notes/HANDOFF.md` (19 November) and then `notes/NOTES.md` before doing anything.** It holds what works, what
 failed, the current best parameters and the task list. Do not re-derive or
 re-test anything recorded there.
 

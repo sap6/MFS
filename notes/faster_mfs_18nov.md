@@ -17,9 +17,10 @@ At the accurate end the MFS also got faster. On the standard wave, J = 11
 (5.5e-6) takes 48 s instead of 108 s. At three wavelengths, J = 9 takes 120 s
 instead of 258 s.
 
-The full re-run of the cube data, with both codes timed alternately as the
-paper's protocol requires, is running now (about 5.5 hours). The figures and
-tables of the paper come from it.
+Status (19 November): the changes are committed. Re-run and committed so far:
+Figure 6, Table 2, Figure 10(d), Figure 5, and the almond timings. Figure 7 and
+Table 5 (`figures/cube_cases.py --run`, about 5 hours) are still to be re-run:
+see `notes/HANDOFF.md`.
 
 ## What changed (about 10 lines of code)
 

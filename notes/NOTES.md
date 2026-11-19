@@ -8,6 +8,7 @@ tangential E_sc = -tangential E_inc on the surface, least-squares collocation.
 
 ## Start here
 
+- **19 Nov: read `notes/HANDOFF.md` first** (state, unfinished re-run of Figure 7 / Table 5, text numbers to update, open decisions).
 - **Since 18 Nov the repository has a new layout** (see the "part three"
   block below and `../CLAUDE.md`): `mfs/`, `figures/`, `data/`, `notebooks/`,
   `tests/`, `paper/`, `thesis/`, `notes/`. Script names in the items below
