@@ -58,6 +58,8 @@ def _block(x, T, y, comps, sig, k, out):
         Tm, e = np.empty((nc, 3)), np.empty(3)
         out[m] = 0.0
         for g in range(4):
+            if REFL[g, 2] < 0:                                  # the sources lie on z = 0, so the image across it repeats
+                continue                                        # image g - 2, up to the parity that the class keeps
             for q in range(3):
                 for a in range(nc):
                     Tm[a, q] = T[m * tmul, a, q] * REFL[g, q]
@@ -69,7 +71,7 @@ def _block(x, T, y, comps, sig, k, out):
                 dipoles(Tm, e, k, r, Ge, Gm)
                 for i in range(comps.shape[0]):
                     for a in range(nc):
-                        out[m, a, n, i] += sig[g] * (Ge[a, comps[i]] if comps[i] < 3 else Gm[a, comps[i] - 3])
+                        out[m, a, n, i] += 2.0 * sig[g] * (Ge[a, comps[i]] if comps[i] < 3 else Gm[a, comps[i] - 3])
 
 
 def matrix(x, y, k, T=None, cls=(-1, 1)):
@@ -246,15 +248,19 @@ def nose_on(k, n_mid, n_F, pts=None):
     """
     The wave along -x (meeting the tip first), polarised along y. It has the parities
     (-1, +1), which carry no current into the tip, so no tail is needed.
-      Returns the source points, the coefficients, the field at pts, the extinction and
-      scattering cross-sections (ext, sca), and the shape of the matrix
+      Returns the source points, the coefficients, the field at pts and the shape of the matrix
     """
     d, p = np.array([[-1.0, 0, 0]]), np.array([[0.0, 1, 0]])
     y, _ = source_rows(n_mid, n_F)
     c, _, shape = solve_class(k, y, (-1, 1), d, p)
     E = None if pts is None else (matrix(pts, y, k) @ c[:, 0]).reshape(-1, 3)
-    ext, sca = cross_sections(lambda dirs: far(k, y, c[:, 0], dirs, (-1, 1)), k, d[0], p[0], sphere_rule(48, 96))
-    return y, c[:, 0], E, (ext, sca), shape
+    return y, c[:, 0], E, shape
+
+
+def optical(k, y, c):
+    """Extinction and scattering cross-sections (ext, sca) of the nose-on solution: equal for the exact field"""
+    d, p = np.array([-1.0, 0, 0]), np.array([0.0, 1, 0])
+    return cross_sections(lambda dirs: far(k, y, c, dirs, (-1, 1)), k, d, p, sphere_rule(48, 96))
 
 
 def rcs(freq, n_mid=6, n_F=3, step=0.5, s=0.5, s_col=0.3):

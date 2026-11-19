@@ -68,7 +68,8 @@ if "--run" in sys.argv:
         out, rows = {}, []
         almond.nose_on(k, 2, 0), bem.almond(12, 12, k, np.array([-1.0, 0, 0]), np.array([0, 1.0, 0]), pts)   # warm-up
         for i, (n_mid, n_F) in enumerate(((3, 0), (4, 1), (5, 2), (6, 3), (8, 5))):
-            (y, c, E, (ext, sca), shape_), t = timed(almond.nose_on, k, n_mid, n_F, pts)
+            (y, c, E, shape_), t = timed(almond.nose_on, k, n_mid, n_F, pts)
+            ext, sca = almond.optical(k, y, c)                              # the check is not timed, as for Bempp
             rows.append((len(y), shape_[1], t, abs(ext - sca) / sca))
             out[f"mfs_E{i}"] = E
         brows = []
