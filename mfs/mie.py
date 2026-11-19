@@ -29,17 +29,15 @@ def scattered_field(pts, k, d, p, a=1.0, nmax=None):
     x = pts @ Q
 
     # Spherical coordinates of the points in the frame of the wave
-    r = np.linalg.norm(x, axis=1)
-    mu = np.clip(x[:, 2] / r, -1, 1)
-    st, ct = np.sqrt(1 - mu ** 2), mu
-    phi = np.arctan2(x[:, 1], x[:, 0])
-    sp, cp = np.sin(phi), np.cos(phi)
+    r, phi = np.linalg.norm(x, axis=1), np.arctan2(x[:, 1], x[:, 0])
+    ct = np.clip(x[:, 2] / r, -1, 1)
+    st, sp, cp = np.sqrt(1 - ct ** 2), np.sin(phi), np.cos(phi)
 
     # Sum the series, with the angular functions pi_n and tau_n by recurrence
     Er, Et, Ep = (np.zeros(len(x), complex) for _ in range(3))
-    pi0, pi1 = np.zeros_like(mu), np.ones_like(mu)
+    pi0, pi1 = np.zeros_like(ct), np.ones_like(ct)
     for n in range(1, nmax + 1):
-        tau = n * mu * pi1 - (n + 1) * pi0
+        tau = n * ct * pi1 - (n + 1) * pi0
         z, dz = radial(n, k * r, True)
         jx, djx = radial(n, k * a, False)
         hx, dhx = radial(n, k * a, True)
@@ -48,7 +46,7 @@ def scattered_field(pts, k, d, p, a=1.0, nmax=None):
         Et += cM * cp * pi1 * z + cN * cp * tau * dz
         Ep += -cM * sp * tau * z - cN * sp * pi1 * dz
         Er += cN * cp * n * (n + 1) * st * pi1 * z / (k * r)
-        pi0, pi1 = pi1, ((2 * n + 1) * mu * pi1 - (n + 1) * pi0) / n
+        pi0, pi1 = pi1, ((2 * n + 1) * ct * pi1 - (n + 1) * pi0) / n
 
     # Back to Cartesian components, and to the frame of (d, p)
     rhat = np.column_stack((st * cp, st * sp, ct))

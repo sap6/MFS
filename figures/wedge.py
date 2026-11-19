@@ -7,7 +7,7 @@ continuations meet on the wall of the skeleton.
 """
 import numpy as np
 from matplotlib.patches import Arc, FancyArrowPatch
-from style import BLUE, BODY, HERE, INK, MUTED, ORANGE, plt
+from style import BLUE, BODY, INK, MUTED, ORANGE, finish, plt
 
 fig, ax = plt.subplots(figsize=(3.3, 3.1))
 L = 1.0
@@ -37,9 +37,6 @@ ax.text(-0.74, -0.42, "conductor", color=MUTED, ha="center", va="center", fontsi
 for (x0, y0), (x1, y1), rad in (((0.15, -0.32), (-0.24, -0.33), 0.3), ((-0.32, 0.15), (-0.33, -0.24), -0.3)):
     ax.add_patch(FancyArrowPatch((x0, y0), (x1, y1), connectionstyle=f"arc3,rad={rad}", arrowstyle="-|>", mutation_scale=8,
                                  color=INK, lw=0.8))
-ax.set_xlim(-1.02, 1.12)
-ax.set_ylim(-1.02, 1.0)
-ax.set_aspect("equal")
+ax.set(xlim=(-1.02, 1.12), ylim=(-1.02, 1.0), aspect="equal")
 ax.axis("off")
-for ext in ("pdf", "png"):
-    fig.savefig(f"{HERE}/fig_wedge.{ext}", dpi=200, bbox_inches="tight")
+finish(fig, None, "fig_wedge", tight="tight")

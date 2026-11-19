@@ -2340,6 +2340,32 @@ towards the MFS field.
     and 4.9e-7 from the MFS. The almond mesh (27324 unknowns) is already
     near its limit (31600 with two mirrors).
 
+89. **Final 2-core re-timings, academic humaniser pass, and code compactness
+    review (19 November).**
+    - All remaining 2-core benchmarks (`cube_cases_{k1,k1o,k2,k3}`, almond at
+      3.5 GHz, and standalone claim checks) finished on the 2-core Xeon
+      Platinum 8481C (2.2 GHz, 8 GB RAM) container after fixing the 8 GB QR
+      fallback peak-memory allocation (`order="F"` single-class matrices in
+      `Cube.matrix`, non-copying `CSNE` with `zherk`, and freeing `CSNE`
+      before `QR` in `core.factor`).
+    - Academic humaniser pass (`humanizer_academic` + `academic-humanizer`,
+      calibrated to `notes/style_profile.md`) across `paper/main.tex`,
+      `paper/highlights.txt`, and `paper/sections/*.tex`: 0 em dashes, 0 curly
+      quotes, 0 uniform-rhythm paragraphs, 0 repeated 3x openers, 0 AI
+      watch-words, 0 LaTeX warnings/overfulls in both `main.pdf` (45 pp) and
+      `main_3p.pdf` (26 pp), abstract + keywords fitting on Page 1, and 100%
+      identical numeric tokens, equations, and citations.
+    - Code compactness & clarity pass (`mfs/` 1815 -> 1785 lines, `figures/`
+      880 -> 855 lines): removed dead `CENTRE` normal-flip code in `almond.py`
+      and `bem.py`, removed dead `z`-mirror loop branch in `almond._block`,
+      built `cube.graded_nodes` directly on `(0, H)`, freed batch `Cube`
+      instances early in `cube.solve`, unified `bem.assemble_rows` fast paths,
+      extracted `bem.cube_grid` (fixing `y = 0.5` face orientation in
+      `test_bempp_symmetry`), deduplicated `u_rule` in `lines.build_tree`,
+      fixed tuple `d` in `core.cross_sections`, added `"gmsh"` to
+      `pyproject.toml` `[bempp]`, and added `almond.rcs` tip-tail coverage to
+      `tests/test_mfs.py` (`8 passed`, all figures and tables unchanged).
+
 ## 3. Current best commands
 
 ```

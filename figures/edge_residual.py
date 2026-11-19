@@ -19,15 +19,12 @@ if "--run" in sys.argv:
     d, p = core.wave()
     rho = np.logspace(-6, np.log10(0.3), 120)
     x = np.array([(0.5 - r, 0.5, z) for z in (0.03, 0.08, 0.13, 0.18, 0.23) for r in rho])
-    T = np.tile([[1.0, 0, 0], [0, 0, 1.0]], (len(x), 1, 1))
+    inc = core.plane_wave(x, 2 * np.pi, d, p)
     out = {"rho": rho, "J": J}
     for name, tails in (("tail", True), ("notail", False)):
         c = cube.Cube(J, tails=tails, classes=core.classes_of(2 * np.pi, d, p, cube.REFL))
-        coef, _, _ = c.solve(d, p)
-        A = c.matrix(x, T, list(coef))
-        E = sum(A[i][:, :c.unknowns[cl]] @ coef[cl] for i, cl in enumerate(coef)).reshape(-1, 2)
-        r = np.abs(E + np.einsum("mab,mb->ma", T, core.plane_wave(x, 2 * np.pi, d, p))) ** 2
-        out[name] = np.sqrt(np.mean(r.reshape(5, len(rho), 2), axis=(0, 2)))
+        tot = c.field(c.solve(d, p)[0], x) + inc
+        out[name] = np.sqrt(np.mean(np.abs(tot[:, [0, 2]].reshape(5, len(rho), 2)) ** 2, axis=(0, 2)))
     out["dJ"] = c.depths[-1]
     np.savez(data("edge_residual.npz"), **out)
 

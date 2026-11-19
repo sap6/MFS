@@ -18,7 +18,7 @@ import sys
 import time
 
 import numpy as np
-from style import BLUE, NAVY, RUST, data, envelope, finish, plt, rel
+from style import BLUE, NAVY, RUST, curve, data, envelope, finish, plt, rel
 
 from mfs import core, cube
 
@@ -33,11 +33,10 @@ QUAD = ((4, 6, (12, 16, 20, 24, 28, 32, 40, 48)), (6, 8, (12, 16, 20, 24, 28, 32
 
 
 def setup(case):
-    """Wavenumber, wave, test points, and the layout keywords of a level"""
+    """Wavenumber, wave, test points, and extra modes per line"""
     S, angles = CASES[case]
     d, p = core.wave(*angles) if angles else core.wave()
-    layout = lambda J: dict(extra_modes=EXTRA[S])
-    return 2 * np.pi * S, d, p, 2.0 * core.fibonacci(400), layout
+    return 2 * np.pi * S, d, p, 2.0 * core.fibonacci(400), EXTRA[S]
 
 
 def bempp_run(case, g, reg, sing, n, ref):
@@ -54,7 +53,7 @@ def bempp_run(case, g, reg, sing, n, ref):
 
 if "--scan" in sys.argv or "--run" in sys.argv:
     case = sys.argv[-1]
-    k, d, p, pts, layout = setup(case)
+    k, d, p, pts, extra = setup(case)
     if "--scan" in sys.argv:
         # Every grading with every quadrature and mesh size (1.5 to 1.9 on the finest mesh), against the reference
         ref = np.load(data(f"cube_cases_{case}_ref.npz"))["E"]
@@ -63,7 +62,7 @@ if "--scan" in sys.argv or "--run" in sys.argv:
     else:
         # The reference, then the MFS levels and the best-graded Bempp run of each (quadrature, mesh), alternately
         cube.solve(2, d, p, pts, k)                                     # warm-up: compilation is not timed
-        E, t, info = cube.solve(J_REF[case], d, p, pts, k, **layout(J_REF[case]))
+        E, t, info = cube.solve(J_REF[case], d, p, pts, k, extra_modes=extra)
         print(f"{case} ref J={J_REF[case]}: {t:.1f} s, opt={info['optical']:.1e}", flush=True)
         info = [J_REF[case], t, max(info["unknowns"]), info["rows"], info["optical"], info["ext"]]
         np.savez(data(f"cube_cases_{case}_ref.npz"), E=E, pts=pts, info=info)
@@ -75,7 +74,7 @@ if "--scan" in sys.argv or "--run" in sys.argv:
         for rep in range(2):
             for nd, J in runs:
                 gc.collect()
-                EJ, t, info = cube.solve(J, d, p, pts, k, q=2 ** -0.5 if nd == 2 else 0.5, **layout(J))
+                EJ, t, info = cube.solve(J, d, p, pts, k, q=2 ** -0.5 if nd == 2 else 0.5, extra_modes=extra)
                 t_mfs[nd, J].append(t)
                 res[nd, J] = (max(info["unknowns"]), sum(info["unknowns"]), info["rows"], rel(EJ, E), info["optical"])
                 print(f"{case} pass {rep + 1} MFS ({nd}, {J}): {t:.2f} s, err={res[nd, J][3]:.2e}", flush=True)
@@ -95,15 +94,13 @@ fig, axs = plt.subplots(1, 3, figsize=(6.6, 2.9), sharey=True)
 panels = (("k1o", "(a) $k = 2\\pi$, general wave"), ("k2", "(b) $k = 4\\pi$, two wavelengths"), ("k3", "(c) $k = 6\\pi$, three wavelengths"))
 for ax, (case, title) in zip(axs, panels):
     res = np.load(data(f"cube_cases_{case}.npz"))
-    for nd, col, mk, ls, zo, label in ((2, BLUE, "o", "-", 4, "MFS (two depths per octave)"),
-                                       (1, NAVY, "h", (0, (6, 1.5)), 3, "MFS, one depth per octave")):
-        m = res["mfs"][res["mfs"][:, 0] == nd]
-        if len(m):
-            ax.loglog(m[:, 5], m[:, 6], linestyle=ls, color=col, marker=mk, ms=4.8, lw=1.4, mec="white", mew=0.6,
-                      zorder=zo, label=label)
-    env = res["env"][res["env"][:, 6] < 2e-2]
-    ax.loglog(env[:, 5], env[:, 6], linestyle=(0, (3, 1)), color=RUST, marker="X", ms=4.8, lw=1.4, mec="white", mew=0.6,
-              zorder=2, label="Bempp, graded, with symmetry")
+    mfs = res["mfs"]
+    for pts, col, mk, ls, zo, label in (
+        (mfs[mfs[:, 0] == 2], BLUE, "o", "-", 4, "MFS (two depths per octave)"),
+        (mfs[mfs[:, 0] == 1], NAVY, "h", (0, (6, 1.5)), 3, "MFS, one depth per octave"),
+        (res["env"][res["env"][:, 6] < 2e-2], RUST, "X", (0, (3, 1)), 2, "Bempp, graded, with symmetry"),
+    ):
+        curve(ax, pts[:, 5], pts[:, 6], col, mk, ls, label, 4.8, 1.4, 0.6, zorder=zo)
     ax.set_title(title, loc="left", fontsize=8.5)
     ax.set_xlabel("wall time [s]  (2 cores)")
     ax.xaxis.set_minor_formatter(plt.NullFormatter())

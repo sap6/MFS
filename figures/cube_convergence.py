@@ -11,7 +11,7 @@ import sys
 import time
 
 import numpy as np
-from style import BLUE, GREEN, MUTED, NAVY, ORANGE, PURPLE, RUST, data, finish, plt, rel
+from style import BLUE, GREEN, MUTED, NAVY, ORANGE, PURPLE, RUST, curve, data, finish, plt, rel
 
 from mfs import core, cube
 
@@ -52,13 +52,12 @@ if "--run" in sys.argv:
 # Errors against the reference, as a function of the unknowns of the whole cube
 res = np.load(data("cube_convergence.npz"))
 ref, jref = res["ref_E"], int(res["ref_info"][0])
-curves = {name: np.array([(4 * r[2], rel(res[f"{name}_E{int(r[0])}"], ref)) for r in res[name]
-                          if (name not in ("tail", "dense") or r[0] >= 4) and not (name == "dense" and int(r[0]) == jref)])
+curves = {name: np.array([(4 * r[2], rel(res[f"{name}_E{int(r[0])}"], ref)) for r in res[name] if 4 <= r[0] < jref])
           for name in ("dense", "tail", "notail", "plain")}
 u = np.load(data("cube_bempp_uniform.npz"))
 curves["uniform"] = np.array([(n, rel(E, ref)) for n, E in zip(u["ndof"], u["E"]) if n > 1000])
 best = {}                                                        # Bempp on graded meshes: the smallest error on each mesh
-for g, reg, sing, n, N, t, err in np.load(data("cube_cases_k1.npz"))["bem"]:
+for *_, N, _, err in np.load(data("cube_cases_k1.npz"))["bem"]:
     best[int(N)] = min(best.get(int(N), 1.0), err)
 curves["graded"] = np.array(sorted(best.items()))
 
@@ -72,8 +71,7 @@ print(f"error = {np.exp(p[1]):.3g} exp({p[0]:.4f} sqrt(N_u)), largest deviation 
 fig, ax = plt.subplots(figsize=(5.2, 3.8))
 xs = np.array([np.sqrt(curves["dense"][0, 0]) - 4, np.sqrt(curves["dense"][-1, 0]) + 8])
 ax.semilogy(xs, np.exp(np.polyval(p, xs)), color=MUTED, lw=0.8, zorder=1)
-label = rf"${np.exp(p[1]):.2f}\,\exp({p[0]:.4f}\sqrt{{N_u}})$"
-ax.annotate(label, (153, 5.5e-4), fontsize=8.5, color=MUTED)
+ax.annotate(rf"${np.exp(p[1]):.2f}\,\exp({p[0]:.4f}\sqrt{{N_u}})$", (153, 5.5e-4), fontsize=8.5, color=MUTED)
 for key, (col, mk, ls, label) in {"plain": (PURPLE, "^", ":", "plain MFS (inner cube)"),
                                   "notail": (GREEN, "s", "--", "MFS without the tails"),
                                   "tail": (NAVY, "h", (0, (6, 1.5)), "MFS, one depth per octave"),
@@ -81,9 +79,7 @@ for key, (col, mk, ls, label) in {"plain": (PURPLE, "^", ":", "plain MFS (inner 
                                   "uniform": (ORANGE, "D", "-.", "Bempp, quasi-uniform meshes"),
                                   "graded": (RUST, "X", (0, (3, 1)), "Bempp, graded meshes (best setting per mesh)")}.items():
     v = curves[key]
-    ax.semilogy(np.sqrt(v[:, 0]), v[:, 1], linestyle=ls, color=col, marker=mk, ms=5, lw=1.4, mec="white", mew=0.7,
-                label=label, zorder=3)
-ax.set_xlabel(r"$\sqrt{N_u}$,  $N_u$ = number of unknowns")
-ax.set_ylabel("relative error of the scattered field")
+    curve(ax, np.sqrt(v[:, 0]), v[:, 1], col, mk, ls, label, lw=1.4, logx=False, zorder=3)
+ax.set(xlabel=r"$\sqrt{N_u}$,  $N_u$ = number of unknowns", ylabel="relative error of the scattered field")
 ax.legend(frameon=False, fontsize=8, loc="upper center", bbox_to_anchor=(0.5, -0.18), ncol=2, columnspacing=1.0)
 finish(fig, ax, "fig_cube_convergence", tight="tight")

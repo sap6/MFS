@@ -14,11 +14,8 @@ OUT = os.path.join(HERE, "..", "paper", "tables")
 
 def sci(x):
     """x as m × 10^e in LaTeX, one decimal"""
-    e = int(np.floor(np.log10(x)))
-    m = x / 10.0 ** e
-    if round(m, 1) >= 10:
-        m, e = m / 10, e + 1
-    return f"${m:.1f}\\times10^{{{e}}}$"
+    m, e = f"{x:.1e}".split("e")
+    return f"${m}\\times10^{{{int(e)}}}$"
 
 
 def tm(t):
@@ -43,14 +40,13 @@ write("cube_mfs_short", [f"    {int(J)} & {int(unk) // 2} & {int(rows)} & {tm(t)
 # Table 4: the sphere (400 and 1200 sources), the torus and the almond (layout 6:3), with Bempp's largest mesh
 s, t, a = np.load(data("cost_sphere.npz")), np.load(data("cost_torus.npz")), np.load(data("cost_almond.npz"))
 aref = a[f"mfs_E{len(a['mfs']) - 1}"]
-nb = len(a["bem"]) - 1
 row = lambda shape, method, unk, time, err: f"    {shape} & {method} & {int(unk)} & {tm(time)} & {sci(err)} \\\\"
-sphere_mfs = [r for r in s["mfs"] if int(r[0]) in (1200, 3600)]
-write("summary", [row("Sphere", "MFS", *sphere_mfs[0]), row("", "MFS", *sphere_mfs[1]), row("", "Bempp", *s["bem"][-1][:3]),
+write("summary", [*[row("Sphere" if int(r[0]) == 1200 else "", "MFS", *r) for r in s["mfs"] if int(r[0]) in (1200, 3600)],
+                  row("", "Bempp", *s["bem"][-1][:3]),
                   "    \\midrule", *[row("Torus", "MFS", *r[:3]) for r in t["mfs"] if int(r[0]) == 21120],
                   row("", "Bempp", *t["bem"][-1][:3]), "    \\midrule",
-                  row("Almond", "MFS $6{:}3$", a["mfs"][3][1], a["mfs"][3][2], rel(a["mfs_E3"], aref)),
-                  row("", "Bempp", a["bem"][nb][0], a["bem"][nb][1], rel(a[f"bem_E{nb}"], aref))])
+                  row("Almond", "MFS $6{:}3$", *a["mfs"][3][1:3], rel(a["mfs_E3"], aref)),
+                  row("", "Bempp", *a["bem"][-1], rel(a[f"bem_E{len(a['bem']) - 1}"], aref))])
 
 # Table 5: both ends of the cube comparison. Time for an error of about 1e-3 (at most 1.2e-3);
 # Bempp's most accurate run (the end of its lower envelope) and the first MFS level below it

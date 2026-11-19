@@ -39,9 +39,8 @@ def cube_layout(J=6, fname="fig_cube_layout"):
     ax = axs[1]
     ax.plot(depths, np.zeros_like(depths), "o", color=BLUE, ms=4.5, mec="white", mew=0.5)
     ax.plot(tail, np.zeros_like(tail), "o", mfc="white", mec=ORANGE, ms=3.5, mew=0.8)
-    for j, d in enumerate(depths):
-        if j in (0, 2 * J):
-            ax.annotate("$d_0$" if j == 0 else r"$d_{\min}$", (d, 0), (d, 0.16), ha="center", fontsize=8)
+    for d, lab in ((depths[0], "$d_0$"), (depths[-1], r"$d_{\min}$")):
+        ax.annotate(lab, (d, 0), (d, 0.16), ha="center", fontsize=8)
     ax.annotate("tail, fixed weights", (tail[5], 0), (tail[5], -0.24), ha="center", fontsize=8, color=ORANGE)
     ax.annotate("free", (depths[4], 0), (depths[4], -0.24), ha="center", fontsize=8, color=BLUE)
     ax.set(xscale="log", xlim=(3e-6, 0.5), ylim=(-0.5, 0.5), yticks=[], xlabel="depth below the edge")
@@ -66,10 +65,10 @@ def cube_layout(J=6, fname="fig_cube_layout"):
 
 def almond_layout(n_mid=6, n_F=3, fname="fig_almond_layout"):
     """Figure 8: the source layout of the almond, n_mid:n_F = 6:3"""
-    y, (tpts, row, rr) = almond.source_rows(n_mid, n_F)
+    y, (tpts, *_) = almond.source_rows(n_mid, n_F)
     L = almond.L
     # Outline of the mid-plane section: the front half from semi_axes(), the rear half an ellipse
-    xf = np.linspace(0, L * 0.58333, 400)
+    xf = np.linspace(0, L * almond.T1, 400)
     af = almond.semi_axes(xf)[0]
     psi = np.linspace(0, np.pi / 2, 200)
     xr, ar = -almond.A_ * np.sin(psi), almond.B_ * np.cos(psi)
@@ -84,7 +83,7 @@ def almond_layout(n_mid=6, n_F=3, fname="fig_almond_layout"):
     ax.set(xlabel="$x$ [mm]", ylabel="$y$ [mm]", aspect="equal", ylim=(0, 62))
     ax.legend(frameon=False, fontsize=8, loc="upper right", markerscale=2.5)
     ax.set_title("(a) mid-plane $z = 0$, upper half", loc="left", fontsize=8.5)
-    x0 = L * 0.58333 * 1e3
+    x0 = L * almond.T1 * 1e3
     ax.plot([x0 - 6, x0 - 6, x0 + 1, x0 + 1, x0 - 6], [0, 5, 5, 0, 0], color=MUTED, lw=0.6)
     ax = axs[1]
     sel = X > x0 - 6.5

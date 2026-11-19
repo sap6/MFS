@@ -21,4 +21,4 @@ A. E. Yilmaz, "Rye Canyon radar cross-section measurements of benchmark almond
 targets", IEEE Antennas Propag. Mag. 62(1), 96-106, 2020,
 doi:10.1109/MAP.2019.2955702.
 
-Used by `../fig_almond_benchmark.py`.
+Used by `../../figures/almond_rcs.py` and `../../notebooks/4_almond.ipynb`.

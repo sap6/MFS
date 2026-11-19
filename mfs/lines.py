@@ -31,7 +31,7 @@ def nodes(k, H):
     """
     Nodes per panel (moment panels, Gauss panels) for wavenumber k and lines of length up to 2H.
     The kernel phase along the coarsest panels grows like kH: 12 / 8 nodes at one wavelength
-    (the cube fields change by 1e-8 with more), 20 / 10 at two and 28 / 12 at three (Appendix B)
+    (the cube fields change by < 1e-6 with more), 20 / 10 at two and 28 / 12 at three (Appendix B)
     """
     s = max(0.0, k * 2 * H / (2 * np.pi) - 1.0)          # wavelengths per edge, minus one
     return int(np.ceil(PM + 8 * s)), int(np.ceil(NG + 2 * s))
@@ -51,6 +51,12 @@ def build_tree(lam, d, n, H, k):
     gm, _ = leg.leggauss(pm)
     gg, gwg = leg.leggauss(ng)
     gf, gwf = leg.leggauss(16)                           # fine rule for the exact moments
+
+    def u_rule(lo, hi, g, gw):                           # Gauss rule on [lo, hi] in u: nodes t and mode weights
+        u = 0.5 * (lo + hi)[:, None] + 0.5 * (hi - lo)[:, None] * g
+        w = 0.5 * (hi - lo)[:, None] * gw * H * 0.5 * lam / np.cosh(0.5 * lam * u) ** 2 / d
+        return (H * np.tanh(0.5 * lam * u)).ravel(), leg.legvander(u.ravel(), n - 1) * w.ravel()[:, None]
+
     npan = 2 ** (ltab + 1) - 1
     off = np.zeros(npan + 1, np.int64)
     tlo, thi = np.empty(npan), np.empty(npan)
@@ -64,25 +70,20 @@ def build_tree(lam, d, n, H, k):
         tlo[p:p + m], thi[p:p + m] = a, b
         if lev < LMOM:
             # Moment panels: pm Gauss nodes in t, weights = moments of the Lagrange polynomials against the modes
+            nsub = max(8, int(np.ceil(2.0 / m / 0.03125)))   # sub-intervals of width at most 1/32 in u
             for i in range(m):
                 tn = 0.5 * (a[i] + b[i]) + 0.5 * (b[i] - a[i]) * gm
-                nsub = max(8, int(np.ceil((uhi[i] - ulo[i]) / 0.03125)))   # sub-intervals of width at most 1/32 in u
                 e = np.linspace(ulo[i], uhi[i], nsub + 1)
-                u = (0.5 * (e[:-1] + e[1:])[:, None] + 0.5 * (e[1:] - e[:-1])[:, None] * gf).ravel()
-                w = (0.5 * (e[1:] - e[:-1])[:, None] * gwf).ravel()
-                w = w * H * 0.5 * lam / np.cosh(0.5 * lam * u) ** 2 / d
-                L = BarycentricInterpolator(tn, np.eye(pm))(H * np.tanh(0.5 * lam * u))   # Lagrange polynomials, (fine, pm)
-                V = leg.legvander(u, n - 1)                                   # (fine, n)
+                tf, VW = u_rule(e[:-1], e[1:], gf, gwf)
+                L = BarycentricInterpolator(tn, np.eye(pm))(tf)   # Lagrange polynomials, (fine, pm)
                 ts.append(tn)
-                Ws.append(L.T @ (V * w[:, None]))
-                off[p + i + 1] = off[p + i] + pm
+                Ws.append(L.T @ VW)
         else:
             # Gauss panels: ng nodes in u, weights = the modes times dt/du
-            u = 0.5 * (ulo + uhi)[:, None] + 0.5 * (uhi - ulo)[:, None] * gg  # (m, ng)
-            w = 0.5 * (uhi - ulo)[:, None] * gwg * H * 0.5 * lam / np.cosh(0.5 * lam * u) ** 2 / d
-            ts.append((H * np.tanh(0.5 * lam * u)).ravel())
-            Ws.append(leg.legvander(u.ravel(), n - 1) * w.ravel()[:, None])
-            off[p + 1:p + m + 1] = off[p] + ng * np.arange(1, m + 1)
+            tg, VW = u_rule(ulo, uhi, gg, gwg)
+            ts.append(tg)
+            Ws.append(VW)
+        off[p + 1:p + m + 1] = off[p] + (pm if lev < LMOM else ng) * np.arange(1, m + 1)
         p += m
     out = (np.ascontiguousarray(np.concatenate(ts)), np.ascontiguousarray(np.vstack(Ws)), off, tlo, thi, ltab, gg, gwg)
     _TREES[key] = out
@@ -238,8 +239,8 @@ def points_add(x, T, refl, pe, pm, k, A, col0, sgn):
         Tm, e = np.empty((nc, 3)), np.empty(3)
         for j in range(ne + pm.shape[0]):
             acc[:] = 0.0
+            y = pe[j] if j < ne else pm[j - ne]
             for r in range(nr):
-                y = pe[j] if j < ne else pm[j - ne]
                 for q in range(3):
                     e[q] = x[m, q] * refl[r, q] - y[q]
                     for a in range(nc):

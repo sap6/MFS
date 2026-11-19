@@ -20,10 +20,10 @@ from . import lines
 from .core import class_part, classes_of, cross_sections, dyadic, factor, magnetic, sign, sphere_rule
 
 H = 0.5                                                          # half side length
-REFL = [np.array(r, float) for r in itertools.product((1, -1), repeat=3)]
-CLASSES = [tuple(r) for r in REFL]                               # parities (sx, sy, sz), in the same order
+CLASSES = list(itertools.product((1, -1), repeat=3))             # parities (sx, sy, sz) under the three mirrors
+REFL = np.array(CLASSES, float)                                  # the eight reflections, in the same order
 ROT = np.eye(3)[[1, 2, 0]]                                       # a third of a turn about the body diagonal
-NU, TAU = 0.45417, 0.8400                                        # smallest electric and magnetic exponents of the corner
+NU, TAU = 0.45417, 0.840                                         # smallest electric and magnetic exponents of the corner
 TAIL_E = {"e": (2 / 3, 5 / 3), "m": (4 / 3, 7 / 3)}              # edge tail exponents: (along the edge, along the bisector)
 RULE = sphere_rule(40, 80)                                       # quadrature on the unit sphere, for the optical theorem
 
@@ -39,7 +39,7 @@ def orbits(classes):
         c = todo.pop(0)
         orbit[c] = [0]
         for j in (1, 2):
-            cj = tuple(c[(i + j) % 3] for i in range(3))
+            cj = c[j:] + c[:j]
             if cj in todo:
                 todo.remove(cj)
                 orbit[c].append(j)
@@ -47,18 +47,16 @@ def orbits(classes):
 
 
 def graded_nodes(levels, ng, hmax=0.1):
-    """Gauss-Legendre nodes on (-H, H): ng per panel, panels halving towards both ends, none longer than hmax"""
+    """Gauss-Legendre nodes on (0, H): ng per panel, panels halving towards H, none longer than hmax"""
     dist = np.concatenate(([0.0], H * 0.5 ** np.arange(levels, -1, -1)))   # distance from the edge
     brk = [0.0]
     for a, b in zip(dist[:-1], dist[1:]):
         n = int(np.ceil((b - a) / hmax))
         brk.extend(a + (b - a) * np.arange(1, n + 1) / n)
-    brk = np.array(brk)
-    ends = np.concatenate((-H + brk, (H - brk[::-1])[1:]))
+    ends = H - np.array(brk)[::-1]
+    a, b = ends[:-1, None], ends[1:, None]
     g, w = np.polynomial.legendre.leggauss(ng)
-    s = np.concatenate([0.5 * (a + b) + 0.5 * (b - a) * g for a, b in zip(ends[:-1], ends[1:])])
-    ws = np.concatenate([0.5 * (b - a) * w for a, b in zip(ends[:-1], ends[1:])])
-    return s, ws
+    return (0.5 * (a + b) + 0.5 * (b - a) * g).ravel(), (0.5 * (b - a) * w).ravel()
 
 
 class Line:
@@ -156,10 +154,10 @@ class Cube:
         d_min = self.depths[-1] if len(self.depths) else 0.2
         levels = max(2, int(np.ceil(np.log2(H / d_min))))
         s, w = graded_nodes(levels, ng)
-        U, V = [g.ravel() for g in np.meshgrid(s[s > 0], s[s > 0], indexing="ij")]
-        W = np.outer(w[s > 0], w[s > 0]).ravel()
+        U, V = [g.ravel() for g in np.meshgrid(s, s, indexing="ij")]
+        W = np.outer(w, w).ravel()
         self.x = np.concatenate([np.insert(np.column_stack((U, V)), ax, H, axis=1) for ax in range(3)])
-        self.T = np.concatenate([np.repeat(np.delete(np.eye(3), ax, axis=0)[None], len(U), axis=0) for ax in range(3)])
+        self.T = np.repeat([np.delete(np.eye(3), ax, axis=0) for ax in range(3)], len(W), axis=0)
         dist = H - np.sort(np.abs(self.x), axis=1)[:, 1]        # distance to the nearest edge
         self.rw = np.sqrt(np.tile(W, 3)) * dist ** 0.5
         self.rows = 2 * len(self.x)
@@ -189,22 +187,22 @@ class Cube:
         A = (np.zeros((len(x) * nc, nmax), complex, order="F")[None] if len(classes) == 1   # F-ordered so QR can overwrite A[0]
              else np.zeros((len(classes), len(x) * nc, nmax), complex))
         sgn = np.array([[sign(c, R) for R in REFL] for c in classes])
-        refl, x = np.array(REFL), np.ascontiguousarray(x)
+        x = np.ascontiguousarray(x)
 
         # Point dipoles: electric, then magnetic
-        lines.points_add(x, T, refl, self.pe, self.pm, self.k, A, np.ascontiguousarray(cmap[:, 0]), sgn)
+        lines.points_add(x, T, REFL, self.pe, self.pm, self.k, A, np.ascontiguousarray(cmap[:, 0]), sgn)
 
         # Lines, each electric line with its magnetic twin, and the vertex tails
         for i, ln in enumerate(self.lines):
             lo = 3 * self.slot0[1 + i]
             if isinstance(ln, VertexTail):
                 for r, R in enumerate(REFL):
-                    B = ln.block(self.k, x * R, np.broadcast_to(T * R, (len(x), nc, 3)))
+                    B = ln.block(self.k, x * R, T * R)
                     for j in range(len(classes)):
                         A[j][:, cmap[j, lo]:cmap[j, lo] + 3] += sgn[j, r] * B
             elif ln.kind == "e":                                 # the magnetic twin follows in the next 3 n columns
                 w = None if ln.w is None else np.stack((ln.w, self.lines[i + 1].w))
-                lines.tree_add(x, T, refl, ln.ax, ln.b, ln.c, ln.pos, ln.lam, ln.d, ln.n, self.k, H, A,
+                lines.tree_add(x, T, REFL, ln.ax, ln.b, ln.c, ln.pos, ln.lam, ln.d, ln.n, self.k, H, A,
                                cmap[:, lo:lo + 6 * ln.n], sgn, rot=ln.rot, w=w)
         return A
 
@@ -247,32 +245,31 @@ def solve(J, d=(0, 0, -1.0), p=(0, 1.0, 0), pts=None, k=2 * np.pi, max_gb=None, 
     d, p = np.asarray(d, float), np.asarray(p, float)
     t0 = time.time()
     orbit = orbits(classes_of(k, d, p, REFL))
-    todo, E, sols, info = list(orbit), (None if pts is None else 0), [], dict(unknowns=[], t_assemble=0.0, t_factor=0.0)
-    while todo:
-        g = len(todo)
-        if g > 1:                                                # how many class matrices fit into max_gb
-            probe = Cube(J, k, classes=[], **layout)
-            g = max(1, min(g, int(max_gb * 2 ** 30 / (16.0 * probe.rows * probe.unknowns[todo[0]]))))
-        cube = Cube(J, k, classes=todo[:g], **layout)
-        todo = todo[g:]
+    todo, E, sols = list(orbit), (None if pts is None else 0), []
+    r2, b2, info = 0.0, 0.0, dict(unknowns=[], t_assemble=0.0, t_factor=0.0)
+    probe = Cube(J, k, classes=[], **layout)
+    g = max(1, int(max_gb * 2 ** 30 / (16.0 * probe.rows * max(probe.unknowns.values()))))   # classes per batch
+    for i in range(0, len(todo), g):
+        cube = Cube(J, k, classes=todo[i:i + g], **layout)
         for j in range(3):                                       # the wave turned back by j thirds of a turn
             only = [c for c in cube.classes if j in orbit[c]]
             if only:
                 Q = np.linalg.matrix_power(ROT, j)
-                coef, res, b2 = cube.solve(Q.T @ d, Q.T @ p, only)
+                coef, res, nb2 = cube.solve(Q.T @ d, Q.T @ p, only)
                 if pts is not None:
                     E = E + cube.field(coef, pts @ Q) @ Q.T
-                sols.append((cube, Q, coef, res, b2))
+                sols.append((Q, coef))
+                r2, b2 = r2 + res ** 2 * nb2, b2 + nb2
         info["unknowns"] += [cube.unknowns[c] for c in cube.classes]
         info["t_assemble"] += cube.t_assemble
         info["t_factor"] += cube.t_factor
-        cube.fac = None                                          # the checks below need only the layout: free the factors
+        del cube                                                 # free the matrices and factors before the next batch
     t = time.time() - t0
 
     # Checks, not timed: boundary residual and the optical theorem
-    far = lambda dirs: sum(cube.far(coef, dirs @ Q) @ Q.T for cube, Q, coef, _, _ in sols)
+    far = lambda dirs: sum(probe.far(coef, dirs @ Q) @ Q.T for Q, coef in sols)
     info["ext"], info["sca"] = cross_sections(far, k, d, p, RULE)
-    info["residual"] = float(np.sqrt(sum(r ** 2 * b2 for *_, r, b2 in sols) / sum(s[-1] for s in sols)))
+    info["residual"] = float(np.sqrt(r2 / b2))
     info["optical"] = abs(info["ext"] - info["sca"]) / info["sca"]
-    info["rows"] = cube.rows
+    info["rows"] = probe.rows
     return E, t, info

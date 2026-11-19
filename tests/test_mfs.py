@@ -13,12 +13,13 @@ from mfs import almond, cone, core, cube, mie, sphere, torus
 DATA = os.path.join(os.path.dirname(__file__), "..", "data")
 K = 2 * np.pi
 D, P = core.wave()                                       # the standard wave: along -z, polarised along y
+DW, PW = core.wave(60, 25, 35)                           # the general wave of Section 5.5
 
 
 def test_mie():
     # The total tangential field vanishes on the sphere, for any wave
     u = core.fibonacci(500)
-    for d, p in ((D, P), core.wave(60, 25, 35)):
+    for d, p in ((D, P), (DW, PW)):
         tot = mie.scattered_field(u, K, d, p) + core.plane_wave(u, K, d, p)
         assert np.abs(tot - np.sum(tot * u, axis=1)[:, None] * u).max() < 1e-12
 
@@ -51,21 +52,24 @@ def test_cube_against_paper():
 
 def test_cube_rotation():
     # A general wave: four class matrices and the rotation give the same field as all eight classes
-    d, p = core.wave(60, 25, 35)
     pts = 2.0 * core.fibonacci(50)
-    E, _, info = cube.solve(2, d, p, pts=pts)
-    full = cube.Cube(2, classes=core.classes_of(K, d, p, cube.REFL))
-    coef, _, _ = full.solve(d, p)
+    E, _, info = cube.solve(2, DW, PW, pts=pts)
+    full = cube.Cube(2, classes=core.classes_of(K, DW, PW, cube.REFL))
+    coef, _, _ = full.solve(DW, PW)
     assert len(info["unknowns"]) == 4 and len(coef) == 8
     assert core.rel(E, full.field(coef, pts)) < 1e-10
 
 
 def test_almond_against_paper():
-    # Section 6.3: the layout 3:0 at 1.19 GHz, nose-on, reproduces the stored field
+    # Section 6.3: the layout 3:0 at 1.19 GHz, nose-on, reproduces the stored field; tip tail works at 3.5 GHz
     d = np.load(os.path.join(DATA, "cost_almond.npz"))
     k = 2 * np.pi * 1.19e9 / almond.C0
     E = almond.nose_on(k, 3, 0, 0.3 * core.fibonacci(400))[2]
     assert core.rel(E, d["mfs_E0"]) < 1e-10
+    r = almond.rcs(3.5, 4, 1, step=90.0)
+    ref = np.load(os.path.join(DATA, "almond_rcs_3.5GHz.npz"))
+    for pol in ("sigma_HH", "sigma_VV"):
+        assert np.abs(10 * np.log10(r[pol] / ref[pol][[0, 180, 360]])).max() < 0.25
 
 
 def test_cone():
@@ -82,12 +86,6 @@ def test_bempp_symmetry():
     E_sym, _ = bem.torus(8, K, D, P, pts)
     E_full, _ = bem.efie(bem.torus_grid(1.0, 0.5, 8)[0], K, D, P, pts)
     assert core.rel(E_sym, E_full) < 1e-10
-    dw, pw = core.wave(60, 25, 35)
-    Ec_sym, _ = bem.cube(4, 1.5, K, dw, pw, pts)
-    s = np.array([0.0, 0.5 * (1 - 0.5 ** 1.5), 0.5])
-    v = np.array([[x, y, z] for a in range(3) for b, c in [((a + 1) % 3, (a + 2) % 3)]
-                  for i in range(3) for j in range(3) for x, y, z in [np.insert([s[i], s[j]], a, 0.5)]])
-    tr = [(b + i * 3 + j, b + (i + 1) * 3 + j, b + (i + 1) * 3 + j + 1) for b in (0, 9, 18) for i in range(2) for j in range(2)]
-    tr += [(b + i * 3 + j, b + (i + 1) * 3 + j + 1, b + i * 3 + j + 1) for b in (0, 9, 18) for i in range(2) for j in range(2)]
-    Ec_full, _ = bem.efie(bem.mirror_grid(v, np.array(tr), bem.group())[0], K, dw, pw, pts)
+    Ec_sym, _ = bem.cube(4, 1.5, K, DW, PW, pts)
+    Ec_full, _ = bem.efie(bem.cube_grid(4, 1.5)[0], K, DW, PW, pts)
     assert core.rel(Ec_sym, Ec_full) < 5e-5

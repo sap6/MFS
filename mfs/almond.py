@@ -23,7 +23,6 @@ ETA_F = np.sqrt(1 - (C_ / B_) ** 2)                         # focal curve, as a 
 GAP = 1 - ETA_F                                             # from the focal curve to the rim, as a fraction of the half-width
 C0 = 299792458.0                                            # speed of light [m/s]
 REFL = np.array([[1.0, 1, 1], [1, -1, 1], [1, 1, -1], [1, -1, -1]])   # the images under y → -y and z → -z
-CENTRE = np.array([0.02, 0, 0])                             # a point inside the almond, to orient the normals
 
 # Exponents of the tip cone (half-angles 34.09 and 12.71 degrees) by the parities (y, z) of the
 # potential: electric type E = ∇(r^nu Y), magnetic type H = ∇(r^tau Z) (mfs.cone, Table A.1)
@@ -41,25 +40,21 @@ def semi_axes(x):
     return np.clip(a, 0, None), np.clip(b, 0, None)
 
 
-def parity_class(sy, sz):
-    """
-    Dipole components that survive on the mid-plane for the class (sy, sz), and the signs
-    of the four images. Components 0-2: electric x, y, z; 3-5: magnetic x, y, z
-    """
-    return (np.array([0, 1, 5]) if sz > 0 else np.array([2, 3, 4])), np.array([1.0, sy, sz, sy * sz])
+def midplane_comps(sz):
+    """Dipole components that survive on z = 0 under z → -z (0-2: electric x, y, z; 3-5: magnetic x, y, z)"""
+    return np.array([0, 1, 5]) if sz > 0 else np.array([2, 3, 4])
 
 
 @njit(parallel=True, fastmath=True, cache=True)
-def _block(x, T, y, comps, sig, k, out):
-    """out[m, a, n, i]: row a of T[m] against the field of dipole comps[i] at y[n], summed over the images"""
+def _block(x, T, y, comps, sy, k, out):
+    """out[m, a, n, i]: row a of T[m] against the field of dipole comps[i] at y[n], summed over the four images"""
     nc, tmul = T.shape[1], 1 if T.shape[0] > 1 else 0
     for m in prange(x.shape[0]):
         Ge, Gm = np.empty((nc, 3), np.complex128), np.empty((nc, 3), np.complex128)
         Tm, e = np.empty((nc, 3)), np.empty(3)
         out[m] = 0.0
-        for g in range(4):
-            if REFL[g, 2] < 0:                                  # the sources lie on z = 0, so the image across it repeats
-                continue                                        # image g - 2, up to the parity that the class keeps
+        for g in range(2):                                      # y → ±y; the images across z = 0 repeat these (factor 2 below)
+            sg = 2.0 if g == 0 else 2.0 * sy
             for q in range(3):
                 for a in range(nc):
                     Tm[a, q] = T[m * tmul, a, q] * REFL[g, q]
@@ -71,20 +66,21 @@ def _block(x, T, y, comps, sig, k, out):
                 dipoles(Tm, e, k, r, Ge, Gm)
                 for i in range(comps.shape[0]):
                     for a in range(nc):
-                        out[m, a, n, i] += 2.0 * sig[g] * (Ge[a, comps[i]] if comps[i] < 3 else Gm[a, comps[i] - 3])
+                        out[m, a, n, i] += sg * (Ge[a, comps[i]] if comps[i] < 3 else Gm[a, comps[i] - 3])
 
 
-def matrix(x, y, k, T=None, cls=(-1, 1)):
+def matrix(x, y, k, T=None, cls=(-1, 1), tail=None):
     """
-    Fields of the dipoles at y on the mid-plane, symmetrised for the class cls
+    Fields of the dipoles at y on the mid-plane (and the tip tail, if given), symmetrised for cls
       x: points (M, 3), T: tangents (M, 2, 3) or None for the Cartesian components
-      Returns an array (M nc, N · 3)
+      Returns an array (M nc, unknowns)
     """
-    comps, sig = parity_class(*cls)
-    T = np.eye(3)[None] if T is None else np.ascontiguousarray(T)
-    out = np.empty((len(x), T.shape[1], len(y), len(comps)), complex)
-    _block(np.ascontiguousarray(x), T, np.ascontiguousarray(y), comps, sig, k, out)
-    return out.reshape(len(x) * T.shape[1], -1)
+    comps = midplane_comps(cls[1])
+    T_ = np.eye(3)[None] if T is None else np.ascontiguousarray(T)
+    out = np.empty((len(x), T_.shape[1], len(y), len(comps)), complex)
+    _block(np.ascontiguousarray(x), T_, np.ascontiguousarray(y), comps, float(cls[0]), k, out)
+    A = out.reshape(len(x) * T_.shape[1], -1)
+    return A if tail is None else np.hstack((A, tail_matrix(x, tail, k, T, cls)))
 
 
 # Sources on the mid-plane
@@ -125,14 +121,14 @@ def source_rows(n_mid, n_F, s=0.7, tip_cut=0.004, hmax=np.inf, tip_end=4e-7):
             x += min(s * surf_dist(x, y), hmax)
 
         # Rear half: the ellipse through the same point of the widest section, confocal with the focal ellipse
-        Amu, psi, first = np.sqrt(A_ ** 2 - B_ ** 2 * (1 - eta ** 2)), 0.0, True
+        Amu = np.sqrt(A_ ** 2 - B_ ** 2 * (1 - eta ** 2))
+        psi = 0.5 * min(s * surf_dist(0.0, eta * B_), hmax) / Amu
         while psi < np.pi / 2:
             x, y = -Amu * np.sin(psi), eta * B_ * np.cos(psi)
             ds = min(s * surf_dist(x, y), hmax)
-            dpsi = ds / np.sqrt((Amu * np.cos(psi)) ** 2 + (eta * B_ * np.sin(psi)) ** 2)
-            if not first and y > 0.3 * ds:
+            if y > 0.3 * ds:
                 pts.append((x, y, 0.0))
-            psi, first = psi + (0.5 * dpsi if first else dpsi), False
+            psi += ds / np.sqrt((Amu * np.cos(psi)) ** 2 + (eta * B_ * np.sin(psi)) ** 2)
     tail = np.array(tail)
     return np.array(pts), (tail[:, :3], tail[:, 3].astype(int), tail[:, 4])
 
@@ -144,9 +140,9 @@ def tail_matrix(x, tail, k, T, cls, n_e=2, n_m=1):
     n_m smallest magnetic exponents of the class
     """
     sy, sz = cls
-    comps, _ = parity_class(sy, sz)
+    comps = midplane_comps(sz)
     pts, row, rr = tail
-    nc = 3 if T is None else 2
+    nc = 3 if T is None else T.shape[1]
     G = matrix(x, pts, k, T, cls).reshape(len(x) * nc, len(pts), 3)
     cols = []
     # H is a pseudovector, so the potential of the magnetic type has the opposite parities
@@ -177,17 +173,15 @@ def collocation(s=0.35, hmax=0.012, tip_cut=0.002, end_cut=0.02):
         return np.sqrt((np.sin(phi) / 3) ** 2 + np.maximum(0.0, np.cos(phi) - ETA_F) ** 2)
 
     # Angles around the cross-section, the same for every x (every section is a 3:1 ellipse)
-    phis, dphis, phi = [], [], 0.0
+    rings, phi = [], 0.0
     while phi < np.pi / 2:
         dphi = min(s * rel_dist(phi + 1e-9) / np.sqrt(np.sin(phi) ** 2 + np.cos(phi) ** 2 / 9), hmax / B_, np.pi / 2 - phi)
-        phis.append(phi + 0.5 * dphi)
-        dphis.append(dphi)
+        rings.append((phi + 0.5 * dphi, dphi))
         phi += dphi
 
-    # Along the body, in the front and in the rear half, with normals by finite differences
-    pts, wts, nrm = [], [], []
-    e = 1e-7                                                    # step of the finite differences
-    for phi, dphi in zip(phis, dphis):
+    # Along the body, in the front and in the rear half, with outward normals by finite differences
+    pts, wts, nrm, e = [], [], [], 1e-7                         # e: step of the finite differences
+    for phi, dphi in rings:
         for rear in (False, True):
             u, u_end = 0.0, (np.pi / 2 - end_cut) if rear else L * (T1 - tip_cut)
             while u < u_end:
@@ -197,17 +191,16 @@ def collocation(s=0.35, hmax=0.012, tip_cut=0.002, end_cut=0.02):
                 else:
                     a, metric = semi_axes(u)[0], 1.0
                 du = min(min(s * a * rel_dist(phi), hmax) / metric, u_end - u)
-                um = np.array(u + 0.5 * du)
-                pu = (surface_point(um + e, np.array(phi), rear) - surface_point(um - e, np.array(phi), rear)) / (2 * e)
-                pp = (surface_point(um, np.array(phi + e), rear) - surface_point(um, np.array(phi - e), rear)) / (2 * e)
+                um = u + 0.5 * du
+                pu = (surface_point(um + e, phi, rear) - surface_point(um - e, phi, rear)) / (2 * e)
+                pp = (surface_point(um, phi + e, rear) - surface_point(um, phi - e, rear)) / (2 * e)
                 n = np.cross(pu, pp)
-                pts.append(surface_point(um, np.array(phi), rear))
-                wts.append(np.linalg.norm(n) * du * dphi)
-                nrm.append(n / np.linalg.norm(n))
+                ln = np.linalg.norm(n)
+                pts.append(surface_point(um, phi, rear))
+                wts.append(ln * du * dphi)
+                nrm.append((n if rear else -n) / ln)            # u runs towards -x on the rear and +x on the front
                 u += du
-    pts, nrm = np.array(pts), np.array(nrm)
-    nrm *= np.sign(np.sum(nrm * (pts - CENTRE), axis=1))[:, None]
-    return pts, np.array(wts), nrm
+    return np.array(pts), np.array(wts), np.array(nrm)
 
 
 def solve_class(k, y, cls, d, p, tail=None, s_col=0.35, ratio=2.5):
@@ -225,10 +218,7 @@ def solve_class(k, y, cls, d, p, tail=None, s_col=0.35, ratio=2.5):
     sw = np.repeat(np.sqrt(w / w.sum()), 2)[:, None]
 
     # Form matrix A and the right-hand sides, rows weighted by sqrt(area)
-    A = matrix(x, y, k, T, cls)
-    if tail is not None:
-        A = np.concatenate((A, tail_matrix(x, tail, k, T, cls)), axis=1)
-    A *= sw
+    A = matrix(x, y, k, T, cls, tail) * sw
     b = -np.einsum("mab,mwb->maw", T, class_part(x, k, d, p, REFL, (1, *cls))).reshape(-1, len(d)) * sw
 
     # Solve for all waves at once
@@ -238,9 +228,7 @@ def solve_class(k, y, cls, d, p, tail=None, s_col=0.35, ratio=2.5):
 
 def far(k, y, c, dirs, cls, tail=None, rfar=1.0e5):
     """Far-field pattern F (E ~ F e^{ikr}/r) in the directions dirs, for the coefficients c of one class"""
-    A = matrix(rfar * dirs, y, k, None, cls)
-    if tail is not None:
-        A = np.concatenate((A, tail_matrix(rfar * dirs, tail, k, None, cls)), axis=1)
+    A = matrix(rfar * dirs, y, k, None, cls, tail)
     return (A @ c).reshape(len(dirs), 3, *c.shape[1:]) * rfar * np.exp(-1j * k * rfar)
 
 

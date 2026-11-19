@@ -24,7 +24,7 @@ import numpy as np
 import scipy.linalg as sla
 from numba import njit, prange
 
-from .almond import CENTRE, L, T0, T1, semi_axes
+from .almond import L, T0, T1, semi_axes
 from .core import classes_of, sign
 from .cube import ROT, orbits
 
@@ -42,9 +42,7 @@ def plane_wave_trace(x, n, domain_index, result, parameters):
 def assemble_rows(div, k, rep=None, max_gb=0.9):
     """Rows of the EFIE matrix on div (all of them, or the representatives rep), in OpenCL buffers of at most max_gb"""
     N, l2g = div.global_dof_count, div.local2global
-    if rep is None and 16 * N * N <= max_gb * 2 ** 30:
-        curl = bempp.function_space(div.grid, "SNC", 0)
-        return np.asarray(bempp.operators.boundary.maxwell.electric_field(div, div, curl, k).weak_form().to_dense())
+    dense = lambda s: np.asarray(bempp.operators.boundary.maxwell.electric_field(div, div, s, k).weak_form().to_dense())
 
     def _space(rc):
         in_c = np.zeros(N, bool)
@@ -57,22 +55,18 @@ def assemble_rows(div, k, rep=None, max_gb=0.9):
         rows = np.nonzero(in_c[full_of])[0]
         return test, rows[np.argsort(full_of[rows])]
 
-    if rep is not None:
-        test, rows = _space(rep)
-        if 16 * test.global_dof_count * N <= max_gb * 2 ** 30:
-            return np.asarray(bempp.operators.boundary.maxwell.electric_field(div, div, test, k).weak_form().to_dense())[rows]
-        est_rows = test.global_dof_count
-        del test, rows
-    else:
-        rep, est_rows = np.arange(N), N
-    n_chunks = int(np.ceil(16.0 * est_rows * N / (max_gb * 2 ** 30))) + 1
+    test, rows = (bempp.function_space(div.grid, "SNC", 0), slice(None)) if rep is None else _space(rep)
+    est_rows = test.global_dof_count
+    if 16 * est_rows * N <= max_gb * 2 ** 30:
+        return dense(test)[rows]
+    del test, rows
+    rep = np.arange(N) if rep is None else rep
     A = np.empty((len(rep), N), complex, order="F" if len(rep) == N else "C")
     pos = 0
-    for rc in np.array_split(rep, n_chunks):
+    for rc in np.array_split(rep, int(np.ceil(16.0 * est_rows * N / (max_gb * 2 ** 30))) + 1):
         test, rows = _space(rc)
-        block = np.asarray(bempp.operators.boundary.maxwell.electric_field(div, div, test, k).weak_form().to_dense())
-        A[pos:pos + len(rc)] = block[rows]
-        del block, test
+        A[pos:pos + len(rc)] = dense(test)[rows]
+        del test
         pos += len(rc)
     return A
 
@@ -268,30 +262,31 @@ class Cyclic(Symmetric):
 
 # The meshes of the paper
 
+def cube_grid(n, g):
+    """Graded mesh of the unit cube (n intervals per edge, exponent g), made of one octant and its images"""
+    m = int(n) // 2
+    s = 0.5 * (1 - (1 - np.arange(m + 1) / m) ** g)
+    U, V = [x.ravel() for x in np.meshgrid(s, s, indexing="ij")]
+    face = np.column_stack((np.full_like(U, 0.5), U, V))
+    verts = np.concatenate([np.roll(face, a, axis=1) for a in range(3)])
+    idx = lambda i, j: i * (m + 1) + j
+    t0 = []
+    for i in range(m):
+        for j in range(m):
+            t0 += [(idx(i, j), idx(i + 1, j), idx(i + 1, j + 1)), (idx(i, j), idx(i + 1, j + 1), idx(i, j + 1))]
+    tris = np.concatenate([np.array(t0) + a * len(face) for a in range(3)])
+    refl = group()
+    return *mirror_grid(verts, tris, refl), refl
+
+
 def cube(n, g, k, d, p, pts):
     """
     Unit cube, n intervals per edge graded towards the edges with exponent g, with the three
     mirror planes and the rotation about the body diagonal (four classes at most)
       Returns the field at pts and the number of unknowns of the full mesh
     """
-    m = int(n) // 2
-    s = 0.5 * (1 - (1 - np.arange(m + 1) / m) ** g)
-    verts, tris = [], []
-    for a in range(3):                                          # the octant (+, +, +): three faces
-        b, c = (a + 1) % 3, (a + 2) % 3
-        base = len(verts)
-        for i in range(m + 1):
-            for j in range(m + 1):
-                x = np.zeros(3)
-                x[a], x[b], x[c] = 0.5, s[i], s[j]
-                verts.append(x)
-        idx = lambda i, j: base + i * (m + 1) + j
-        for i in range(m):
-            for j in range(m):
-                tris += [(idx(i, j), idx(i + 1, j), idx(i + 1, j + 1)), (idx(i, j), idx(i + 1, j + 1), idx(i, j + 1))]
-    refl = group()
-    sym = Mirror(*mirror_grid(np.array(verts), np.array(tris), refl), refl, k)
-    orbit = orbits(classes_of(k, d, p, refl))
+    sym = Mirror(*cube_grid(n, g), k)
+    orbit = orbits(classes_of(k, d, p, sym.refl))
     E = 0
     for j in range(3):                                          # the wave turned back j thirds of a turn, the field forward
         only = [c for c in orbit if j in orbit[c]]
@@ -343,15 +338,10 @@ def almond(n_t, n_s, k, d, p, pts):
     verts[np.abs(verts) < 1e-15] = 0.0
     idx = lambda i, j: 1 + i * (q + 1) + j
     last, tris = len(verts) - 1, []
-    for j in range(q):
+    for j in range(q):                                          # outward normals
         tris += [(0, idx(0, j + 1), idx(0, j)), (last, idx(n_t - 2, j), idx(n_t - 2, j + 1))]
         for i in range(n_t - 2):
             tris += [(idx(i, j), idx(i, j + 1), idx(i + 1, j)), (idx(i, j + 1), idx(i + 1, j + 1), idx(i + 1, j))]
-    tris = np.array(tris)
-    c = verts[tris].mean(axis=1)
-    nrm = np.cross(verts[tris[:, 1]] - verts[tris[:, 0]], verts[tris[:, 2]] - verts[tris[:, 0]])
-    flip = np.sum(nrm * (c - CENTRE), axis=1) < 0              # outward normals
-    tris[flip] = tris[flip][:, [0, 2, 1]]
     refl = group((0, 1, 1))
-    sym = Mirror(*mirror_grid(verts, tris, refl), refl, k)
+    sym = Mirror(*mirror_grid(verts, np.array(tris), refl), refl, k)
     return sym.field(sym.solve(d, p), pts), sym.N

@@ -11,7 +11,7 @@ incident wave (as for acoustic scattering in Liu and Barnett 2016).
 import numpy as np
 from scipy.linalg import lstsq
 
-from .core import cross_sections, dyadic, field, plane_wave, sphere_rule
+from .core import cross_sections, dyadic, field, plane_wave, rel, sphere_rule
 
 
 def circle(n, centre, radius):
@@ -29,8 +29,8 @@ def ring_points(rho, z, nphi):
 
 def frame(ph):
     """Unit vectors e_rho, e_phi, e_z at the angles ph, shape (len(ph), 3, 3)"""
-    c, s, o = np.cos(ph), np.sin(ph), 0 * ph
-    return np.stack((np.stack((c, s, o), 1), np.stack((-s, c, o), 1), np.stack((o, o, o + 1), 1)), 1)
+    c, s, o = np.cos(ph), np.sin(ph), np.zeros_like(ph)
+    return np.array([[c, s, o], [-s, c, o], [o, o, o + 1]]).transpose(2, 0, 1)
 
 
 class Torus:
@@ -115,8 +115,7 @@ def solve(torus, k, rhs, ns, nphi, a_s, rings=2):
 
 def scatter(k, d, p, ns, nphi, R=1.0, a=0.5, a_s=None, rings=2):
     """Plane-wave scattering with sources on the inner torus of minor radius a_s (default a / 2)"""
-    torus = Torus(R, a)
-    return solve(torus, k, lambda x: -plane_wave(x, k, d, p), ns, nphi, 0.5 * a if a_s is None else a_s, rings)
+    return solve(Torus(R, a), k, lambda x: -plane_wave(x, k, d, p), ns, nphi, 0.5 * a if a_s is None else a_s, rings)
 
 
 def residual(sol, d, p, R=1.0, a=0.5, n=1500):
@@ -124,7 +123,7 @@ def residual(sol, d, p, R=1.0, a=0.5, n=1500):
     xt, Tt = Torus(R, a).test_points(n)
     got = np.einsum("mca,ma->mc", Tt, sol.field(xt))
     want = -np.einsum("mca,ma->mc", Tt, plane_wave(xt, sol.k, d, p))
-    return float(np.linalg.norm(got - want) / np.linalg.norm(want))
+    return rel(got, want)
 
 
 def optical(sol, d, p):

@@ -9,7 +9,7 @@ the dotted lines mark the conjectured bound a_s = R - sqrt(R² - a²).
 import sys
 
 import numpy as np
-from style import BLUE, GREEN, ORANGE, data, finish, plt
+from style import BLUE, GREEN, ORANGE, curve, data, finish, plt
 
 from mfs import core, torus
 
@@ -36,7 +36,7 @@ fig, axes = plt.subplots(1, 2, figsize=(6.5, 2.7))
 for a, (col, mk, ls) in TUBES.items():
     r = res[f"a{a:g}"]
     for ax, j in zip(axes, (1, 2)):
-        ax.semilogy(r[:, 0], r[:, j], color=col, marker=mk, ls=ls, lw=1.4, ms=4.5, mec="white", mew=0.6, label=rf"$a/R = {a:g}$")
+        curve(ax, r[:, 0], r[:, j], col, mk, ls, rf"$a/R = {a:g}$", 4.5, 1.4, 0.6, logx=False)
         ax.axvline((1 - np.sqrt(1 - a * a)) / a, color=col, lw=0.9, ls=":")
 axes[0].set_ylabel("boundary residual")
 axes[1].set_ylabel(r"coefficient norm $\|\boldsymbol{\alpha}\|$")

@@ -27,7 +27,7 @@ def solve(N, k=2 * np.pi, R=0.5, d=(0, 0, -1.0), p=(0, 1.0, 0), M=None):
     A = np.einsum("mab,mnbc->manc", T, dyadic(x, y, k)).reshape(2 * M, 3 * N)
 
     # Form vector b: minus the tangential incident field
-    b = -np.einsum("mab,mb->ma", T, plane_wave(x, k, np.array(d), np.array(p))).reshape(-1)
+    b = -np.einsum("mab,mb->ma", T, plane_wave(x, k, d, p)).reshape(-1)
 
     # Solve the least-squares problem for alpha
     alpha = QR(A).solve(b).reshape(N, 3)

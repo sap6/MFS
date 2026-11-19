@@ -131,8 +131,7 @@ def class_part(x, k, d, p, refl, cls):
     for R in refl:
         phase = np.exp(1j * k * (x * R) @ D.T)                   # e^{ik d·Rx}, shape (M, W)
         E = E + sign(cls, R) * R * P[None] * phase[:, :, None]
-    E = E / len(refl)
-    return E[:, 0] if np.ndim(d) == 1 else E
+    return (E[:, 0] if np.ndim(d) == 1 else E) / len(refl)
 
 
 def classes_of(k, d, p, refl):
@@ -184,8 +183,7 @@ class CSNE:
             raise np.linalg.LinAlgError("too ill-conditioned for the semi-normal equations")
 
     def _normal(self, r):
-        # (A^H A)^{-1} A^H r, with the column scaling undone
-        rhs = np.conj(self.A.T @ np.conj(r))
+        rhs = np.conj(self.A.T @ np.conj(r))                   # A^H r, without copying A
         s = self.scale if rhs.ndim == 1 else self.scale[:, None]
         return sla.cho_solve(self.R, rhs / s, check_finite=False) / s
 
@@ -228,7 +226,7 @@ def cross_sections(far, k, d, p, rule=None):
       far: function of directions (D, 3) returning F, shape (D, 3)
     """
     dirs, w = rule or sphere_rule()
-    F = far(np.vstack((dirs, d[None])))
+    F = far(np.vstack((dirs, d)))
     ext = 4 * np.pi / k * float(np.imag(np.conj(p) @ F[-1]))
     sca = float(np.sum(w * np.sum(np.abs(F[:-1]) ** 2, axis=1)))
     return ext, sca

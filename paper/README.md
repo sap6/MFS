@@ -8,7 +8,7 @@ The manuscript, in LaTeX (Elsevier's `elsarticle`, preprint layout). In `paper/`
 
 - `main.tex`, `sections/*.tex`: the text; `refs.bib`: the references; `highlights.txt`.
 - The figures are read from `../figures/`, where each has a script.
-- `main_3p.tex` is the same paper in the journal's single-column `3p` layout, to count pages
-  (`sed 's/\[preprint,12pt\]/[final,3p,times]/' main.tex > main_3p.tex && latexmk -pdf main_3p.tex`).
+- To count pages in the journal's single-column `3p` layout:
+  `sed 's/\[preprint,12pt\]/[final,3p,times]/' main.tex > main_3p.tex && latexmk -pdf main_3p.tex`.
 - Before submission the authors add the declarations that JCP requires (templates are
   commented in `main.tex`; see `../notes/jcp_checklist.md`).

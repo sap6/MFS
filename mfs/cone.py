@@ -81,15 +81,14 @@ class EllipticCone:
         u = np.cos((np.arange(n_src) + 0.5) / n_src * (np.pi / 2))
         self.src = unit(np.column_stack((-np.ones(n_src), f * u, 0 * u)))
         rng = np.random.default_rng(seed)
-        pts = unit(rng.normal(size=(40 * n_int, 3)))
-        pts = np.abs(pts)
+        pts = np.abs(unit(rng.normal(size=(40 * n_int, 3))))
         pts[:, 0] *= np.sign(rng.normal(size=len(pts)))
         inside = (pts[:, 0] < 0) & ((pts[:, 1] / tan_y) ** 2 + (pts[:, 2] / tan_z) ** 2 < pts[:, 0] ** 2)
         self.xi = pts[~inside][:n_int]
 
     def columns(self, nu, x, sy, sz, normal=None):
         """Symmetrised particular solutions at x (values, or derivatives along normal); odd in z: the derivative across the segment"""
-        ez, cols = np.array([0.0, 0, 1]), []
+        cols = []
         for s in self.src:
             col = 0
             for ry, sign in ((1, 1.0), (-1, sy)):
@@ -98,9 +97,9 @@ class EllipticCone:
                 if sz > 0:
                     col = col + sign * (P(nu, c) if normal is None else -dP(nu, c) * (normal @ sj))
                 elif normal is None:
-                    col = col + sign * (-dP(nu, c) * (x @ ez))
+                    col = col + sign * (-dP(nu, c) * x[:, 2])
                 else:
-                    col = col + sign * (d2P(nu, c) * (normal @ sj) * (x @ ez) - dP(nu, c) * (normal @ ez))
+                    col = col + sign * (d2P(nu, c) * (normal @ sj) * x[:, 2] - dP(nu, c) * normal[:, 2])
             cols.append(col)
         return np.column_stack(cols)
 
@@ -133,8 +132,8 @@ class CubeVertex:
         # Boundary: the three sides, Gauss panels graded towards the corners
         g, w = np.polynomial.legendre.leggauss(4)
         edges = np.concatenate(([0.0], (np.pi / 4) * 0.6 ** np.arange(18, -1, -1)))
-        th = np.concatenate([0.5 * (a + b) + 0.5 * (b - a) * g for a, b in zip(edges[:-1], edges[1:])])
-        wt = np.concatenate([0.5 * (b - a) * w for a, b in zip(edges[:-1], edges[1:])])
+        a, b = edges[:-1, None], edges[1:, None]
+        th, wt = (0.5 * (a + b) + 0.5 * (b - a) * g).ravel(), (0.5 * (b - a) * w).ravel()
         th, wt = np.concatenate((th, np.pi / 2 - th[::-1])), np.concatenate((wt, wt[::-1]))
         self.xb = np.concatenate([np.outer(np.cos(th), V[i]) + np.outer(np.sin(th), V[(i + 1) % 3]) for i in range(3)])
         self.nb = np.concatenate([np.tile(V[(i + 2) % 3], (len(th), 1)) for i in range(3)])
@@ -150,7 +149,7 @@ class CubeVertex:
             if normal is None:
                 out += [P(nu, c)] + [-dP(nu, c) * (x @ t) for t in tt]
             else:
-                ns = np.sum(normal * s, axis=1)
+                ns = normal @ s
                 out += [-dP(nu, c) * ns] + [d2P(nu, c) * ns * (x @ t) - dP(nu, c) * (normal @ t) for t in tt]
         return np.column_stack(out)
 
