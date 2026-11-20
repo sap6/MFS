@@ -35,6 +35,8 @@ D.~I. Kaklamani, H.~T. Anastassiu, Aspects of the method of auxiliary sources
 \bibitem{doicu2000}
 A.~Doicu, Y.~A. Eremin, T.~Wriedt, Acoustic and Electromagnetic Scattering
   Analysis Using Discrete Sources, Academic Press, 2000.
+\newblock \href {https://doi.org/10.1016/B978-0-12-219740-6.X5000-8}
+  {\path{doi:10.1016/B978-0-12-219740-6.X5000-8}}.
 
 \bibitem{barnett2008}
 A.~H. Barnett, T.~Betcke, Stability and convergence of the method of
@@ -106,6 +108,8 @@ A.~Gopal, L.~N. Trefethen, New {L}aplace and {H}elmholtz solvers, Proc. Natl.
 \bibitem{ginn2023}
 H.~Ginn, L.~N. Trefethen, Lightning {H}elmholtz solver, arXiv:2310.01665
   (2023).
+\newblock \href {https://doi.org/10.48550/arXiv.2310.01665}
+  {\path{doi:10.48550/arXiv.2310.01665}}.
 
 \bibitem{hochman2013}
 A.~Hochman, Y.~Leviatan, J.~K. White, On the use of rational-function fitting
@@ -118,6 +122,8 @@ A.~Hochman, Y.~Leviatan, J.~K. White, On the use of rational-function fitting
 D.~Kong, J.~Shen, Lightning algorithm for inhomogeneous modified {H}elmholtz
   equations on cornered domains and their applications, arXiv:2610.26540
   (2026).
+\newblock \href {https://doi.org/10.48550/arXiv.2610.26540}
+  {\path{doi:10.48550/arXiv.2610.26540}}.
 
 \bibitem{tabatadze2025}
 V.~Tabatadze, K.~{\.I}{\c{s}}can, K.~Kara{\c{c}}uha, On electromagnetic
@@ -179,18 +185,26 @@ T.~Betcke, M.~W. Scroggs, Bempp-cl: a fast {P}ython based just-in-time
 \bibitem{kirsch2015}
 A.~Kirsch, F.~Hettlich, The Mathematical Theory of Time-Harmonic {M}axwell's
   Equations, Springer, 2015.
+\newblock \href {https://doi.org/10.1007/978-3-319-11086-8}
+  {\path{doi:10.1007/978-3-319-11086-8}}.
 
 \bibitem{colton2013}
 D.~Colton, R.~Kress, Inverse Acoustic and Electromagnetic Scattering Theory,
   3rd Edition, Springer, 2013.
+\newblock \href {https://doi.org/10.1007/978-1-4614-4942-3}
+  {\path{doi:10.1007/978-1-4614-4942-3}}.
 
 \bibitem{osipov2017}
 A.~V. Osipov, S.~A. Tretyakov, Modern Electromagnetic Scattering Theory with
   Applications, Wiley, 2017.
+\newblock \href {https://doi.org/10.1002/9781119004639}
+  {\path{doi:10.1002/9781119004639}}.
 
 \bibitem{golub2013}
 G.~H. Golub, C.~F. Van~Loan, Matrix Computations, 4th Edition, Johns Hopkins
   University Press, 2013.
+\newblock \href {https://doi.org/10.56021/9781421407944}
+  {\path{doi:10.56021/9781421407944}}.
 
 \bibitem{bjorck1987}
 {\AA}.~Bj{\"o}rck, Stability analysis of the method of seminormal equations for

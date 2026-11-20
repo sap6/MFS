@@ -86,6 +86,8 @@ def build_tree(lam, d, n, H, k):
         off[p + 1:p + m + 1] = off[p] + (pm if lev < LMOM else ng) * np.arange(1, m + 1)
         p += m
     out = (np.ascontiguousarray(np.concatenate(ts)), np.ascontiguousarray(np.vstack(Ws)), off, tlo, thi, ltab, gg, gwg)
+    if len(_TREES) >= 32:
+        _TREES.clear()
     _TREES[key] = out
     return out
 

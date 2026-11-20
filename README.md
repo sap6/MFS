@@ -78,7 +78,7 @@ Each shape has one entry point:
 Every figure and table has a script in [`figures/`](figures). Run on its own,
 the script draws the figure in seconds from the results in [`data/`](data).
 With `--run` it computes those results again and overwrites `data/`
-(`git checkout data` restores the paper's results); the times below are on
+(`git checkout -- data/` restores the paper's results); the times below are on
 two cores (Intel Xeon Platinum 8481C at 2.2 GHz, 8 GB RAM). The runs that
 involve Bempp need `pip install -e ".[bempp]"`.
 

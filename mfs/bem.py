@@ -63,7 +63,7 @@ def assemble_rows(div, k, rep=None, max_gb=0.9):
     rep = np.arange(N) if rep is None else rep
     A = np.empty((len(rep), N), complex, order="F" if len(rep) == N else "C")
     pos = 0
-    for rc in np.array_split(rep, int(np.ceil(16.0 * est_rows * N / (max_gb * 2 ** 30))) + 1):
+    for rc in np.array_split(rep, min(len(rep), int(np.ceil(16.0 * est_rows * N / (max_gb * 2 ** 30))) + 1)):
         test, rows = _space(rc)
         A[pos:pos + len(rc)] = dense(test)[rows]
         del test
@@ -158,8 +158,8 @@ def action(space, vmap, emap):
 
 @njit(parallel=True, cache=True)
 def fold(A, rows, cols, coef):
-    """out[i, k] = Σ_r coef[r, k] A[rows[i], cols[r, k]]: the rows of A against the symmetrised functions"""
-    out = np.zeros((len(rows), cols.shape[1]), np.complex128)
+    """out[i, k] = Σ_r coef[r, k] A[rows[i], cols[r, k]]: F-ordered rows of A against the symmetrised functions"""
+    out = np.zeros((cols.shape[1], len(rows)), np.complex128).T
     for i in prange(len(rows)):
         for r in range(cols.shape[0]):
             for k in range(cols.shape[1]):
@@ -224,9 +224,9 @@ class Mirror(Symmetric):
             self.lu[c] = (keep, cols, coef, lu)
         return self.lu[c]
 
-    def solve(self, d, p, classes=None):
+    def solve(self, d, p, classes=None, b=None):
         """RWG coefficients of the current for the wave p e^{ik d·x}, restricted to the given classes"""
-        b, J = self.trace(d, p), np.zeros(self.N, complex)
+        b, J = (self.trace(d, p) if b is None else b), np.zeros(self.N, complex)
         for c in classes_of(self.k, d, p, self.refl):
             if classes is None or c in classes:
                 keep, cols, coef, lu = self._class(c)
@@ -287,16 +287,15 @@ def cube(n, g, k, d, p, pts):
     """
     sym = Mirror(*cube_grid(n, g), k)
     orbit = orbits(classes_of(k, d, p, sym.refl))
-    E = 0
-    for j in range(3):                                          # the wave turned back j thirds of a turn, the field forward
-        only = [c for c in orbit if j in orbit[c]]
-        if only:
-            Q = np.linalg.matrix_power(ROT, j)
-            E = E + sym.field(sym.solve(Q.T @ d, Q.T @ p, only), pts @ Q) @ Q.T
-            for c in only:
-                if j == orbit[c][-1]:
-                    sym.lu.pop(c, None)
-    return E, sym.N
+    turns = {j: np.linalg.matrix_power(ROT, j) for js in orbit.values() for j in js}
+    bs = {j: sym.trace(Q.T @ d, Q.T @ p) for j, Q in turns.items()}
+    Js = {j: 0 for j in turns}
+    for c, js in orbit.items():                                 # one LU factor in memory at a time
+        for j in js:
+            Js[j] = Js[j] + sym.solve(turns[j].T @ d, turns[j].T @ p, [c], b=bs[j])
+        sym.lu.clear()
+    sym.A = None
+    return sum(sym.field(J, pts @ turns[j]) @ turns[j].T for j, J in Js.items()), sym.N
 
 
 def torus_grid(R, a, n):
@@ -323,7 +322,9 @@ def torus(n, k, d, p, pts, R=1.0, a=0.5):
         c = np.arange(n * m, dtype=np.int32)
         return vmap, 2 * vmap[:, np.repeat(c, 2)] + np.tile(np.arange(2, dtype=np.int32), n * m)[None, :]
     sym = Cyclic(grid, *maps(), k)
-    return sym.field(sym.solve(d, p), pts), sym.N
+    J = sym.solve(d, p)
+    sym.A = None
+    return sym.field(J, pts), sym.N
 
 
 def almond(n_t, n_s, k, d, p, pts):
@@ -344,4 +345,6 @@ def almond(n_t, n_s, k, d, p, pts):
             tris += [(idx(i, j), idx(i, j + 1), idx(i + 1, j)), (idx(i, j + 1), idx(i + 1, j + 1), idx(i + 1, j))]
     refl = group((0, 1, 1))
     sym = Mirror(*mirror_grid(verts, np.array(tris), refl), refl, k)
-    return sym.field(sym.solve(d, p), pts), sym.N
+    J = sym.solve(d, p)
+    sym.A = None
+    return sym.field(J, pts), sym.N

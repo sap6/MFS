@@ -245,6 +245,11 @@ def solve(J, d=(0, 0, -1.0), p=(0, 1.0, 0), pts=None, k=2 * np.pi, max_gb=None, 
     if max_gb is None:
         pages = os.sysconf("SC_PHYS_PAGES") if "SC_PHYS_PAGES" in getattr(os, "sysconf_names", ()) else -1
         ram = pages * os.sysconf("SC_PAGE_SIZE") / 2 ** 30 if pages > 0 else 12.0
+        try:
+            cg = open("/sys/fs/cgroup/memory.max").read().strip()
+            ram = min(ram, int(cg) / 2 ** 30) if cg.isdigit() else ram
+        except OSError:
+            pass
         max_gb = min(6.0, 0.55 * ram)
     d, p = np.asarray(d, float), np.asarray(p, float)
     pts = None if pts is None else np.asarray(pts, float)
@@ -253,7 +258,8 @@ def solve(J, d=(0, 0, -1.0), p=(0, 1.0, 0), pts=None, k=2 * np.pi, max_gb=None, 
     todo, E, sols = list(orbit), (None if pts is None else np.zeros((len(pts), 3), complex)), []
     r2, b2, info = 0.0, 0.0, dict(unknowns=[], t_assemble=0.0, t_factor=0.0)
     probe = Cube(J, k, classes=[], **layout)
-    g = max(1, int(max_gb * 2 ** 30 / (16.0 * probe.rows * max(probe.unknowns.values()))))   # classes per batch
+    nmax = max(probe.unknowns.values())
+    g = max(1, int(max_gb * 2 ** 30 / (16.0 * (probe.rows * nmax + nmax ** 2))))   # classes per batch (A and R)
     for i in range(0, len(todo), g):
         cube = Cube(J, k, classes=todo[i:i + g], **layout)
         bsols = []

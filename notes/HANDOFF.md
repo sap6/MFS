@@ -1,14 +1,14 @@
-# Handoff (19 November 2026)
+# Handoff (20 November 2026)
 
 Read this first, then `CLAUDE.md` and the top of `notes/NOTES.md`.
 
 ## 1. State of the repository
 
-- Branch `ccr-116c520c-fts35f` of `sap6/mfs`, everything committed and
-  pushed (last commit before this file: `9c7b3d4`). No pull request; not
-  merged into `main`. Nothing was ever pushed to `sap6/mfs-paper` (it syncs
+- Branch `ccr-116c520c-fts35f` of `sap6/MFS`, everything committed and
+  pushed. No pull request; not merged into `main` (merge into `main` before
+  sharing Colab links). Nothing was ever pushed to `sap6/mfs-paper` (it syncs
   to Overleaf): never push there without asking the author.
-- `python -m pytest tests` passes (8 tests with `MFS_TEST_BEMPP=1`), CI on
+- `python -m pytest tests` passes (`12` tests with `MFS_TEST_BEMPP=1`), CI on
   GitHub is green, and `python figures/tables.py` reproduces `paper/tables/`.
 - Layout: `mfs/` (the package), `figures/` (one script per figure, replots
   from `data/`, `--run` recomputes), `data/`, `notebooks/` (Colab),
@@ -46,19 +46,20 @@ experiment log). The essentials:
   | case | best MFS layout (1 or 2 depths/octave) | two depths/octave alone |
   |---|---|---|
   | standard wave (`k1`) | 5.7e-4 | 2.4e-4 |
-  | general wave (`k1o`) | 5.0e-4 | 2.0e-4 |
-  | two wavelengths (`k2`) | 8.0e-4 | 5.0e-4 |
+  | general wave (`k1o`) | 5.2e-4 | 2.0e-4 |
+  | two wavelengths (`k2`) | 7.6e-4 | 4.8e-4 |
   | three wavelengths (`k3`) | 1.3e-3 | 1.0e-3 |
 
 ## 3. Completed on 19--20 November 2026
 
 - **3.1 Unified cube rules & refreshed benchmarks (commit `80928a0` + 20 Nov pass):**
-  - Unified `mfs/cube.py` boundary panel cap `hmax = min(1/8, pi/k)`, panel order `2 + max(m, 1 + ceil(s/2))`, physical line-length mode rule `round(2*s*(s+1)*2*(H-d))`, and line quadrature `12 + ceil(8*s), 8 + ceil(2*s)` with zero per-case overrides; F-contiguous per-class slices `np.moveaxis(np.zeros((rows, nmax, g), order="F"), 2, 0)` avoid implicit `zherk` and `QR` copies.
+  - Unified `mfs/cube.py` boundary panel cap `hmax = min(1/8, pi/(2k))` (`lambda/4`), panel order `2 + max(m, 1 + ceil(s/2))`, physical line-length mode rule `round(2*s*(s+1)*2*(H-d))`, and line quadrature `12 + ceil(8*s), 8 + ceil(2*s)` with zero per-case overrides; F-contiguous per-class slices `np.moveaxis(np.zeros((rows, nmax, g), order="F"), 2, 0)` avoid implicit `zherk` and `QR` copies.
   - Eliminated 1.4 GB of matrix/tensor copies in `mfs/almond.py` (`matrix`, `tail_matrix` via chunked BLAS `zgemm`, vectorised `collocation`), speeding up `1.19 GHz` nose-on MFS by `1.5x--3.9x` (`3:0..8:5` in `0.67, 1.48, 2.38, 5.10, 12.94 s`, `10^{-15}` field agreement) so MFS is now faster than Bempp across the entire accuracy range on sphere, torus, and `1.19 GHz` almond.
   - Fixed `torus.residual` to default to `(sol.R, sol.a)` and scaled `CSNE` Gram matrix in-place.
 - **3.2 Figures, tables, manuscript, notebooks & tests (20 Nov):**
   - Raised PNG export to `300 dpi`; replaced aliased `6°` dot subsampling in `fig_almond_benchmark` with full `0.5°` dashed reference curve; fixed `fig_almond_layout` `1.85x` aspect distortion and `fig_cube_layout` text/smudge overlaps; added `$2^{-9}d_{\min}$` marker in `fig_edge_residual`; unified axes and legends across `fig_cube_cases`, `fig_cost_all`, `fig_sphere`, `fig_torus_sources`, and `fig_sphere_nearfield`; expanded Table 4 (`summary.tex`) to show both `Total` and `Solved` unknowns.
-  - Refined manuscript exposition, referee preemptions (open-skeleton absence of spurious Maxwell resonances, unit-cube EFIE cavity parity orthogonality, CSNE iterative-refinement sensitivity), and self-contained captions across `paper/sections/*.tex`, compiling `main.pdf` (46 pp) and `main_3p.pdf` (27 pp) with `0` warnings and `0` Overfull/Underfull boxes.
+  - Refined manuscript exposition, referee preemptions (open-skeleton absence of spurious Maxwell resonances, unit-cube EFIE cavity parity orthogonality, CSNE iterative-refinement sensitivity, verified `10^7` column-scaled condition bound, `0.20%`/`0.033%` almond `(1,1)` residuals, `-66.7` vs `-71.1` dBsm `10.25 GHz` null flank, DOIs and pruned `refs.bib`), compiling `main.pdf` (46 pp) and `main_3p.pdf` (27 pp) with `0` warnings and `0` Overfull/Underfull boxes.
+  - Eliminated three `>7.5 GiB` RAM / swap-thrash hazards on 8 GB VMs: capped `lines._TREES` at 32 entries (saves `0.75--1.55 GiB`), made `bem.fold` F-ordered and factored one orbit class at a time while freeing `sym.A` before OpenCL potential evaluation (cuts `bem.cube` `k1o` `n=48` peak RSS by `~2.4 GiB`), and included `CSNE` Cholesky factor `nmax^2` + cgroup limits in `cube.solve` batching (`k1o J=11` `5.53 -> 2.77 GiB`).
   - Upgraded `README.md`, all 4 Colab notebooks (`1_sphere.ipynb`..`4_almond.ipynb`, re-executed cleanly), and `tests/test_mfs.py` (`12` tests with `MFS_TEST_BEMPP=1`).
 
 ## 4. Decisions only the author can make (asked, not yet answered)
