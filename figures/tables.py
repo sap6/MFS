@@ -52,8 +52,8 @@ write("summary", [*[row("Sphere" if int(r[0]) == 1200 else "", "MFS", r[0], r[0]
                   row("Almond", "MFS $6{:}3$", alm_tot, ncls, talm, rel(a["mfs_E3"], aref)),
                   row("", "Bempp", nbem, nbem // 4, a["bem"][-1, 1], rel(a[f"bem_E{len(a['bem']) - 1}"], aref))])
 
-# Table 5: both ends of the cube comparison. Time for an error of about 1e-3 (at most 1.2e-3);
-# Bempp's most accurate run and the first MFS level below it
+# Table 5: both ends of the cube comparison. Bempp's most accurate run and the first MFS level
+# below it; then wall time for an error of about 1e-3 (at most 1.2e-3)
 rows = []
 labels = (("k1", r"Standard ($k=2\pi$)"), ("k1o", r"General ($k=2\pi$)"),
           ("k2", r"Standard ($k=4\pi$)"), ("k3", r"Standard ($k=6\pi$)"))
@@ -63,7 +63,7 @@ for case, label in labels:
     tb, tm_ = min(t for t, e in bem if e <= 1.2e-3), min(t for t, e in mfs if e <= 1.2e-3)
     bt, be = envelope(bem)[-1]
     mt, me = min(((t, e) for t, e in mfs if e < be))
-    rows.append(f"    {label} & {tm(tb)} & {tm(tm_)} & {sci(be)} & {tm(bt)} & {sci(me)} & {tm(mt)} \\\\")
+    rows.append(f"    {label} & {sci(be)} & {tm(bt)} & {sci(me)} & {tm(mt)} & {tm(tb)} & {tm(tm_)} \\\\")
 write("cube_ends", rows)
 
 # Table C.1: the fastest Bempp runs on the cube for each accuracy (the lower envelope), errors below 3e-3

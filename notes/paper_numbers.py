@@ -143,3 +143,37 @@ for case in ("k1", "k1o", "k2", "k3"):
           f"most accurate: Bempp {be:.2e} in {bt:.1f} s vs MFS ({mnd},{mJ}) {me:.2e} in {mt:.1f} s ({mt / bt:.2f}x)")
     env_sub = [row for row in d["env"] if row[6] < 3e-3]
     print("   App C env (<3e-3) gradings:", sorted({float(row[0]) for row in env_sub}))
+
+# Section 5.6: the regular tetrahedron
+from mfs import tetrahedron as _tet  # noqa: E402
+tc = np.load(D + "tetrahedron_convergence.npz")
+tref = tc["ref_E"]
+tdense = {int(r[0]): r for r in tc["dense"]}
+tNu = {J: sum(_tet.Tetrahedron(J, classes=[]).unknowns.values()) for J in tdense}
+terr = {J: rel(tc[f"dense_E{J}"], tref) for J in tdense if J != 10}
+print("\n== Section 5.6 (Regular tetrahedron)")
+print("errors J = 3..9:", {J: f"{e:.2e}" for J, e in terr.items()})
+print("unk/cls & N_u J = 3..10:", {J: (int(tdense[J][2]), tNu[J]) for J in tdense})
+print("time J = 3..10:", {J: round(float(tdense[J][1]), 2) for J in tdense})
+print("optical J = 3..10:", {J: f"{tdense[J][4]:.2e}" for J in tdense})
+print("ext J = 8..10:", {J: f"{tdense[J][5]:.6f}" for J in (8, 9, 10)})
+print("factor per level J = 3..8:", [round(terr[J] / terr[J + 1], 2) for J in range(3, 9)])
+tN = np.array([tNu[J] for J in range(3, 9)], float)
+te = np.array([terr[J] for J in range(3, 9)])
+tb, ta = np.polyfit(np.sqrt(tN), np.log(te), 1)
+print(f"fit eps = {np.exp(ta):.3f} exp({tb:.4f} sqrt(N_u)), largest factor {np.exp(np.max(np.abs(ta + tb * np.sqrt(tN) - np.log(te)))):.2f} "
+      f"(largest rel dev {np.max(np.abs(np.exp(ta + tb * np.sqrt(tN)) / te - 1)):.1%})")
+tdmin = 0.1 * 2.0 ** -np.arange(3, 9)
+print(f"decay like d_min^{np.polyfit(np.log(tdmin), np.log(te), 1)[0]:.2f}")
+tone = {int(r[0]): r for r in tc["one"]}
+teo = {J: rel(tc[f"one_E{J}"], tref) for J in tone}
+print("one depth J=3..8: errors", {J: f"{teo[J]:.2e}" for J, r in tone.items()},
+      "times", {J: round(float(r[1]), 2) for J, r in tone.items()})
+tnt = {int(r[0]): rel(tc[f"notail_E{int(r[0])}"], tref) for r in tc["notail"]}
+print("no tails:", {J: f"{x:.2e}" for J, x in tnt.items()}, "tails reduce J = 8 by", round(tnt[8] / terr[8]),
+      f"decay like d_min^{np.polyfit(np.log(0.1 * 2.0 ** -np.array(sorted(tnt))), np.log([tnt[J] for J in sorted(tnt)]), 1)[0]:.2f}")
+tpl = {int(r[0]): (sum(_tet.Tetrahedron(None, classes=[], n_base=int(r[0])).unknowns.values()), rel(tc[f"plain_E{int(r[0])}"], tref))
+       for r in tc["plain"]}
+print("plain layout (N_u, err):", {nb: (nu, f"{e_:.2e}") for nb, (nu, e_) in tpl.items()})
+print("Bempp graded (n, N_u, t, err):", [(int(r[0]), int(r[1]), round(float(r[2]), 1), f"{r[3]:.2e}") for r in tc["bem"]])
+

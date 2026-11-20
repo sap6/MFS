@@ -22,3 +22,9 @@ vertex = cone.CubeVertex()
 print("cube vertex: nu =", ", ".join(f"{v:.5f}" for v in vertex.exponents()[:2]),
       "  tau =", ", ".join(f"{v:.5f}" for v in vertex.exponents(neumann=True)[:2]))
 # Paper: nu = 0.45417, 1.23087; tau = 0.840, 1.20635 (De Smedt and Van Bladel 1986: 0.45410, 0.84108)
+
+# Regular tetrahedron vertex: three equilateral faces meeting at dihedral angle arccos(1/3)
+tet_vertex = cone.CubeVertex(V=cone.TET_EDGES)
+print("tetrahedron vertex: nu =", ", ".join(f"{v:.5f}" for v in tet_vertex.exponents()[:2]),
+      "  tau =", ", ".join(f"{v:.5f}" for v in tet_vertex.exponents(neumann=True)[:2]))
+# Paper: nu = 0.32221, 1.09227; tau = 0.907, 1.07683

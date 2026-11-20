@@ -1,6 +1,6 @@
 # Project notes
 
-Last updated: 2026-11-20 (unified cube rules & almond copy-free speedup, 300 dpi figure & table clarity pass, manuscript exposition & referee preemptions, upgraded notebooks & tests; see `notes/HANDOFF.md`). The research scripts named in the items are in
+Last updated: 2026-11-20 (regular tetrahedron benchmark + symmetric graded Bempp, general convex-wedge & focal-ring derivations, FMM conditioning remark, graphical abstract & JCP cover letter; see `notes/HANDOFF.md`). The research scripts named in the items are in
 `validation/` at commit 9f5a721. Companion files: `DERIVATIONS.md` (proofs and exponent tables),
 `LITERATURE.md` (T6), `PAPER_OUTLINE.md` (T7). Problem throughout:
 exterior scattering of a plane wave by a perfectly conducting (PEC) body,
@@ -8,15 +8,15 @@ tangential E_sc = -tangential E_inc on the surface, least-squares collocation.
 
 ## Start here
 
-- **20 Nov: read `notes/HANDOFF.md` first** (current repository state, unified cube boundary/mode/quadrature rules, `1.5x--3.9x` copy-free almond MFS speedup, 6-column Table 4, figure/caption/notebook upgrades, and remaining author-only decisions).
+- **20 Nov: read `notes/HANDOFF.md` first** (current repository state, fifth benchmark shape `mfs/tetrahedron.py` + `data/tetrahedron_convergence.npz`, unified cube boundary/mode/quadrature rules, copy-free almond MFS speedup, graphical abstract, cover letter, and remaining author-only decisions).
 - **Since 18 Nov the repository has a new layout** (see the "part three"
   block below and `../CLAUDE.md`): `mfs/`, `figures/`, `data/`, `notebooks/`,
   `tests/`, `paper/`, `thesis/`, `notes/`. Script names in the items below
   (`validation/...`) refer to commit 9f5a721.
-- Everything is committed and pushed on branch `ccr-116c520c-fts35f`. No
+- Everything is committed on branch `ccr-116c520c-fts35f`. No
   pull request exists. Nothing was ever pushed to `sap6/mfs-paper`; it is
   still the thesis text (commit 4f8731f).
-- The paper is `paper/main.tex` (one document, 46 preprint pages, 27 in
+- The paper is `paper/main.tex` (one document, 49 preprint pages, 28 in
   the journal `3p,times` layout, zero LaTeX warnings or overfull boxes). Section 6 lists what the paper may and may not claim.
 - The blocks below are in reverse order of time. The newest one is
   authoritative; older blocks are kept as the record and are superseded

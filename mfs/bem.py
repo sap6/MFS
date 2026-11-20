@@ -27,6 +27,7 @@ from numba import njit, prange
 from .almond import L, T0, T1, semi_axes
 from .core import classes_of, sign
 from .cube import ROT, orbits
+from .tetrahedron import FACE0, REFL as TET_REFL
 
 
 @bempp.callable(complex=True, parameterized=True)
@@ -39,7 +40,7 @@ def plane_wave_trace(x, n, domain_index, result, parameters):
     result[2] = e0 * n[1] - e1 * n[0]
 
 
-def assemble_rows(div, k, rep=None, max_gb=0.9):
+def assemble_rows(div, k, rep=None, max_gb=0.5):
     """Rows of the EFIE matrix on div (all of them, or the representatives rep), in OpenCL buffers of at most max_gb"""
     N, l2g = div.global_dof_count, div.local2global
     dense = lambda s: np.asarray(bempp.operators.boundary.maxwell.electric_field(div, div, s, k).weak_form().to_dense())
@@ -291,6 +292,43 @@ def cube(n, g, k, d, p, pts):
     bs = {j: sym.trace(Q.T @ d, Q.T @ p) for j, Q in turns.items()}
     Js = {j: 0 for j in turns}
     for c, js in orbit.items():                                 # one LU factor in memory at a time
+        for j in js:
+            Js[j] = Js[j] + sym.solve(turns[j].T @ d, turns[j].T @ p, [c], b=bs[j])
+        sym.lu.clear()
+    sym.A = None
+    return sum(sym.field(J, pts @ turns[j]) @ turns[j].T for j, J in Js.items()), sym.N
+
+
+def tetrahedron_grid(n, g):
+    """Graded three-kite mesh of the regular tetrahedron (n intervals per edge, exponent g), made of F_0 and its D_2 images"""
+    m = int(n) // 2
+    xi = (np.arange(m + 1) / m) ** g
+    U, V = [x.ravel() for x in np.meshgrid(xi, xi, indexing="ij")]
+    c0 = FACE0.mean(axis=0)
+    idx = lambda i, j: i * (m + 1) + j
+    t0 = []
+    for i in range(m):
+        for j in range(m):
+            t0 += [(idx(i, j), idx(i + 1, j), idx(i + 1, j + 1)), (idx(i, j), idx(i + 1, j + 1), idx(i, j + 1))]
+    verts, tris = [], []
+    for q in range(3):
+        A, M1, M2 = FACE0[q], 0.5 * (FACE0[q] + FACE0[(q + 1) % 3]), 0.5 * (FACE0[q] + FACE0[(q + 2) % 3])
+        kv = ((1 - U) * (1 - V))[:, None] * A + ((1 - U) * V)[:, None] * M1 + (U * (1 - V))[:, None] * M2 + (U * V)[:, None] * c0
+        e1, e2 = kv[t0[0][1]] - kv[t0[0][0]], kv[t0[0][2]] - kv[t0[0][0]]
+        tk = np.array(t0) if np.dot(np.cross(e1, e2), -np.ones(3)) > 0 else np.array(t0)[:, [0, 2, 1]]
+        tris.append(tk + q * len(kv))
+        verts.append(kv)
+    return *mirror_grid(np.vstack(verts), np.vstack(tris), TET_REFL), TET_REFL
+
+
+def tetrahedron(n, g, k, d, p, pts):
+    """Regular tetrahedron of unit edge length, with D_2 and the one-third turn about (1, 1, 1) (at most two classes)"""
+    sym = Mirror(*tetrahedron_grid(n, g), k)
+    orbit = orbits(classes_of(k, d, p, sym.refl))
+    turns = {j: np.linalg.matrix_power(ROT, j) for js in orbit.values() for j in js}
+    bs = {j: sym.trace(Q.T @ d, Q.T @ p) for j, Q in turns.items()}
+    Js = {j: 0 for j in turns}
+    for c, js in orbit.items():
         for j in js:
             Js[j] = Js[j] + sym.solve(turns[j].T @ d, turns[j].T @ p, [c], b=bs[j])
         sym.lu.clear()

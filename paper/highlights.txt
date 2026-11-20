@@ -1,5 +1,5 @@
 - Source placement in the Method of Fundamental Solutions for 3D Maxwell waves
 - A convex conducting polyhedron scatters like currents on its medial surface
 - Singular tails with computed edge, vertex and tip exponents add few unknowns
-- Root-exponential convergence on a cube while the usual source layout stalls
+- Root-exponential convergence on polyhedra while inner source surfaces stall
 - NASA almond radar cross-section within 0.14 dB of a published reference

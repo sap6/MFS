@@ -17,6 +17,7 @@ cp tables/*.tex overleaf/tables/
 for f in $(grep -hoE '\{fig_[a-z0-9_]+(\.pdf)?\}' main.tex sections/*.tex | tr -d '{}' | sed 's/\.pdf$//' | sort -u); do
     cp "../figures/${f}.pdf" overleaf/figures/
 done
+if [ -f ../figures/fig_graphical_abstract.pdf ]; then cp ../figures/fig_graphical_abstract.pdf overleaf/figures/; fi
 if command -v pdflatex >/dev/null 2>&1 && command -v bibtex >/dev/null 2>&1; then
     (cd overleaf
      pdflatex -interaction=nonstopmode main.tex >/dev/null

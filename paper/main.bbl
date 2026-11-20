@@ -145,10 +145,6 @@ L.~Ye, S.~Hu, G.~Xu, T.~Yan, A meshless regularized method of fundamental
 \newblock \href {https://doi.org/10.1016/j.enganabound.2023.05.050}
   {\path{doi:10.1016/j.enganabound.2023.05.050}}.
 
-\bibitem{thesis2025}
-S.~Bandyopadhyay, Using the method of fundamental solutions to solve
-  {M}axwell's equations, {MSci} thesis, University College London (2025).
-
 \bibitem{woo1993}
 A.~C. Woo, H.~T.~G. Wang, M.~J. Schuh, M.~L. Sanders, {EM} programmer's
   notebook: benchmark radar targets for the validation of computational
@@ -236,6 +232,10 @@ S.~M. Rao, D.~R. Wilton, A.~W. Glisson, Electromagnetic scattering by surfaces
   of arbitrary shape, IEEE Trans. Antennas Propag. 30 (1982) 409--418.
 \newblock \href {https://doi.org/10.1109/TAP.1982.1142818}
   {\path{doi:10.1109/TAP.1982.1142818}}.
+
+\bibitem{thesis2025}
+S.~Bandyopadhyay, Using the method of fundamental solutions to solve
+  {M}axwell's equations, {MSci} thesis, University College London (2025).
 
 \bibitem{liu2016}
 Y.~Liu, A.~H. Barnett, Efficient numerical solution of acoustic scattering from

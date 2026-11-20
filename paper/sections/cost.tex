@@ -14,7 +14,7 @@ For Bempp we used its fastest assembly backend. On the cube, we also graded the 
 
 \begin{table}[htbp]
   \centering
-  \caption{Selected runs of \autoref{fig:costall}(a)--(c): whole-body unknowns (Total), unknowns solved for the incident wave after symmetry reduction (Solved), wall time and error, measured as in the figure. On the torus, the axial wave excites two azimuthal Fourier modes ($m = \pm1$); on the almond, the nose-on wave excites one of the four mirror-symmetry classes (\ref{app:bempp}). The cube is summarised in \autoref{tab:cubeends}.}
+  \caption{Selected runs of \autoref{fig:costall}(a)--(c): whole-body unknowns (Total), unknowns solved for the incident wave after symmetry reduction (Solved), wall time and error, measured as in the figure. On the torus, the axial wave excites two azimuthal Fourier modes ($m = \pm1$); on the almond, the nose-on wave excites one of the four mirror-symmetry classes (\ref{app:bempp}). The cube is summarised in \autoref{tab:cubeends}, and the regular tetrahedron in \autoref{sec:tetrahedron}.}
   \label{tab:summary}
   \small
   \begin{tabular}{llrrrl}
@@ -45,28 +45,26 @@ These errors are measured at a distance of one radius or more from the body. Clo
 
 On the cube the comparison is closer, because the boundary element method handles edges well once the mesh is graded. On Bempp's default quasi-uniform meshes, its error is still $2\times10^{-3}$ after more than two minutes; on graded meshes, in contrast, its best runs are much faster.
 
-\autoref{tab:cubeends} gives both ends of the comparison for the four cases of the cube, between the best MFS layout (one or two depths per octave) and the best Bempp configuration at each accuracy. Figures~\ref{fig:cubecases} and~\ref{fig:costall}(d) show the curves. At an error of about $10^{-3}$, the boundary element method is faster at one wavelength: about one and a half times as fast for the standard wave ($1.9$ seconds against $2.8$) and twice as fast for the general wave ($2.5$ seconds against $5.3$). The two methods are level at two wavelengths ($6.1$ and $6.8$ seconds), whereas at three wavelengths the MFS with one depth per octave is slightly faster ($14$ seconds against $17$). At the other end of the comparison, Bempp's most accurate run uses the finest mesh that fits into memory ($41472$ unknowns) and takes between four and five minutes in every case ($249$ to $286$ seconds). In contrast, the MFS reaches a smaller error in an eighth to a third of that time ($32$ to $89$ seconds), with the two-depth layout at $J = 9$ at one and two wavelengths and the one-depth layout at $J = 8$ at three ($3.0\times10^{-4}$ in $32$ seconds against Bempp's $3.1\times10^{-4}$ in $273$ seconds, while the two-depth layout at $J = 8$ reaches $1.6\times10^{-4}$ in $74$ seconds).
+\autoref{tab:cubeends} gives both ends of the comparison for the four cases of the cube, between the best MFS layout (one or two depths per octave) and the best Bempp configuration at each accuracy; Figures~\ref{fig:cubecases} and~\ref{fig:costall}(d) show the full curves. At the high-accuracy end, Bempp's finest run uses the largest mesh that fits into memory ($41472$ unknowns) and takes four to five minutes in every case ($249$ to $286$ seconds). The MFS reaches a smaller error in an eighth to a third of that time ($32$ to $89$ seconds), using the two-depth layout at $J = 9$ at one and two wavelengths and the one-depth layout at $J = 8$ at three (while the two-depth layout at $J = 8$ reaches $1.6\times10^{-4}$ in $74$ seconds), and continues to converge below Bempp's memory ceiling, down to $2.1\times10^{-5}$ in just over a minute for the standard wave. At the coarse end, around an error of $10^{-3}$, Bempp is one and a half to two times faster at one wavelength, the two methods are level at two wavelengths, and the MFS is slightly faster at three (\autoref{tab:cubeends}).
 
 \begin{table}[htbp]
   \centering
-  \caption{Unit cube, both ends of the comparison. Left: wall time of the fastest run of each code with an error of about $10^{-3}$ (at most $1.2\times10^{-3}$; for the MFS, the faster of one and two depths per octave is taken). Right: the most accurate run of Bempp (on the $41472$-unknown mesh) and the first MFS run with a smaller error, each with its wall time.}
+  \caption{Unit cube, both ends of the comparison. Left: the most accurate run of Bempp (on the $41472$-unknown mesh) and the first MFS run with a smaller error, each with its wall time. Right: wall time of the fastest run of each code with an error of about $10^{-3}$ (at most $1.2\times10^{-3}$; for the MFS, the faster of one and two depths per octave is taken).}
   \label{tab:cubeends}
   \small
   \setlength{\tabcolsep}{4pt}
-  \begin{tabular}{lrrlrlr}
+  \begin{tabular}{llrlrrr}
     \toprule
-     & \multicolumn{2}{c}{Time [s] for $10^{-3}$} & \multicolumn{2}{c}{Bempp, most accurate} & \multicolumn{2}{c}{MFS, first better} \\
+     & \multicolumn{2}{c}{Bempp, most accurate} & \multicolumn{2}{c}{MFS, first better} & \multicolumn{2}{c}{Time [s] for $10^{-3}$} \\
     \cmidrule(lr){2-3}\cmidrule(lr){4-5}\cmidrule(lr){6-7}
-    Case & Bempp & MFS & Error & [s] & Error & [s] \\
+    Case & Error & [s] & Error & [s] & Bempp & MFS \\
     \midrule
 \tablebody{cube_ends}
     \bottomrule
   \end{tabular}
 \end{table}
 
-With two depths per octave alone, the MFS and Bempp are level near $2.4\times10^{-4}$ for the standard wave and $2.0\times10^{-4}$ for the general wave at one wavelength. For the standard wave, for example, the MFS reaches $1.3\times10^{-4}$ in $24$ seconds, while the boundary element method reaches $1.6\times10^{-4}$ in $37$ seconds and $1.1\times10^{-4}$ in $63$ seconds. The error at which the two-depth layout is level with Bempp grows with the size of the cube, from $2.4\times10^{-4}$ at one wavelength to $5\times10^{-4}$ at two and $10^{-3}$ at three. Below the smallest error reached by the boundary element solver on our machine, the MFS continues to converge, for the standard wave down to $5.5\times10^{-5}$ in $40$ seconds and $2.1\times10^{-5}$ in just over a minute.
-
-Including the variant with one depth per octave (\autoref{sec:cuberesults}) moves the crossover to larger errors. For the standard wave, this variant is level with the boundary element method near $5.7\times10^{-4}$. It reaches $1.6\times10^{-4}$ in $6.9$ seconds and $1.4\times10^{-4}$ in $9.9$ seconds, whereas the boundary element method needs $37$ seconds and $42$ to $63$ seconds for comparable errors. For the general wave it crosses near $5\times10^{-4}$ and stays ahead down to $1.8\times10^{-4}$ ($19$ seconds against $45$), and at two and three wavelengths the combined MFS envelope crosses near $8\times10^{-4}$ and $1.3\times10^{-3}$. At smaller errors, the one-depth variant levels off near $1.4\times10^{-4}$ to $3\times10^{-4}$ and the two-depth layout takes over.
+Between these two ends, the crossover moves towards larger errors as the frequency increases. With two depths per octave alone, the MFS overtakes Bempp near $2.4\times10^{-4}$ ($2.0\times10^{-4}$ for the general wave) at one wavelength, near $5\times10^{-4}$ at two wavelengths, and near $10^{-3}$ at three. Including the one-depth variant (\autoref{sec:cuberesults}) shifts the crossover to $5.7\times10^{-4}$ and $5\times10^{-4}$ for the two waves at one wavelength (reaching $1.4\times10^{-4}$ in $9.9$ seconds against $42$ to $63$ seconds for Bempp) and to $8\times10^{-4}$ and $1.3\times10^{-3}$ at two and three wavelengths, before the one-depth curve levels off near $1.4\text{--}3\times10^{-4}$ and the two-depth layout takes over.
 
 \subsection{What the comparison shows}
 

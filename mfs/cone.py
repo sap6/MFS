@@ -111,14 +111,21 @@ class EllipticCone:
         return minima(sigma, 0.02, hi + 1e-9, 0.02, tol=1e-3)
 
 
+TET_EDGES = np.array([[0.0, -1.0, -1.0], [-1.0, 0.0, -1.0], [-1.0, -1.0, 0.0]]) / np.sqrt(2.0)
+
+
 class CubeVertex:
     """
-    Vertex of the solid octant x, y, z < 0; the field lives in the other seven. Poles inside the
-    spherical triangle, clustered exponentially towards its corners (a lightning layout on the
-    sphere), each with the fundamental solution and its two tangential derivatives.
+    Symmetric trihedral vertex spanned by three unit edge vectors V (by default -I, the solid
+    octant x, y, z < 0 of the cube; TET_EDGES gives a vertex of the regular tetrahedron). Poles
+    lie inside the spherical triangle and cluster exponentially towards its three corners, each
+    carrying the fundamental solution and its two tangential derivatives.
     """
-    def __init__(self, n=20, sigma=3.0, dmax=0.7, ni=200, seed=0):
-        V, C = -np.eye(3), unit(-np.ones(3))
+    def __init__(self, n=20, sigma=3.0, dmax=None, ni=200, seed=0, V=None):
+        V = -np.eye(3) if V is None else unit(np.asarray(V, float))
+        C = unit(V.sum(axis=0))
+        th0 = float(np.arccos(np.clip(V[0] @ V[1], -1, 1)))
+        dmax = 0.7 * float(np.arccos(V[0] @ C) / np.arccos(1 / np.sqrt(3))) if dmax is None else dmax
         self.poles, self.tans = [], []
         for v in V:
             t = unit(C - (C @ v) * v)
@@ -129,18 +136,24 @@ class CubeVertex:
                 self.poles.append(p)
                 self.tans.append((tp, np.cross(p, tp)))
 
-        # Boundary: the three sides, Gauss panels graded towards the corners
+        # Boundary: the three great-circle sides, Gauss panels graded towards the corners
         g, w = np.polynomial.legendre.leggauss(4)
-        edges = np.concatenate(([0.0], (np.pi / 4) * 0.6 ** np.arange(18, -1, -1)))
+        edges = np.concatenate(([0.0], (0.5 * th0) * 0.6 ** np.arange(18, -1, -1)))
         a, b = edges[:-1, None], edges[1:, None]
         th, wt = (0.5 * (a + b) + 0.5 * (b - a) * g).ravel(), (0.5 * (b - a) * w).ravel()
-        th, wt = np.concatenate((th, np.pi / 2 - th[::-1])), np.concatenate((wt, wt[::-1]))
-        self.xb = np.concatenate([np.outer(np.cos(th), V[i]) + np.outer(np.sin(th), V[(i + 1) % 3]) for i in range(3)])
-        self.nb = np.concatenate([np.tile(V[(i + 2) % 3], (len(th), 1)) for i in range(3)])
-        self.wb = np.tile(wt, 3)
-        self.rho = np.arccos(np.clip(np.max(-self.xb, axis=1), -1, 1))   # distance to the nearest corner
-        pts = unit(np.random.default_rng(seed).normal(size=(8 * ni, 3)))
-        self.xi = pts[~np.all(pts < 0, axis=1)][:ni]
+        th, wt = np.concatenate((th, th0 - th[::-1])), np.concatenate((wt, wt[::-1]))
+        xb, nb = [], []
+        for i in range(3):
+            u0, u1 = V[i], V[(i + 1) % 3]
+            xb.append((np.outer(np.sin(th0 - th), u0) + np.outer(np.sin(th), u1)) / np.sin(th0))
+            nf = unit(np.cross(u0, u1))
+            nf = -nf if nf @ V[(i + 2) % 3] < 0 else nf
+            nb.append(np.tile(nf, (len(th), 1)))
+        fnorms = np.array([nb[0][0], nb[1][0], nb[2][0]])
+        self.xb, self.nb, self.wb = np.concatenate(xb), np.concatenate(nb), np.tile(wt, 3)
+        self.rho = np.min(np.arccos(np.clip(self.xb @ V.T, -1, 1)), axis=1)   # distance to the nearest corner
+        pts = unit(np.random.default_rng(seed).normal(size=(12 * ni, 3)))
+        self.xi = pts[~np.all(pts @ fnorms.T > 0, axis=1)][:ni]
 
     def columns(self, nu, x, normal=None):
         out = []
@@ -156,8 +169,8 @@ class CubeVertex:
     def exponents(self, neumann=False):
         """Exponents nu (Dirichlet) or tau (neumann=True) of the vertex, below 2.6"""
         def sigma(nu):
-            # Neumann rows are weighted by the distance to the corner, where the normal derivative grows like 1/distance
-            wb = np.sqrt(self.wb) * (self.rho if neumann else 1.0)
+            # Neumann rows are weighted by sqrt(distance) towards the corners, as on the polyhedron faces
+            wb = np.sqrt(self.wb * (self.rho if neumann else 1.0))
             B = self.columns(nu, self.xb, self.nb if neumann else None) * wb[:, None]
             return smallest_sigma(B, self.columns(nu, self.xi) / np.sqrt(len(self.xi)))
-        return minima(sigma, 0.06, 2.6, 0.04)
+        return minima(sigma, 0.06, 2.6, 0.025)

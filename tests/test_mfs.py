@@ -8,7 +8,7 @@ import os
 import numpy as np
 import pytest
 
-from mfs import almond, cone, core, cube, mie, sphere, torus
+from mfs import almond, cone, core, cube, mie, sphere, tetrahedron, torus
 
 DATA = os.path.join(os.path.dirname(__file__), "..", "data")
 K = 2 * np.pi
@@ -115,17 +115,34 @@ def test_line_tree_cache_cap():
     assert len(lines._TREES) <= 32
 
 
+def test_tetrahedron_and_rotation():
+    # Section 5.6: level J = 4 reproduces the stored field, and 2-matrix ROT matches all 4 classes
+    d = np.load(os.path.join(DATA, "tetrahedron_convergence.npz"))
+    E, _, info = tetrahedron.solve(4, pts=d["pts"])
+    assert core.rel(E, d["dense_E4"]) < 1e-10
+    assert info["unknowns"] == [1436]
+    assert tetrahedron.solve(2, pts=np.empty((0, 3)))[0].shape == (0, 3)
+    pts = 2.0 * core.fibonacci(50)
+    Er, _, ir = tetrahedron.solve(2, DW, PW, pts=pts)
+    full = tetrahedron.Tetrahedron(2, classes=core.classes_of(K, DW, PW, tetrahedron.REFL))
+    cf, _, _ = full.solve(DW, PW)
+    assert len(ir["unknowns"]) == 2 and len(cf) == 4
+    assert core.rel(Er, full.field(cf, pts)) < 1e-10
+
+
 def test_cone():
-    # Appendix A: smallest electric exponents at the almond tip and at a cube vertex
+    # Appendix A: smallest electric exponents at the almond tip, cube vertex, and tetrahedron vertex
     nu = cone.EllipticCone().exponents(1, 1, hi=0.5)
     assert abs(nu[0] - 0.29959) < 1e-5
     nu_cube = cone.CubeVertex(n=10).exponents()
     assert abs(nu_cube[0] - 0.45417) < 2e-4
+    nu_tet = cone.CubeVertex(n=10, V=cone.TET_EDGES).exponents()
+    assert abs(nu_tet[0] - 0.32221) < 2e-4
 
 
 @pytest.mark.skipif(not os.environ.get("MFS_TEST_BEMPP"), reason="set MFS_TEST_BEMPP=1 to test the Bempp comparison")
 def test_bempp_symmetry():
-    # Symmetric boundary element solves (Cyclic torus, Mirror cube & almond), F-ordered fold, and chunked assembly
+    # Symmetric boundary element solves (Cyclic torus, Mirror cube, tetrahedron & almond), F-ordered fold, chunked assembly
     from mfs import bem
     F = bem.fold(np.ones((4, 4), complex), np.array([0, 1]), np.array([[0, 1], [2, 3]]), np.ones((2, 2)))
     assert F.flags.f_contiguous
@@ -139,6 +156,9 @@ def test_bempp_symmetry():
     Ec_sym, _ = bem.cube(4, 1.5, K, DW, PW, pts)
     Ec_full, _ = bem.efie(bem.cube_grid(4, 1.5)[0], K, DW, PW, pts)
     assert core.rel(Ec_sym, Ec_full) < 5e-5
+    Et_sym, _ = bem.tetrahedron(6, 1.8, K, DW, PW, pts)
+    Et_full, _ = bem.efie(bem.tetrahedron_grid(6, 1.8)[0], K, DW, PW, pts)
+    assert core.rel(Et_sym, Et_full) < 1e-12
     ka, pt_a = 2 * np.pi * 1.19e9 / almond.C0, 0.3 * core.fibonacci(30)
     Ea_sym, _ = bem.almond(12, 12, ka, DW, PW, pt_a)
     q = 3

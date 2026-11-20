@@ -12,12 +12,12 @@ MSci thesis, whose notebooks are kept in [`thesis/`](thesis).
 The Method of Fundamental Solutions (MFS) approximates the field scattered by a
 perfect conductor by a sum of dipoles placed inside the body. It needs no mesh
 and no integration over the surface, and it converges rapidly, but only if the
-sources are in the right place. We study where to place them on four shapes: a
-sphere, a torus, a cube and the NASA almond:
+sources are in the right place. We study where to place them on five shapes: a
+sphere, a torus, a cube, a regular tetrahedron and the NASA almond:
 
 - **Smooth and thin bodies (sphere, torus, almond away from the tip):** place dipoles so they enclose the interior singularities of the continued field (the centre of the sphere, the focal ring of the torus, and the mid-plane focal curve of the almond).
-- **Convex polyhedra (cube):** place electric and magnetic dipoles on the interior medial surface (*skeleton*, the twelve edge-bisector planes), using polynomial line densities stretched towards the vertices rather than rows of discrete points.
-- **Sharp edges and conical tips (cube edges/vertices, almond tip):** continue truncated source clusters all the way to the singularity with a *singular tail* weighted by the analytical exponents of the local Maxwell field, adding only a handful of unknowns.
+- **Convex polyhedra (cube, regular tetrahedron):** place electric and magnetic dipoles on the interior medial surface (*skeleton*, the edge-bisector walls), using polynomial line densities stretched towards the vertices rather than rows of discrete points.
+- **Sharp edges and conical tips (polyhedron edges/vertices, almond tip):** continue truncated source clusters all the way to the singularity with a *singular tail* weighted by the analytical exponents of the local Maxwell field, adding only a handful of unknowns.
 
 ![Source layout on the skeleton of the cube](figures/fig_cube_layout.png)
 
@@ -71,6 +71,7 @@ Each shape has one entry point:
 | sphere | `sphere.solve(N, k, R)` | source points `y` and coefficients `alpha`; the field is `core.field(pts, y, alpha, k)` |
 | torus | `torus.scatter(k, d, p, ns, nphi)` | a `Solution` with `.field(pts)` and `.far(dirs)` |
 | cube | `cube.solve(J, d, p, pts)` | `(E, elapsed, info)` with unknowns, weighted residual and optical mismatch |
+| tetrahedron | `tetrahedron.solve(J, d, p, pts)` | `(E, elapsed, info)` with unknowns, weighted residual and optical mismatch |
 | almond | `almond.nose_on(k, n_mid, n_F, pts)`, `almond.rcs(freq)` | `((y, tail), c, E, shape)` for nose-on incidence, or monostatic RCS dictionary across azimuths |
 
 ## The figures and tables of the paper
@@ -86,14 +87,16 @@ involve Bempp need `pip install -e ".[bempp]"`.
 |---|---|---|
 | Figure 1: the sphere | [`figures/sphere.py`](figures/sphere.py) | 2 minutes |
 | Figure 2: the source torus | [`figures/torus_sources.py`](figures/torus_sources.py) | 1 minute |
-| Figures 3 and 8: source layouts | [`figures/layouts.py`](figures/layouts.py) | (a drawing) |
+| Figures 3 and 9: source layouts | [`figures/layouts.py`](figures/layouts.py) | (a drawing) |
 | Figure 4: the wedge at an edge | [`figures/wedge.py`](figures/wedge.py) | (a sketch) |
 | Figure 5: the residual near an edge | [`figures/edge_residual.py`](figures/edge_residual.py) | 1 minute |
 | Figure 6, Table 2: convergence on the cube | [`figures/cube_convergence.py`](figures/cube_convergence.py) | 8 minutes, Bempp 4 more |
 | Figure 7, Table 5: other waves and larger cubes | [`figures/cube_cases.py`](figures/cube_cases.py) | 20 to 40 minutes per case (`--run CASE`: `k1`, `k1o`, `k2`, `k3`; `--scan CASE`: 2 hours) |
-| Figure 9, Table 3: almond radar cross-section | [`figures/almond_rcs.py`](figures/almond_rcs.py) | 7 minutes |
-| Figure 10, Table 4: comparison with Bempp | [`figures/cost.py`](figures/cost.py) | 3 to 8 minutes per shape (`--run SHAPE`: `sphere`, `torus`, `almond`) |
-| Figure 11: the field near the surface | [`figures/nearfield.py`](figures/nearfield.py) | a few minutes |
+| Figure 8: the regular tetrahedron | [`figures/tetrahedron.py`](figures/tetrahedron.py) | 6 minutes |
+| Figure 10, Table 3: almond radar cross-section | [`figures/almond_rcs.py`](figures/almond_rcs.py) | 7 minutes |
+| Figure 11, Table 4: comparison with Bempp | [`figures/cost.py`](figures/cost.py) | 3 to 8 minutes per shape (`--run SHAPE`: `sphere`, `torus`, `almond`) |
+| Figure 12: the field near the surface | [`figures/nearfield.py`](figures/nearfield.py) | a few minutes |
+| Graphical abstract | [`figures/graphical_abstract.py`](figures/graphical_abstract.py) | seconds (from `data/`) |
 | Tables 2, 4, 5, C.1 | [`figures/tables.py`](figures/tables.py) | seconds |
 | Table A.1, vertex exponents | [`figures/cone_exponents.py`](figures/cone_exponents.py) | 5 minutes |
 
@@ -108,7 +111,7 @@ time.
 
 | Folder | Contents |
 |---|---|
-| [`mfs/`](mfs) | the method, one short module per shape: `core` (dyadic Green's functions, symmetries, `CSNE`/`QR` least-squares solvers), `sphere`, `torus`, `cube` (with the line quadrature in `lines`), `almond`; the exact solution `mie`; the exponents at the almond tip and the cube vertex, `cone`; and the boundary element comparison, `bem` |
+| [`mfs/`](mfs) | the method, one short module per shape: `core` (dyadic Green's functions, symmetries, `CSNE`/`QR` least-squares solvers), `sphere`, `torus`, `cube` and `tetrahedron` (with the line quadrature in `lines`), `almond`; the exact solution `mie`; the exponents at the almond tip and polyhedral vertices, `cone`; and the boundary element comparison, `bem` |
 | [`notebooks/`](notebooks) | the four notebooks above |
 | [`figures/`](figures) | one script per figure of the paper, and the tables |
 | [`data/`](data) | the results behind every figure and table, and the Austin benchmark data for the almond |
