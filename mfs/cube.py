@@ -46,7 +46,7 @@ def orbits(classes):
     return orbit
 
 
-def graded_nodes(levels, ng, hmax=0.1):
+def graded_nodes(levels, ng, hmax=H / 4):
     """Gauss-Legendre nodes on (0, H): ng per panel, panels halving towards H, none longer than hmax"""
     dist = np.concatenate(([0.0], H * 0.5 ** np.arange(levels, -1, -1)))   # distance from the edge
     brk = [0.0]
@@ -114,27 +114,29 @@ class Cube:
     classes are assembled and factorised once; solve() then takes any wave
     whose classes are among them.
       q          : ratio of the depths, 2^{-1/2} (two per octave, the paper's layout) or 1/2
-      extra_modes: modes added to every line (4 at two wavelengths, 12 at three)
+      extra_modes: extra modes per unit line length (default: 2 s (s + 1) for s = k/(2π) - 1 > 0)
       tails      : with or without the singular tails
       J = None gives the usual layout that fails: only the base grid, n_base × n_base per face
     """
-    def __init__(self, J, k=2 * np.pi, q=2 ** -0.5, extra_modes=0, tails=True, classes=CLASSES, n_base=8):
+    def __init__(self, J, k=2 * np.pi, q=2 ** -0.5, extra_modes=None, tails=True, classes=CLASSES, n_base=8):
         self.k, self.classes = k, [tuple(c) for c in classes]
+        s = max(0.0, k * 2 * H / (2 * np.pi) - 1.0)              # wavelengths per side, minus one
+        m = max(1, int(round(np.log(0.5) / np.log(q))))          # depths per octave (2 for q = 2^{-1/2}, 1 for q = 1/2)
         if J is None:
-            self.depths, tails, q = np.zeros(0), False, 0.5
+            self.depths, tails, ex = np.zeros(0), False, 0.0
         else:
-            nd = int(round(J * np.log(0.5) / np.log(q)))         # number of depths below the first
-            self.depths = 0.2 * q ** np.arange(nd + 1)
-            n0 = max(4, 2 * J - 4) + extra_modes
+            self.depths = 0.2 * q ** np.arange(m * J + 1)
+            n0 = max(4, 2 * J - 4)
+            ex = 2 * s * (s + 1) if extra_modes is None else extra_modes
 
         # Sources in the octant x, y, z > 0
-        s = (np.arange(n_base) + 0.5) / n_base * 0.6 - 0.3       # base grid on the faces of the inner cube, side 0.6
-        s = s[s > 0]
-        U, V = [g.ravel() for g in np.meshgrid(s, s, indexing="ij")]
+        g0 = (np.arange(n_base) + 0.5) / n_base * 0.6 - 0.3      # base grid on the faces of the inner cube, side 0.6
+        g0 = g0[g0 > 0]
+        U, V = [g.ravel() for g in np.meshgrid(g0, g0, indexing="ij")]
         base = np.concatenate([np.insert(np.column_stack((U, V)), ax, 0.3, axis=1) for ax in range(3)])
         vertex = H - self.depths[:, None] / np.sqrt(3) * np.ones((1, 3))
         self.pe, self.pm = np.concatenate((base, vertex)), vertex
-        self.lines = [Line(ax, d, n0 + int(np.ceil(2 * np.log(2 * H / d))), kind)   # modes: n0 + ⌈2 ln(2H/d)⌉ (Appendix B)
+        self.lines = [Line(ax, d, n0 + int(round(ex * (1 - d / H))) + int(np.ceil(2 * np.log(2 * H / d))), kind)
                       for d in self.depths for ax in range(3) for kind in "em"]
         if tails:                                                # the six lines at d_min (three axes, e and m) continue as tails
             self.lines += [Line(ln.ax, ln.d, ln.n, ln.kind, tail=True) for ln in self.lines[-6:]]
@@ -149,12 +151,12 @@ class Cube:
         self.unknowns = {c: int(kp.sum()) for c, kp in self.keep.items()}
 
         # Boundary points in the octant: graded tensor grids, ng nodes per panel, panels halving
-        # towards the edges until they are shorter than d_min; rows weighted by sqrt(area) · (distance to the edge)^{1/2}
-        ng = 4 if q > 0.6 else 3
+        # towards the edges from min(H/4, λ/4) down to d_min; rows weighted by sqrt(area · dist)
+        ng = 2 + max(m, 1 + int(np.ceil(0.5 * s)))
         d_min = self.depths[-1] if len(self.depths) else 0.2
         levels = max(2, int(np.ceil(np.log2(H / d_min))))
-        s, w = graded_nodes(levels, ng)
-        U, V = [g.ravel() for g in np.meshgrid(s, s, indexing="ij")]
+        sc, w = graded_nodes(levels, ng, min(H / 4, np.pi / (2 * k)))
+        U, V = [g.ravel() for g in np.meshgrid(sc, sc, indexing="ij")]
         W = np.outer(w, w).ravel()
         self.x = np.concatenate([np.insert(np.column_stack((U, V)), ax, H, axis=1) for ax in range(3)])
         self.T = np.repeat([np.delete(np.eye(3), ax, axis=0) for ax in range(3)], len(W), axis=0)
@@ -241,25 +243,33 @@ def solve(J, d=(0, 0, -1.0), p=(0, 1.0, 0), pts=None, k=2 * np.pi, max_gb=None, 
     if max_gb is None:
         pages = os.sysconf("SC_PHYS_PAGES") if "SC_PHYS_PAGES" in getattr(os, "sysconf_names", ()) else -1
         ram = pages * os.sysconf("SC_PAGE_SIZE") / 2 ** 30 if pages > 0 else 12.0
-        max_gb = min(6.0, (0.32 if (k > 5 * np.pi and (J or 0) >= 8) else 0.55) * ram)      # one class at a time when QR may take over
+        max_gb = min(6.0, 0.55 * ram)
     d, p = np.asarray(d, float), np.asarray(p, float)
     t0 = time.time()
     orbit = orbits(classes_of(k, d, p, REFL))
-    todo, E, sols = list(orbit), (None if pts is None else 0), []
+    todo, E, sols = list(orbit), (None if pts is None else np.zeros((len(pts), 3), complex)), []
     r2, b2, info = 0.0, 0.0, dict(unknowns=[], t_assemble=0.0, t_factor=0.0)
     probe = Cube(J, k, classes=[], **layout)
     g = max(1, int(max_gb * 2 ** 30 / (16.0 * probe.rows * max(probe.unknowns.values()))))   # classes per batch
     for i in range(0, len(todo), g):
         cube = Cube(J, k, classes=todo[i:i + g], **layout)
+        bsols = []
         for j in range(3):                                       # the wave turned back by j thirds of a turn
             only = [c for c in cube.classes if j in orbit[c]]
             if only:
                 Q = np.linalg.matrix_power(ROT, j)
                 coef, res, nb2 = cube.solve(Q.T @ d, Q.T @ p, only)
-                if pts is not None:
-                    E = E + cube.field(coef, pts @ Q) @ Q.T
-                sols.append((Q, coef))
+                bsols.append((Q, coef))
                 r2, b2 = r2 + res ** 2 * nb2, b2 + nb2
+        cube.fac.clear()                                         # free the matrices and factors before evaluating the field
+        if pts is not None and bsols:
+            for p0 in range(0, len(pts), 1000):
+                pb = pts[p0:p0 + 1000]
+                Ap = cube.matrix(np.vstack([pb @ Q for Q, _ in bsols]), None, cube.classes)
+                for m, (Q, coef) in enumerate(bsols):
+                    sl = slice(3 * m * len(pb), 3 * (m + 1) * len(pb))
+                    E[p0:p0 + 1000] += sum(Ap[s, sl, :cube.unknowns[c]] @ coef[c] for s, c in enumerate(cube.classes) if c in coef).reshape(-1, 3) @ Q.T
+        sols.extend(bsols)
         info["unknowns"] += [cube.unknowns[c] for c in cube.classes]
         info["t_assemble"] += cube.t_assemble
         info["t_factor"] += cube.t_factor

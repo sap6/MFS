@@ -2692,6 +2692,8 @@ Open, in the order I would take them:
 - 19 Nov. Stride-2 mode skipping in `_tree_kernel`: breaks unit-stride vectorisation (J = 8 standard 31.85 s -> 31.44 s, general 67.1 s -> 69.2 s). Rejected.
 - 19 Nov. One CSNE refinement step instead of two: J = 8 coefficients 1.8e-10 vs 3.6e-11 from QR, saves < 1% time. Rejected.
 - 19 Nov. Zero-copy slice views in `Cube.__init__`, `zgeqrf` without R copy in `QR`, and 1 GB OpenCL row chunks in `bem.py` (diff 2.2e-19): 41472-dof Bempp and J = 12 MFS run cleanly in 8 GB RAM. Kept.
+- 20 Nov. Cube boundary rule without thresholds (`hmax = min(1/8, lambda/4)`, `ng = 2 + max(m, 1 + ceil(s/2))`), extra modes scaled by physical line length `round(2 s (s + 1) (1 - 2 d))`, 4-image chunked accumulator in `_tree_kernel`, and `fac.clear()` before `Ap`: eliminates the `k = 6 pi` one-depth hook (`1.89e-3 -> 2.91e-4` at `J = 9`) and the `J = 9` QR fallback (`304 s -> 114 s`), cuts `1-2 lambda` rows by 27%, and moves crossovers to `5.7e-4 / 5.2e-4 / 7.6e-4 / 1.3e-3` (`2.4e-4 / 2.0e-4 / 4.8e-4 / 1.0e-3` two-depth alone); Table 5 finest Bempp beaten in `32-89 s` vs `249-286 s`.
+- 20 Nov. Almond `nose_on` with the tip tail (magnetic parity `(+, -)` has `tau = 0.879 < 1`): removes the `4.4e-5` tip truncation error, drops `6:3` optical mismatch `7.6e-5 -> 8.0e-6`, and keeps all `8:5` refinements below `1e-5`. Torus source sweep (`torus_sources.npz`) and 2-pass `cost_torus.npz` / `cost_almond.npz` re-run cleanly.
 
 ## 6. Write-up session
 

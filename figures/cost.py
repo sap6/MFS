@@ -24,10 +24,13 @@ K = 2 * np.pi
 
 
 def timed(f, *args):
-    gc.collect()
-    t0 = time.time()
-    out = f(*args)
-    return out, time.time() - t0
+    ts = []
+    for _ in range(2):
+        gc.collect()
+        t0 = time.time()
+        out = f(*args)
+        ts.append(time.time() - t0)
+    return out, min(ts)
 
 
 if "--run" in sys.argv:
@@ -69,9 +72,9 @@ if "--run" in sys.argv:
         da, pa, out, rows, brows = np.array([-1.0, 0, 0]), np.array([0, 1.0, 0]), {}, [], []
         almond.nose_on(k, 2, 0), bem.almond(12, 12, k, da, pa, pts)        # warm-up
         for i, (n_mid, n_F) in enumerate(((3, 0), (4, 1), (5, 2), (6, 3), (8, 5))):
-            (y, c, E, shape_), t = timed(almond.nose_on, k, n_mid, n_F, pts)
-            ext, sca = almond.optical(k, y, c)                              # the check is not timed, as for Bempp
-            rows.append((len(y), shape_[1], t, abs(ext - sca) / sca))
+            (src, c, E, shape_), t = timed(almond.nose_on, k, n_mid, n_F, pts)
+            ext, sca = almond.optical(k, src, c)                            # the check is not timed, as for Bempp
+            rows.append((len(src[0]), shape_[1], t, abs(ext - sca) / sca))
             out[f"mfs_E{i}"] = E
         for i, (n_t, n_s) in enumerate(((28, 28), (40, 36), (60, 56), (84, 76), (100, 92))):
             (E, N), t = timed(bem.almond, n_t, n_s, k, da, pa, pts)

@@ -26,24 +26,23 @@ CASES = {"k1": (1, None), "k1o": (1, (60, 25, 35)), "k2": (2, None), "k3": (3, N
 LEVELS = {"k1": range(4, 12), "k1o": range(4, 11), "k2": range(4, 10), "k3": range(4, 10)}   # two depths per octave
 LEVELS_ONE = range(4, 10)                                # one depth per octave
 J_REF = {"k1": 12, "k1o": 11, "k2": 10, "k3": 10}
-EXTRA = {1: 0, 2: 4, 3: 12}                              # modes added to every line at two and three wavelengths
 GS = (1.25, 1.5, 1.6, 1.75, 1.9, 2.0, 2.25)              # Bempp: grading exponents, quadrature orders and meshes
 QUAD = ((4, 6, (12, 16, 20, 24, 28, 32, 40, 48)), (6, 8, (12, 16, 20, 24, 28, 32, 40, 48)),
         (8, 10, (16, 20, 24, 28, 32, 40, 48)))
 
 
 def setup(case):
-    """Wavenumber, wave, test points, and extra modes per line"""
+    """Wavenumber, wave, and test points"""
     S, angles = CASES[case]
     d, p = core.wave(*angles) if angles else core.wave()
-    return 2 * np.pi * S, d, p, 2.0 * core.fibonacci(400), EXTRA[S]
+    return 2 * np.pi * S, d, p, 2.0 * core.fibonacci(400)
 
 
 def bempp_run(case, g, reg, sing, n, ref):
     """Bempp with the symmetry of the cube: one row (g, regular and singular order, n, unknowns, time, error)"""
     from mfs import bem                         # before bempp: it lets the OpenCL driver see all of the memory
     bempp = bem.bempp
-    k, d, p, pts, _ = setup(case)
+    k, d, p, pts = setup(case)
     bempp.GLOBAL_PARAMETERS.quadrature.regular, bempp.GLOBAL_PARAMETERS.quadrature.singular = int(reg), int(sing)
     gc.collect()
     t0 = time.time()
@@ -53,7 +52,7 @@ def bempp_run(case, g, reg, sing, n, ref):
 
 if "--scan" in sys.argv or "--run" in sys.argv:
     case = sys.argv[-1]
-    k, d, p, pts, extra = setup(case)
+    k, d, p, pts = setup(case)
     if "--scan" in sys.argv:
         # Every grading with every quadrature and mesh size (1.5 to 1.9 on the finest mesh), against the reference
         ref = np.load(data(f"cube_cases_{case}_ref.npz"))["E"]
@@ -62,7 +61,7 @@ if "--scan" in sys.argv or "--run" in sys.argv:
     else:
         # The reference, then the MFS levels and the best-graded Bempp run of each (quadrature, mesh), alternately
         cube.solve(2, d, p, pts, k)                                     # warm-up: compilation is not timed
-        E, t, info = cube.solve(J_REF[case], d, p, pts, k, extra_modes=extra)
+        E, t, info = cube.solve(J_REF[case], d, p, pts, k)
         print(f"{case} ref J={J_REF[case]}: {t:.1f} s, opt={info['optical']:.1e}", flush=True)
         info = [J_REF[case], t, max(info["unknowns"]), info["rows"], info["optical"], info["ext"]]
         np.savez(data(f"cube_cases_{case}_ref.npz"), E=E, pts=pts, info=info)
@@ -74,7 +73,7 @@ if "--scan" in sys.argv or "--run" in sys.argv:
         for rep in range(2):
             for nd, J in runs:
                 gc.collect()
-                EJ, t, info = cube.solve(J, d, p, pts, k, q=2 ** -0.5 if nd == 2 else 0.5, extra_modes=extra)
+                EJ, t, info = cube.solve(J, d, p, pts, k, q=2 ** -0.5 if nd == 2 else 0.5)
                 t_mfs[nd, J].append(t)
                 res[nd, J] = (max(info["unknowns"]), sum(info["unknowns"]), info["rows"], rel(EJ, E), info["optical"])
                 print(f"{case} pass {rep + 1} MFS ({nd}, {J}): {t:.2f} s, err={res[nd, J][3]:.2e}", flush=True)
@@ -98,7 +97,7 @@ for ax, (case, title) in zip(axs, panels):
     for pts, col, mk, ls, zo, label in (
         (mfs[mfs[:, 0] == 2], BLUE, "o", "-", 4, "MFS (two depths per octave)"),
         (mfs[mfs[:, 0] == 1], NAVY, "h", (0, (6, 1.5)), 3, "MFS, one depth per octave"),
-        (res["env"][res["env"][:, 6] < 2e-2], RUST, "X", (0, (3, 1)), 2, "Bempp, graded, with symmetry"),
+        (res["env"][res["env"][:, 6] < 2.5e-2], RUST, "X", (0, (3, 1)), 2, "Bempp, graded, with symmetry"),
     ):
         curve(ax, pts[:, 5], pts[:, 6], col, mk, ls, label, 4.8, 1.4, 0.6, zorder=zo)
     ax.set_title(title, loc="left", fontsize=8.5)

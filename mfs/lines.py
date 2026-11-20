@@ -121,92 +121,100 @@ def _tree_kernel(x, T, refl, ax, b, c, pos, rot, w, tq, W, off, tlo, thi, ltab, 
     """
     M, nr, npos, ns, nc = x.shape[0], refl.shape[0], pos.shape[0], w.shape[1], T.shape[1]
     tmul = 1 if T.shape[0] > 1 else 0
-    for m in prange(M):
-        accr, acci = np.zeros((nr, 2, ns, nc, 3, n)), np.zeros((nr, 2, ns, nc, 3, n))   # real and imaginary parts
-        S = np.zeros((2, ns, nc, 3), np.complex128)
+    r_act = np.empty(4, np.int64)                                      # the line is its own mirror image across x_ax = 0, so only
+    na = 0                                                             # the four images with refl[r, ax] > 0 need to be evaluated
+    for r in range(nr):
+        if refl[r, ax] > 0:
+            r_act[na] = r
+            na += 1
+    nch = min(16, max(1, M))
+    for ch in prange(nch):
+        accr, acci = np.empty((4, 2, ns, nc, 3, n)), np.empty((4, 2, ns, nc, 3, n))   # real and imaginary parts, per worker
+        S = np.empty((2, ns, nc, 3), np.complex128)
         Ge, Gm = np.empty((nc, 3), np.complex128), np.empty((nc, 3), np.complex128)
         Tm, xm, e, Wq = np.empty((nc, 3)), np.empty(3), np.empty(3), np.empty(n)
         stack_l, stack_i = np.empty(2 * LHARD + 8, np.int64), np.empty(2 * LHARD + 8, np.int64)
-        for r in range(nr):
-            if refl[r, ax] < 0:                                # the line is its own mirror image across x_ax = 0, so this
-                continue                                       # image repeats image r with x_ax kept, up to the parity the class keeps
-            # The image of the target and of its rows
-            for j in range(3):
-                xm[j] = x[m, j] * refl[r, j]
-                for a in range(nc):
-                    Tm[a, j] = T[m * tmul, a, j] * refl[r, j]
-            rho2 = 1e300                                       # squared distance to the nearest line, across the edge
-            for i in range(npos):
-                rho2 = min(rho2, (xm[b] - pos[i, 0]) ** 2 + (xm[c] - pos[i, 1]) ** 2)
+        for m in range((M * ch) // nch, (M * (ch + 1)) // nch):
+            accr[:] = 0.0
+            acci[:] = 0.0
+            for ia in range(na):
+                r = r_act[ia]
+                for j in range(3):
+                    xm[j] = x[m, j] * refl[r, j]
+                    for a in range(nc):
+                        Tm[a, j] = T[m * tmul, a, j] * refl[r, j]
+                rho2 = 1e300                                           # squared distance to the nearest line, across the edge
+                for i in range(npos):
+                    rho2 = min(rho2, (xm[b] - pos[i, 0]) ** 2 + (xm[c] - pos[i, 1]) ** 2)
 
-            # Descend the tree: accept a panel when it is no longer than its distance from the target
-            sp, stack_l[0], stack_i[0] = 1, 0, 0
-            while sp > 0:
-                sp -= 1
-                lev, idx = stack_l[sp], stack_i[sp]
-                wid = 2.0 / (1 << lev)
-                p = (1 << lev) - 1 + idx if lev <= ltab else -1
-                a0 = tlo[p] if p >= 0 else H * np.tanh(0.5 * lam * (-1.0 + wid * idx))
-                b0 = thi[p] if p >= 0 else H * np.tanh(0.5 * lam * (-1.0 + wid * (idx + 1)))
-                gap = max(a0 - xm[ax], 0.0, xm[ax] - b0)
-                if b0 - a0 > np.sqrt(rho2 + gap * gap) and lev < LHARD:
-                    stack_l[sp], stack_i[sp], stack_l[sp + 1], stack_i[sp + 1] = lev + 1, 2 * idx, lev + 1, 2 * idx + 1
-                    sp += 2
-                    continue
-                for iq in range(off[p + 1] - off[p] if p >= 0 else g.shape[0]):
-                    # The node t and its weights against the modes: tabulated, or (deep panels) by recurrence
-                    if p >= 0:
-                        t = tq[off[p] + iq]
-                        for kk in range(n):
-                            Wq[kk] = W[off[p] + iq, kk]
-                    else:
-                        u = -1.0 + wid * (idx + 0.5) + 0.5 * wid * g[iq]
-                        ex = np.exp(lam * u)
-                        t = H * (ex - 1.0) / (ex + 1.0)
-                        Wq[0] = 0.5 * wid * gw[iq] * H * 2.0 * lam * ex / ((ex + 1.0) * (ex + 1.0)) / d
-                        if n > 1:
-                            Wq[1] = Wq[0] * u
-                        for kk in range(2, n):
-                            Wq[kk] = ((2 * kk - 1) * u * Wq[kk - 1] - (kk - 1) * Wq[kk - 2]) / kk
+                # Descend the tree: accept a panel when it is no longer than its distance from the target
+                sp, stack_l[0], stack_i[0] = 1, 0, 0
+                while sp > 0:
+                    sp -= 1
+                    lev, idx = stack_l[sp], stack_i[sp]
+                    wid = 2.0 / (1 << lev)
+                    p = (1 << lev) - 1 + idx if lev <= ltab else -1
+                    a0 = tlo[p] if p >= 0 else H * np.tanh(0.5 * lam * (-1.0 + wid * idx))
+                    b0 = thi[p] if p >= 0 else H * np.tanh(0.5 * lam * (-1.0 + wid * (idx + 1)))
+                    gap = max(a0 - xm[ax], 0.0, xm[ax] - b0)
+                    if b0 - a0 > np.sqrt(rho2 + gap * gap) and lev < LHARD:
+                        stack_l[sp], stack_i[sp], stack_l[sp + 1], stack_i[sp + 1] = lev + 1, 2 * idx, lev + 1, 2 * idx + 1
+                        sp += 2
+                        continue
+                    for iq in range(off[p + 1] - off[p] if p >= 0 else g.shape[0]):
+                        # The node t and its weights against the modes: tabulated, or (deep panels) by recurrence
+                        if p >= 0:
+                            t = tq[off[p] + iq]
+                            for kk in range(n):
+                                Wq[kk] = W[off[p] + iq, kk]
+                        else:
+                            u = -1.0 + wid * (idx + 0.5) + 0.5 * wid * g[iq]
+                            ex = np.exp(lam * u)
+                            t = H * (ex - 1.0) / (ex + 1.0)
+                            Wq[0] = 0.5 * wid * gw[iq] * H * 2.0 * lam * ex / ((ex + 1.0) * (ex + 1.0)) / d
+                            if n > 1:
+                                Wq[1] = Wq[0] * u
+                            for kk in range(2, n):
+                                Wq[kk] = ((2 * kk - 1) * u * Wq[kk - 1] - (kk - 1) * Wq[kk - 2]) / kk
 
-                    # Fields of the dipoles at t on every line, in the frame rot, summed with the weights w
-                    S[:] = 0.0
-                    for i in range(npos):
-                        e[ax], e[b], e[c] = xm[ax] - t, xm[b] - pos[i, 0], xm[c] - pos[i, 1]
-                        rr = np.sqrt(e[0] * e[0] + e[1] * e[1] + e[2] * e[2])
-                        e /= rr
-                        dipoles(Tm, e, k, rr, Ge, Gm)
-                        for a in range(nc):
-                            for cc in range(3):
-                                le = Ge[a, 0] * rot[cc, 0] + Ge[a, 1] * rot[cc, 1] + Ge[a, 2] * rot[cc, 2]
-                                lm = Gm[a, 0] * rot[cc, 0] + Gm[a, 1] * rot[cc, 1] + Gm[a, 2] * rot[cc, 2]
-                                for s in range(ns):
-                                    S[0, s, a, cc] += w[0, s, i, cc] * le
-                                    S[1, s, a, cc] += w[1, s, i, cc] * lm
-                    for kind in range(2):
-                        for s in range(ns):
+                        # Fields of the dipoles at t on every line, in the frame rot, summed with the weights w
+                        S[:] = 0.0
+                        for i in range(npos):
+                            e[ax], e[b], e[c] = xm[ax] - t, xm[b] - pos[i, 0], xm[c] - pos[i, 1]
+                            rr = np.sqrt(e[0] * e[0] + e[1] * e[1] + e[2] * e[2])
+                            e /= rr
+                            dipoles(Tm, e, k, rr, Ge, Gm)
                             for a in range(nc):
                                 for cc in range(3):
-                                    sr, si = S[kind, s, a, cc].real, S[kind, s, a, cc].imag
-                                    for kk in range(n):
-                                        accr[r, kind, s, a, cc, kk] += sr * Wq[kk]
-                                        acci[r, kind, s, a, cc, kk] += si * Wq[kk]
-
-        # Sum the images with the signs of each class, and write each entry once
-        for cl in range(sgn.shape[0]):
-            for kind in range(2):
-                for s in range(ns):
-                    for kk in range(n):
-                        for cc in range(3):
-                            col = cmap[cl, ((kind * ns + s) * n + kk) * 3 + cc]
-                            if col >= 0:
+                                    le = Ge[a, 0] * rot[cc, 0] + Ge[a, 1] * rot[cc, 1] + Ge[a, 2] * rot[cc, 2]
+                                    lm = Gm[a, 0] * rot[cc, 0] + Gm[a, 1] * rot[cc, 1] + Gm[a, 2] * rot[cc, 2]
+                                    for s in range(ns):
+                                        S[0, s, a, cc] += w[0, s, i, cc] * le
+                                        S[1, s, a, cc] += w[1, s, i, cc] * lm
+                        for kind in range(2):
+                            for s in range(ns):
                                 for a in range(nc):
-                                    vr, vi = 0.0, 0.0
-                                    for r in range(nr):
-                                        if refl[r, ax] > 0:
-                                            vr += sgn[cl, r] * accr[r, kind, s, a, cc, kk]
-                                            vi += sgn[cl, r] * acci[r, kind, s, a, cc, kk]
-                                    A[cl, m * nc + a, col] += 2.0 * (vr + 1j * vi)
+                                    for cc in range(3):
+                                        sr, si = S[kind, s, a, cc].real, S[kind, s, a, cc].imag
+                                        for kk in range(n):
+                                            accr[ia, kind, s, a, cc, kk] += sr * Wq[kk]
+                                            acci[ia, kind, s, a, cc, kk] += si * Wq[kk]
+
+            # Sum the images with the signs of each class, and write each entry once
+            for cl in range(sgn.shape[0]):
+                for kind in range(2):
+                    for s in range(ns):
+                        for kk in range(n):
+                            for cc in range(3):
+                                col = cmap[cl, ((kind * ns + s) * n + kk) * 3 + cc]
+                                if col >= 0:
+                                    for a in range(nc):
+                                        vr, vi = 0.0, 0.0
+                                        for ia in range(na):
+                                            r = r_act[ia]
+                                            vr += sgn[cl, r] * accr[ia, kind, s, a, cc, kk]
+                                            vi += sgn[cl, r] * acci[ia, kind, s, a, cc, kk]
+                                        A[cl, m * nc + a, col] += 2.0 * (vr + 1j * vi)
 
 
 def tree_add(x, T, refl, ax, b, c, pos, lam, d, n, k, H, A, cmap, sgn, rot=None, w=None):

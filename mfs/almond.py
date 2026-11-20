@@ -234,21 +234,22 @@ def far(k, y, c, dirs, cls, tail=None, rfar=1.0e5):
 
 def nose_on(k, n_mid, n_F, pts=None):
     """
-    The wave along -x (meeting the tip first), polarised along y. It has the parities
-    (-1, +1), which carry no current into the tip, so no tail is needed.
-      Returns the source points, the coefficients, the field at pts and the shape of the matrix
+    The wave along -x (meeting the tip first), polarised along y, which excites the single
+    parity class (-1, +1)
+      Returns (y, tail), the coefficients, the field at pts and the shape of the matrix
     """
     d, p = np.array([[-1.0, 0, 0]]), np.array([[0.0, 1, 0]])
-    y, _ = source_rows(n_mid, n_F)
-    c, _, shape = solve_class(k, y, (-1, 1), d, p)
-    E = None if pts is None else (matrix(pts, y, k) @ c[:, 0]).reshape(-1, 3)
-    return y, c[:, 0], E, shape
+    y, tail = source_rows(n_mid, n_F)
+    c, _, shape = solve_class(k, y, (-1, 1), d, p, tail)
+    E = None if pts is None else (matrix(pts, y, k, tail=tail) @ c[:, 0]).reshape(-1, 3)
+    return (y, tail), c[:, 0], E, shape
 
 
-def optical(k, y, c):
+def optical(k, src, c):
     """Extinction and scattering cross-sections (ext, sca) of the nose-on solution: equal for the exact field"""
+    y, tail = src if isinstance(src, tuple) else (src, None)
     d, p = np.array([-1.0, 0, 0]), np.array([0.0, 1, 0])
-    return cross_sections(lambda dirs: far(k, y, c, dirs, (-1, 1)), k, d, p, sphere_rule(48, 96))
+    return cross_sections(lambda dirs: far(k, y, c, dirs, (-1, 1), tail), k, d, p, sphere_rule(48, 96))
 
 
 def rcs(freq, n_mid=6, n_F=3, step=0.5, s=0.5, s_col=0.3):
