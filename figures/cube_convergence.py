@@ -4,7 +4,7 @@ against √N_u, N_u the number of unknowns of the whole cube. The errors are
 differences from the finest layout, J = 12.
 
     python figures/cube_convergence.py          # the figure, from data/
-    python figures/cube_convergence.py --run    # solve again (about 12 minutes; Bempp: 4 minutes more)
+    python figures/cube_convergence.py --run    # solve again (about 8 minutes; Bempp: 3 to 4 minutes more)
 """
 import gc
 import sys
@@ -22,10 +22,14 @@ if "--run" in sys.argv:
     out = {"pts": pts}
     for name, Js, kw in (("dense", range(3, 13), {}), ("tail", range(3, 10), dict(q=0.5)),
                          ("notail", (4, 6, 8), dict(tails=False)), ("plain", (4, 6, 8, 10), None)):
+        reps = 2 if name in ("dense", "tail") else 1
         rows = []
         for J in Js:
-            gc.collect()
-            E, t, info = cube.solve(None, pts=pts, n_base=J) if kw is None else cube.solve(J, pts=pts, **kw)
+            runs_J = []
+            for _ in range(reps):
+                gc.collect()
+                runs_J.append(cube.solve(None, pts=pts, n_base=J) if kw is None else cube.solve(J, pts=pts, **kw))
+            E, t, info = min(runs_J, key=lambda r: r[1])
             rows.append((J, t, sum(info["unknowns"]), info["rows"], info["optical"]))
             out[f"{name}_E{J}"] = E
             print(name, J, f"{t:.1f} s", flush=True)
@@ -74,12 +78,13 @@ ax.semilogy(xs, np.exp(np.polyval(p, xs)), color=MUTED, lw=0.8, zorder=1)
 ax.annotate(rf"${np.exp(p[1]):.2f}\,\exp({p[0]:.4f}\sqrt{{N_u}})$", (153, 5.5e-4), fontsize=8.5, color=MUTED)
 for key, (col, mk, ls, label) in {"plain": (PURPLE, "^", ":", "plain MFS (inner cube)"),
                                   "notail": (GREEN, "s", "--", "MFS without the tails"),
-                                  "tail": (NAVY, "h", (0, (6, 1.5)), "MFS, one depth per octave"),
+                                  "tail": (NAVY, "h", (0, (6, 1.5)), "MFS (one depth per octave)"),
                                   "dense": (BLUE, "o", "-", "MFS (two depths per octave)"),
                                   "uniform": (ORANGE, "D", "-.", "Bempp, quasi-uniform meshes"),
                                   "graded": (RUST, "X", (0, (3, 1)), "Bempp, graded meshes (best setting per mesh)")}.items():
     v = curves[key]
     curve(ax, np.sqrt(v[:, 0]), v[:, 1], col, mk, ls, label, lw=1.4, logx=False, zorder=3)
-ax.set(xlabel=r"$\sqrt{N_u}$,  $N_u$ = number of unknowns", ylabel="relative error of the scattered field")
+ax.set(xlabel=r"$\sqrt{N_u}$,  $N_u$ = unknowns of the whole cube", ylabel="relative error of the scattered field")
+ax.set_title(r"unit cube, $k = 2\pi$: error against $\sqrt{N_u}$", loc="left", fontsize=8.5)
 ax.legend(frameon=False, fontsize=8, loc="upper center", bbox_to_anchor=(0.5, -0.18), ncol=2, columnspacing=1.0)
 finish(fig, ax, "fig_cube_convergence", tight="tight")

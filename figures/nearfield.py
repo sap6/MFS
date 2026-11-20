@@ -34,12 +34,13 @@ if "--run" in sys.argv:
 res = np.load(data("sphere_nearfield.npz"))
 fig, ax = plt.subplots(figsize=(4.4, 2.9))
 for key, col, mk, ls, label in (
-    ("mfs400", BLUE, "o", "-", "MFS, $N = 400$"),
-    ("mfs1200", NAVY, "h", (0, (6, 1.5)), "MFS, $N = 1200$"),
+    ("mfs400", BLUE, "o", "-", "MFS, 1200 unknowns"),
+    ("mfs1200", NAVY, "h", (0, (6, 1.5)), "MFS, 3600 unknowns"),
     ("bem4824", ORANGE, "D", "-.", "Bempp, 4824 unknowns"),
     ("bem9750", RUST, "X", (0, (3, 1)), "Bempp, 9750 unknowns"),
 ):
     curve(ax, res["delta"], res[key], col, mk, ls, label, 4.5, 1.4, 0.6)
 ax.set(xlabel="distance from the surface", ylabel="relative error against Mie")
+ax.set_title(r"unit sphere, $k = 2\pi$: error near the surface", loc="left", fontsize=8.5)
 ax.legend(frameon=False, fontsize=8, loc="center", bbox_to_anchor=(0.5, 0.24), ncol=2, columnspacing=0.8, handlelength=2.2)
 finish(fig, ax, "fig_sphere_nearfield")

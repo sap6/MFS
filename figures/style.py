@@ -45,5 +45,5 @@ def finish(fig, axs, name, rect=(0, 0, 1, 1), grid=True, tight=None):
                 ax.spines[sp].set_visible(False)
         fig.tight_layout(rect=rect)
     for ext in ("pdf", "png"):
-        fig.savefig(os.path.join(HERE, f"{name}.{ext}"), dpi=200, bbox_inches=tight)
+        fig.savefig(os.path.join(HERE, f"{name}.{ext}"), dpi=300, bbox_inches=tight)
     print(f"wrote figures/{name}.pdf")

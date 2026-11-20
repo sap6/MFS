@@ -47,12 +47,13 @@ def midplane_comps(sz):
 
 @njit(parallel=True, fastmath=True, cache=True)
 def _block(x, T, y, comps, sy, k, out):
-    """out[m, a, n, i]: row a of T[m] against the field of dipole comps[i] at y[n], summed over the four images"""
+    """out[m * nc + a, 3 * n + i]: row a of T[m] against dipole comps[i] at y[n], summed over the four images"""
     nc, tmul = T.shape[1], 1 if T.shape[0] > 1 else 0
     for m in prange(x.shape[0]):
         Ge, Gm = np.empty((nc, 3), np.complex128), np.empty((nc, 3), np.complex128)
         Tm, e = np.empty((nc, 3)), np.empty(3)
-        out[m] = 0.0
+        for a in range(nc):
+            out[m * nc + a, :] = 0.0
         for g in range(2):                                      # y → ±y; the images across z = 0 repeat these (factor 2 below)
             sg = 2.0 if g == 0 else 2.0 * sy
             for q in range(3):
@@ -66,21 +67,54 @@ def _block(x, T, y, comps, sy, k, out):
                 dipoles(Tm, e, k, r, Ge, Gm)
                 for i in range(comps.shape[0]):
                     for a in range(nc):
-                        out[m, a, n, i] += sg * (Ge[a, comps[i]] if comps[i] < 3 else Gm[a, comps[i] - 3])
+                        out[m * nc + a, 3 * n + i] += sg * (Ge[a, comps[i]] if comps[i] < 3 else Gm[a, comps[i] - 3])
 
 
-def matrix(x, y, k, T=None, cls=(-1, 1), tail=None):
+def tail_weights(tail, cls, n_e=2, n_m=1):
+    """
+    Weight matrix W (3 N_t, n_tail) tying the tail dipoles on each row with (r / r_cut)^e,
+    e = nu + 2 (electric) or tau + 2 (magnetic), using the n_e smallest electric and n_m
+    smallest magnetic exponents of the class (H is axial, so tau uses opposite parities)
+    """
+    sy, sz = cls
+    comps = midplane_comps(sz)
+    pts, row, rr = tail
+    if not len(pts):
+        return np.zeros((0, 0))
+    cols = []
+    for sel, exps in ((comps < 3, CONE_NU[(sy, sz)][:n_e]), (comps >= 3, CONE_TAU[(-sy, -sz)][:n_m])):
+        idx = np.nonzero(sel)[0]
+        for i in np.unique(row):
+            p = np.nonzero(row == i)[0]
+            for e in exps:
+                W = np.zeros((len(pts), 3, len(idx)))
+                W[p[:, None], idx, np.arange(len(idx))] = (rr[p] ** (e + 2))[:, None]
+                cols.append(W.reshape(3 * len(pts), len(idx)))
+    return np.hstack(cols)
+
+
+def matrix(x, y, k, T=None, cls=(-1, 1), tail=None, batch=1024):
     """
     Fields of the dipoles at y on the mid-plane (and the tip tail, if given), symmetrised for cls
       x: points (M, 3), T: tangents (M, 2, 3) or None for the Cartesian components
-      Returns an array (M nc, unknowns)
+      Returns an F-ordered array (M nc, unknowns)
     """
+    x, y = np.ascontiguousarray(x), np.ascontiguousarray(y)
     comps = midplane_comps(cls[1])
     T_ = np.eye(3)[None] if T is None else np.ascontiguousarray(T)
-    out = np.empty((len(x), T_.shape[1], len(y), len(comps)), complex)
-    _block(np.ascontiguousarray(x), T_, np.ascontiguousarray(y), comps, float(cls[0]), k, out)
-    A = out.reshape(len(x) * T_.shape[1], -1)
-    return A if tail is None else np.hstack((A, tail_matrix(x, tail, k, T, cls)))
+    nc, nf = T_.shape[1], len(y) * len(comps)
+    W = np.zeros((0, 0)) if tail is None else tail_weights(tail, cls)
+    A = np.empty((len(x) * nc, nf + W.shape[1]), complex, order="F")
+    _block(x, T_, y, comps, float(cls[0]), k, A[:, :nf])
+    if W.shape[1]:
+        tpts = np.ascontiguousarray(tail[0])
+        buf = np.empty((min(len(x), batch) * nc, 3 * len(tpts)), complex)
+        for i in range(0, len(x), batch):
+            j = min(i + batch, len(x))
+            gb = buf[:(j - i) * nc]
+            _block(x[i:j], T_[i:j] if T_.shape[0] > 1 else T_, tpts, comps, float(cls[0]), k, gb)
+            A[i * nc:j * nc, nf:] = gb @ W
+    return A
 
 
 # Sources on the mid-plane
@@ -129,28 +163,8 @@ def source_rows(n_mid, n_F, s=0.7, tip_cut=0.004, hmax=np.inf, tip_end=4e-7):
             if y > 0.3 * ds:
                 pts.append((x, y, 0.0))
             psi += ds / np.sqrt((Amu * np.cos(psi)) ** 2 + (eta * B_ * np.sin(psi)) ** 2)
-    tail = np.array(tail)
+    tail = np.array(tail, float).reshape(-1, 5)
     return np.array(pts), (tail[:, :3], tail[:, 3].astype(int), tail[:, 4])
-
-
-def tail_matrix(x, tail, k, T, cls, n_e=2, n_m=1):
-    """
-    Columns of the tip tail: on each row the dipoles are tied with the weights (r / r_cut)^e,
-    e = nu + 2 (electric) or tau + 2 (magnetic), with the n_e smallest electric and the
-    n_m smallest magnetic exponents of the class
-    """
-    sy, sz = cls
-    comps = midplane_comps(sz)
-    pts, row, rr = tail
-    nc = 3 if T is None else T.shape[1]
-    G = matrix(x, pts, k, T, cls).reshape(len(x) * nc, len(pts), 3)
-    cols = []
-    # H is a pseudovector, so the potential of the magnetic type has the opposite parities
-    for sel, exps in ((comps < 3, CONE_NU[(sy, sz)][:n_e]), (comps >= 3, CONE_TAU[(-sy, -sz)][:n_m])):
-        for i in np.unique(row):
-            Gi, ri = G[:, row == i][:, :, sel], rr[row == i]          # the points of row i, (M nc, n_i, 3)
-            cols += [np.einsum("mnc,n->mc", Gi, ri ** (e + 2)) for e in exps]
-    return np.concatenate(cols, axis=1)
 
 
 # Boundary points on the quarter y, z >= 0 of the surface
@@ -182,25 +196,28 @@ def collocation(s=0.35, hmax=0.012, tip_cut=0.002, end_cut=0.02):
     # Along the body, in the front and in the rear half, with outward normals by finite differences
     pts, wts, nrm, e = [], [], [], 1e-7                         # e: step of the finite differences
     for phi, dphi in rings:
+        rd, cf = rel_dist(phi), np.cos(phi) ** 2 + np.sin(phi) ** 2 / 9
         for rear in (False, True):
-            u, u_end = 0.0, (np.pi / 2 - end_cut) if rear else L * (T1 - tip_cut)
+            u, u_end, ums, dus = 0.0, ((np.pi / 2 - end_cut) if rear else L * (T1 - tip_cut)), [], []
             while u < u_end:
                 if rear:
-                    a = B_ * np.cos(u)
-                    metric = np.sqrt((A_ * np.cos(u)) ** 2 + (B_ * np.sin(u)) ** 2 * (np.cos(phi) ** 2 + np.sin(phi) ** 2 / 9))
+                    a, metric = B_ * np.cos(u), np.sqrt((A_ * np.cos(u)) ** 2 + (B_ * np.sin(u)) ** 2 * cf)
                 else:
-                    a, metric = semi_axes(u)[0], 1.0
-                du = min(min(s * a * rel_dist(phi), hmax) / metric, u_end - u)
-                um = u + 0.5 * du
-                pu = (surface_point(um + e, phi, rear) - surface_point(um - e, phi, rear)) / (2 * e)
-                pp = (surface_point(um, phi + e, rear) - surface_point(um, phi - e, rear)) / (2 * e)
-                n = np.cross(pu, pp)
-                ln = np.linalg.norm(n)
-                pts.append(surface_point(um, phi, rear))
-                wts.append(ln * du * dphi)
-                nrm.append((n if rear else -n) / ln)            # u runs towards -x on the rear and +x on the front
+                    a, metric = float(semi_axes(u)[0]), 1.0
+                du = min(min(s * a * rd, hmax) / metric, u_end - u)
+                ums.append(u + 0.5 * du)
+                dus.append(du)
                 u += du
-    return np.array(pts), np.array(wts), np.array(nrm)
+            um, du = np.array(ums), np.array(dus)
+            ph = np.full_like(um, phi)
+            pu = (surface_point(um + e, ph, rear) - surface_point(um - e, ph, rear)) / (2 * e)
+            pp = (surface_point(um, ph + e, rear) - surface_point(um, ph - e, rear)) / (2 * e)
+            n = np.cross(pu, pp)
+            ln = np.linalg.norm(n, axis=1)
+            pts.append(surface_point(um, ph, rear))
+            wts.append(ln * du * dphi)
+            nrm.append((n if rear else -n) / ln[:, None])       # u runs towards -x on the rear and +x on the front
+    return np.vstack(pts), np.concatenate(wts), np.vstack(nrm)
 
 
 def solve_class(k, y, cls, d, p, tail=None, s_col=0.35, ratio=2.5):
@@ -208,21 +225,22 @@ def solve_class(k, y, cls, d, p, tail=None, s_col=0.35, ratio=2.5):
     Least-squares MFS for one parity class and any number of waves (d, p), shapes (W, 3)
       Returns the coefficients (unknowns, W), the relative boundary residual of each wave, and the sizes
     """
-    # Boundary points, with at least ratio equations per unknown
+    # Boundary points, with at least ratio equations per free dipole unknown
     hmax = min(0.012, 2 * np.pi / k / 5)
     x, w, nrm = collocation(s_col, hmax)
     if 2 * len(x) < ratio * 3 * len(y):
         s_col *= np.sqrt(2 * len(x) / (ratio * 3 * len(y)))
         x, w, nrm = collocation(s_col, hmax)
     T = tangent_basis(nrm)
-    sw = np.repeat(np.sqrt(w / w.sum()), 2)[:, None]
+    sw = np.sqrt(w / w.sum())
 
-    # Form matrix A and the right-hand sides, rows weighted by sqrt(area)
-    A = matrix(x, y, k, T, cls, tail) * sw
-    b = -np.einsum("mab,mwb->maw", T, class_part(x, k, d, p, REFL, (1, *cls))).reshape(-1, len(d)) * sw
+    # Form F-ordered matrix A and the right-hand sides, rows weighted by sqrt(area)
+    Tw = T * sw[:, None, None]
+    A = matrix(x, y, k, Tw, cls, tail)
+    b = -np.einsum("mab,mwb->maw", Tw, class_part(x, k, d, p, REFL, (1, *cls))).reshape(-1, len(d))
 
     # Solve for all waves at once
-    c, res = factor(np.ascontiguousarray(A)).solve(b, residual=True)
+    c, res = factor(A, overwrite=True).solve(b, residual=True)
     return c, res / np.maximum(np.linalg.norm(b, axis=0), 1e-300), A.shape
 
 
@@ -232,16 +250,16 @@ def far(k, y, c, dirs, cls, tail=None, rfar=1.0e5):
     return (A @ c).reshape(len(dirs), 3, *c.shape[1:]) * rfar * np.exp(-1j * k * rfar)
 
 
-def nose_on(k, n_mid, n_F, pts=None):
+def nose_on(k, n_mid, n_F, pts=None, s=0.7, s_col=0.35, hmax=np.inf):
     """
     The wave along -x (meeting the tip first), polarised along y, which excites the single
     parity class (-1, +1)
       Returns (y, tail), the coefficients, the field at pts and the shape of the matrix
     """
     d, p = np.array([[-1.0, 0, 0]]), np.array([[0.0, 1, 0]])
-    y, tail = source_rows(n_mid, n_F)
-    c, _, shape = solve_class(k, y, (-1, 1), d, p, tail)
-    E = None if pts is None else (matrix(pts, y, k, tail=tail) @ c[:, 0]).reshape(-1, 3)
+    y, tail = source_rows(n_mid, n_F, s=s, hmax=hmax)
+    c, _, shape = solve_class(k, y, (-1, 1), d, p, tail, s_col=s_col)
+    E = None if pts is None else (matrix(pts, y, k, cls=(-1, 1), tail=tail) @ c[:, 0]).reshape(-1, 3)
     return (y, tail), c[:, 0], E, shape
 
 

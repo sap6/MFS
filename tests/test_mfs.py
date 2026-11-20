@@ -42,12 +42,27 @@ def test_torus():
     assert errors[1] < 1e-6 and errors[1] < 1e-2 * errors[0]
 
 
+def test_torus_residual_nondefault_a():
+    # torus.residual uses sol.R and sol.a rather than defaulting to a = 0.5
+    sol = torus.scatter(K, D, P, 24, 96, a=0.8, a_s=0.52)
+    assert torus.residual(sol, D, P) < 1e-3 and torus.residual(sol, D, P, a=0.5) > 0.5
+
+
 def test_cube_against_paper():
     # Section 5.4: the level J = 4 reproduces the stored field of the paper
     d = np.load(os.path.join(DATA, "cube_convergence.npz"))
     E, t, info = cube.solve(4, pts=d["pts"])
     assert core.rel(E, d["dense_E4"]) < 1e-10
     assert info["unknowns"] == [1128, 1128]
+
+
+def test_cube_wavenumbers_and_empty_pts():
+    # Unified mode and boundary rules at k = 4pi, 6pi match stored counts, and empty target arrays return cleanly
+    for case, kw in (("k2", 4 * np.pi), ("k3", 6 * np.pi)):
+        row = [r for r in np.load(os.path.join(DATA, f"cube_cases_{case}.npz"))["mfs"] if r[0] == 2 and r[1] == 5][0]
+        c = cube.Cube(5, k=kw, classes=())
+        assert c.unknowns[(1, -1, 1)] == int(row[3]) // 2 and c.rows == int(row[4])
+    assert cube.solve(2, pts=np.empty((0, 3)))[0].shape == (0, 3)
 
 
 def test_cube_rotation():
@@ -61,21 +76,40 @@ def test_cube_rotation():
 
 
 def test_almond_against_paper():
-    # Section 6.3: the layout 3:0 at 1.19 GHz, nose-on, reproduces the stored field; tip tail works at 3.5 GHz
+    # Section 6.3: layout 3:0 at 1.19 GHz, nose-on (with tip tail = 815 unknowns), reproduces stored field
     d = np.load(os.path.join(DATA, "cost_almond.npz"))
     k = 2 * np.pi * 1.19e9 / almond.C0
-    E = almond.nose_on(k, 3, 0, 0.3 * core.fibonacci(400))[2]
+    src, c, E, shape = almond.nose_on(k, 3, 0, 0.3 * core.fibonacci(400))
+    assert isinstance(src, tuple) and len(src) == 2 and shape[1] == 815
     assert core.rel(E, d["mfs_E0"]) < 1e-10
+    src4, c4, _, _ = almond.nose_on(k, 4, 1, 0.3 * core.fibonacci(10))
+    ext, sca = almond.optical(k, src4, c4)
+    assert abs(ext - sca) / sca < 2e-2
     r = almond.rcs(3.5, 4, 1, step=90.0)
     ref = np.load(os.path.join(DATA, "almond_rcs_3.5GHz.npz"))
     for pol in ("sigma_HH", "sigma_VV"):
         assert np.abs(10 * np.log10(r[pol] / ref[pol][[0, 180, 360]])).max() < 0.25
 
 
+def test_csne_qr_fallback():
+    # Ill-conditioned matrix (cond > 1e8) triggers automatic core.factor CSNE -> QR fallback accurately
+    rng = np.random.default_rng(0)
+    U, _ = np.linalg.qr(rng.normal(size=(40, 12)) + 1j * rng.normal(size=(40, 12)))
+    V, _ = np.linalg.qr(rng.normal(size=(12, 12)) + 1j * rng.normal(size=(12, 12)))
+    s = np.logspace(0, -9, 12)
+    A = np.asfortranarray((U * s) @ V.conj().T)
+    b = U @ np.ones(12, complex) + 1e-4 * rng.normal(size=40)
+    sol = core.factor(A.copy(), overwrite=True)
+    assert isinstance(sol, core.QR)
+    assert core.rel(sol.solve(b), core.QR(A.copy()).solve(b)) < 1e-12
+
+
 def test_cone():
-    # Appendix A: the smallest exponent at the tip of the almond
+    # Appendix A: smallest electric exponents at the almond tip and at a cube vertex
     nu = cone.EllipticCone().exponents(1, 1, hi=0.5)
     assert abs(nu[0] - 0.29959) < 1e-5
+    nu_cube = cone.CubeVertex(n=10).exponents()
+    assert abs(nu_cube[0] - 0.45417) < 2e-4
 
 
 @pytest.mark.skipif(not os.environ.get("MFS_TEST_BEMPP"), reason="set MFS_TEST_BEMPP=1 to test the Bempp comparison")

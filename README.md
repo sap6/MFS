@@ -13,10 +13,15 @@ The Method of Fundamental Solutions (MFS) approximates the field scattered by a
 perfect conductor by a sum of dipoles placed inside the body. It needs no mesh
 and no integration over the surface, and it converges rapidly, but only if the
 sources are in the right place. We study where to place them on four shapes: a
-sphere, a torus, a cube and the NASA almond. For the cube, the usual layout (a
-smaller copy of the surface) stalls at errors above 20%. In contrast, sources on
-the planes that bisect the edges, continued by *singular tails*, converge
-root-exponentially.
+sphere, a torus, a cube and the NASA almond:
+
+- **Smooth and thin bodies (sphere, torus, almond away from the tip):** place dipoles so they enclose the interior singularities of the continued field (the centre of the sphere, the focal ring of the torus, and the mid-plane focal curve of the almond).
+- **Convex polyhedra (cube):** place electric and magnetic dipoles on the interior medial surface (*skeleton*, the twelve edge-bisector planes), using polynomial line densities stretched towards the vertices rather than rows of discrete points.
+- **Sharp edges and conical tips (cube edges/vertices, almond tip):** continue truncated source clusters all the way to the singularity with a *singular tail* weighted by the analytical exponents of the local Maxwell field, adding only a handful of unknowns.
+
+![Source layout on the skeleton of the cube](figures/fig_cube_layout.png)
+
+*Source layout on the cube at level $J = 6$ (Figure 3 of the paper): free dipole lines on the edge-bisector plane down to $d_{\min}$, followed by a nine-line singular tail with fixed power-law weights. Whereas dipoles on a scaled inner cube stall above 20% error, this layout converges root-exponentially down to $2\times10^{-5}$.*
 
 ![Error against wall time for the MFS and for Bempp](figures/fig_cost_all.png)
 
@@ -31,10 +36,10 @@ badge at the top of each notebook, or below.
 
 | Notebook | What it shows | Time |
 |---|---|---|
-| [1. The sphere](notebooks/1_sphere.ipynb) [![Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/sap6/MFS/blob/main/notebooks/1_sphere.ipynb) | one solve against the Mie series, convergence like exp(-c√N), the field near the surface | under a minute |
-| [2. The torus](notebooks/2_torus.ipynb) [![Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/sap6/MFS/blob/main/notebooks/2_torus.ipynb) | mode-by-mode solve, the optical theorem, how thin the source torus may be | under a minute |
-| [3. The cube](notebooks/3_cube.ipynb) [![Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/sap6/MFS/blob/main/notebooks/3_cube.ipynb) | why the usual layout stalls, sources on the skeleton, the singular tails, any incident wave | about four minutes |
-| [4. The NASA almond](notebooks/4_almond.ipynb) [![Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/sap6/MFS/blob/main/notebooks/4_almond.ipynb) | sources on the mid-plane, the tip tail, radar cross-section against the Austin benchmark | about two minutes |
+| [1. The sphere](notebooks/1_sphere.ipynb) [![Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/sap6/MFS/blob/main/notebooks/1_sphere.ipynb) | five-line MFS solve against the Mie series, $\exp(-c\sqrt{N})$ convergence and $R_s$ conditioning, near-surface field | under a minute |
+| [2. The torus](notebooks/2_torus.ipynb) [![Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/sap6/MFS/blob/main/notebooks/2_torus.ipynb) | azimuthal Fourier decoupling (axial vs oblique waves), optical theorem, focal-ring bound on the source torus | under a minute |
+| [3. The cube](notebooks/3_cube.ipynb) [![Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/sap6/MFS/blob/main/notebooks/3_cube.ipynb) | why an inner cube stalls, skeleton layout, edge residual with and without singular tails, oblique-wave total field | about three minutes |
+| [4. The NASA almond](notebooks/4_almond.ipynb) [![Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/sap6/MFS/blob/main/notebooks/4_almond.ipynb) | mid-plane focal-curve layout and tip tail, nose-on convergence, 3.5 GHz monostatic RCS against the Austin benchmark | about two minutes |
 
 ## Install
 
@@ -63,10 +68,10 @@ Each shape has one entry point:
 
 | Shape | Call | Returns |
 |---|---|---|
-| sphere | `sphere.solve(N, k, R)` | source points and coefficients; the field is `core.field(pts, y, alpha, k)` |
-| torus | `torus.scatter(k, d, p, ns, nphi)` | a solution with `.field(pts)` and `.far(dirs)` |
-| cube | `cube.solve(J, d, p, pts)` | the field at `pts`, the time, and checks (unknowns, residual, optical theorem) |
-| almond | `almond.nose_on(k, n_mid, n_F, pts)`, `almond.rcs(freq)` | the field, or the radar cross-section against the azimuth |
+| sphere | `sphere.solve(N, k, R)` | source points `y` and coefficients `alpha`; the field is `core.field(pts, y, alpha, k)` |
+| torus | `torus.scatter(k, d, p, ns, nphi)` | a `Solution` with `.field(pts)` and `.far(dirs)` |
+| cube | `cube.solve(J, d, p, pts)` | `(E, elapsed, info)` with unknowns, weighted residual and optical mismatch |
+| almond | `almond.nose_on(k, n_mid, n_F, pts)`, `almond.rcs(freq)` | `((y, tail), c, E, shape)` for nose-on incidence, or monostatic RCS dictionary across azimuths |
 
 ## The figures and tables of the paper
 
@@ -84,10 +89,10 @@ involve Bempp need `pip install -e ".[bempp]"`.
 | Figures 3 and 8: source layouts | [`figures/layouts.py`](figures/layouts.py) | (a drawing) |
 | Figure 4: the wedge at an edge | [`figures/wedge.py`](figures/wedge.py) | (a sketch) |
 | Figure 5: the residual near an edge | [`figures/edge_residual.py`](figures/edge_residual.py) | 1 minute |
-| Figure 6, Table 2: convergence on the cube | [`figures/cube_convergence.py`](figures/cube_convergence.py) | 12 minutes, Bempp 4 more |
-| Figure 7, Table 5: other waves and larger cubes | [`figures/cube_cases.py`](figures/cube_cases.py) | 1 hour per case (`--run`; `--scan` 2 hours) |
-| Figure 9, Table 3: almond radar cross-section | [`figures/almond_rcs.py`](figures/almond_rcs.py) | 15 minutes |
-| Figure 10, Table 4: comparison with Bempp | [`figures/cost.py`](figures/cost.py) | 3 to 5 minutes per shape |
+| Figure 6, Table 2: convergence on the cube | [`figures/cube_convergence.py`](figures/cube_convergence.py) | 8 minutes, Bempp 4 more |
+| Figure 7, Table 5: other waves and larger cubes | [`figures/cube_cases.py`](figures/cube_cases.py) | 20 to 40 minutes per case (`--run CASE`: `k1`, `k1o`, `k2`, `k3`; `--scan CASE`: 2 hours) |
+| Figure 9, Table 3: almond radar cross-section | [`figures/almond_rcs.py`](figures/almond_rcs.py) | 7 minutes |
+| Figure 10, Table 4: comparison with Bempp | [`figures/cost.py`](figures/cost.py) | 3 to 8 minutes per shape (`--run SHAPE`: `sphere`, `torus`, `almond`) |
 | Figure 11: the field near the surface | [`figures/nearfield.py`](figures/nearfield.py) | a few minutes |
 | Tables 2, 4, 5, C.1 | [`figures/tables.py`](figures/tables.py) | seconds |
 | Table A.1, vertex exponents | [`figures/cone_exponents.py`](figures/cone_exponents.py) | 5 minutes |
@@ -103,7 +108,7 @@ time.
 
 | Folder | Contents |
 |---|---|
-| [`mfs/`](mfs) | the method, one short module per shape: `sphere`, `torus`, `cube` (with the line quadrature in `lines`), `almond`; the exact solution `mie`; the exponents at the almond tip and the cube vertex, `cone`; and the boundary element comparison, `bem` |
+| [`mfs/`](mfs) | the method, one short module per shape: `core` (dyadic Green's functions, symmetries, `CSNE`/`QR` least-squares solvers), `sphere`, `torus`, `cube` (with the line quadrature in `lines`), `almond`; the exact solution `mie`; the exponents at the almond tip and the cube vertex, `cone`; and the boundary element comparison, `bem` |
 | [`notebooks/`](notebooks) | the four notebooks above |
 | [`figures/`](figures) | one script per figure of the paper, and the tables |
 | [`data/`](data) | the results behind every figure and table, and the Austin benchmark data for the almond |

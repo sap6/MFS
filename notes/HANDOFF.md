@@ -45,24 +45,21 @@ experiment log). The essentials:
 
   | case | best MFS layout (1 or 2 depths/octave) | two depths/octave alone |
   |---|---|---|
-  | standard wave (`k1`) | 4.5e-4 | 1.8e-4 |
-  | general wave (`k1o`) | 3.9e-4 | 1.5e-4 |
-  | two wavelengths (`k2`) | 8.6e-4 | 4.0e-4 |
-  | three wavelengths (`k3`) | 2.2e-3 | 1.0e-3 |
+  | standard wave (`k1`) | 5.7e-4 | 2.4e-4 |
+  | general wave (`k1o`) | 5.0e-4 | 2.0e-4 |
+  | two wavelengths (`k2`) | 8.0e-4 | 5.0e-4 |
+  | three wavelengths (`k3`) | 1.3e-3 | 1.0e-3 |
 
-## 3. Completed on 19 November 2026
+## 3. Completed on 19--20 November 2026
 
-- **3.1 Re-run of Figure 7 and Table 5 (`data/cube_cases_{k1,k1o,k2,k3}.npz`):** Done in 2 alternating passes on 2 cores (8 GB RAM), including `k3` after fixing peak-memory copies in `core.QR` / `core.CSNE` and setting `cube.solve` to assemble one class at a time when `k > 5 pi` and `J >= 8`. Tables (`paper/tables/*.tex`) and all 11 figures regenerated and visually checked.
-- **3.2 Numbers in the text (`paper/sections/*.tex`):** Updated throughout from `notes/paper_numbers.py` and verified by an independent review pass.
-- **3.3 Standalone claim re-checks with the new boundary grading:**
-  - One depth per octave at `J = 10, 11, 12`: `1.27e-4`, `1.44e-4`, `1.78e-4` (stalls between `1.3e-4` and `1.8e-4`, unchanged).
-  - Refinements at `J = 9` vs `dense_E9`: `+4` modes `9.9e-7`, `12x12` base `1.1e-7`, `14` tail steps `7.3e-7`, `+2` boundary edge levels `3.43e-6` (`+2` levels & `hmax = 0.07`: `3.43e-6`) -> updated `< 3e-6` to `< 4e-6`.
-  - Tail exponents at `J = 6, 8`: adding next edge term changes error by `-1.6%` (`J = 6`) and `-3.1%` (`J = 8`, `< 5%`); lowering bisector exponents by 1 increases error by `3.37x` at `J = 6` and `7.60x` at `J = 8` (updated in `cube.tex`); adding 2nd vertex exponent at `J = 6` changes error by `-0.15%` (`< 1%`).
-  - Two wavelengths (`k = 4 pi`), `J = 8` (`+8` vs `+4` modes): `9.5e-6` (`1e-5`).
-  - Three wavelengths (`k = 6 pi`): `+8` vs `+12` modes changes `J = 7` by `3.18e-4` (`3e-4`) and `J = 8` by `1.92e-4` (`2e-4`); `+16` vs `+12` modes changes `J = 7` by `7.36e-5` (`7e-5`).
-  - Almond at `3.5 GHz` (`s = 0.5`, 2 alternating passes): MFS `5:2` reaches `4.2e-5` in `5.7 s` (`6:3`: `8.3e-6` in `9.3 s`), while Bempp reaches `3.1e-3` in `8.4 s` and `1.1e-3` in `64 s`.
-- **3.4 Notebooks (`notebooks/1_sphere.ipynb` .. `4_almond.ipynb`):** Cell 1 updated for both Colab and local execution; all four re-executed cleanly.
-- **3.5 Manuscript & Overleaf bundle:** `paper/main.pdf` (45 pages, preprint), `main_3p.pdf` (26 pages, JCP `3p`), and `paper/mfs-paper-overleaf.zip` built with zero warnings or overfull boxes; all appendix hyperlinks fixed (`\theHsection`).
+- **3.1 Unified cube rules & refreshed benchmarks (commit `80928a0` + 20 Nov pass):**
+  - Unified `mfs/cube.py` boundary panel cap `hmax = min(1/8, pi/k)`, panel order `2 + max(m, 1 + ceil(s/2))`, physical line-length mode rule `round(2*s*(s+1)*2*(H-d))`, and line quadrature `12 + ceil(8*s), 8 + ceil(2*s)` with zero per-case overrides; F-contiguous per-class slices `np.moveaxis(np.zeros((rows, nmax, g), order="F"), 2, 0)` avoid implicit `zherk` and `QR` copies.
+  - Eliminated 1.4 GB of matrix/tensor copies in `mfs/almond.py` (`matrix`, `tail_matrix` via chunked BLAS `zgemm`, vectorised `collocation`), speeding up `1.19 GHz` nose-on MFS by `1.5x--3.9x` (`3:0..8:5` in `0.67, 1.48, 2.38, 5.10, 12.94 s`, `10^{-15}` field agreement) so MFS is now faster than Bempp across the entire accuracy range on sphere, torus, and `1.19 GHz` almond.
+  - Fixed `torus.residual` to default to `(sol.R, sol.a)` and scaled `CSNE` Gram matrix in-place.
+- **3.2 Figures, tables, manuscript, notebooks & tests (20 Nov):**
+  - Raised PNG export to `300 dpi`; replaced aliased `6°` dot subsampling in `fig_almond_benchmark` with full `0.5°` dashed reference curve; fixed `fig_almond_layout` `1.85x` aspect distortion and `fig_cube_layout` text/smudge overlaps; added `$2^{-9}d_{\min}$` marker in `fig_edge_residual`; unified axes and legends across `fig_cube_cases`, `fig_cost_all`, `fig_sphere`, `fig_torus_sources`, and `fig_sphere_nearfield`; expanded Table 4 (`summary.tex`) to show both `Total` and `Solved` unknowns.
+  - Refined manuscript exposition, referee preemptions (open-skeleton absence of spurious Maxwell resonances, unit-cube EFIE cavity parity orthogonality, CSNE iterative-refinement sensitivity), and self-contained captions across `paper/sections/*.tex`, compiling `main.pdf` (46 pp) and `main_3p.pdf` (27 pp) with `0` warnings and `0` Overfull/Underfull boxes.
+  - Upgraded `README.md`, all 4 Colab notebooks (`1_sphere.ipynb`..`4_almond.ipynb`, re-executed cleanly), and `tests/test_mfs.py` (`12` tests with `MFS_TEST_BEMPP=1`).
 
 ## 4. Decisions only the author can make (asked, not yet answered)
 
@@ -88,7 +85,6 @@ experiment log). The essentials:
   - fewer modes do not pay;
   - SciPy's `lstsq` is 2 to 4 times slower than our CSNE/QR;
   - NumPy kernels are 20 to 50 times slower than the compiled ones.
-- **QR fallback:** CSNE refuses the matrix only at three wavelengths with
-  J >= 9; QR then takes over, and needs one more copy of the matrix.
+- **QR fallback:** CSNE falls back to in-place QR only when the Cholesky diagonal of $R$ spans more than four orders of magnitude (`d.min() <= 1e-4 * d.max()`); at `1--3` wavelengths with the unified mode rule, CSNE succeeds at every level `J = 4..12` (the fallback triggers e.g. at `4` wavelengths, `J = 6`).
 - **The author's voice:** `notes/style_profile.md` (from `thesis/`). The
   title is settled. The abstract has at most 250 words.

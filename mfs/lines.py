@@ -52,7 +52,7 @@ def build_tree(lam, d, n, H, k):
     gg, gwg = leg.leggauss(ng)
     gf, gwf = leg.leggauss(16)                           # fine rule for the exact moments
 
-    def u_rule(lo, hi, g, gw):                           # Gauss rule on [lo, hi] in u: nodes t and mode weights
+    def u_rule(lo, hi, g, gw):                           # Gauss rule on [lo, hi] in u: nodes t and mode weights (scaled by 1/d)
         u = 0.5 * (lo + hi)[:, None] + 0.5 * (hi - lo)[:, None] * g
         w = 0.5 * (hi - lo)[:, None] * gw * H * 0.5 * lam / np.cosh(0.5 * lam * u) ** 2 / d
         return (H * np.tanh(0.5 * lam * u)).ravel(), leg.legvander(u.ravel(), n - 1) * w.ravel()[:, None]
@@ -79,7 +79,7 @@ def build_tree(lam, d, n, H, k):
                 ts.append(tn)
                 Ws.append(L.T @ VW)
         else:
-            # Gauss panels: ng nodes in u, weights = the modes times dt/du
+            # Gauss panels: ng nodes in u, weights = the modes times (dt/du) / d (column scaling cancels 1/d)
             tg, VW = u_rule(ulo, uhi, gg, gwg)
             ts.append(tg)
             Ws.append(VW)

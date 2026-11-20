@@ -77,6 +77,20 @@ F.~G. Bogdanov, D.~D. Karkashadze, R.~S. Zaridze, The method of auxiliary
 \newblock \href {https://doi.org/10.1016/B978-044450282-7/50019-1}
   {\path{doi:10.1016/B978-044450282-7/50019-1}}.
 
+\bibitem{eisler1989}
+S.~Eisler, Y.~Leviatan, Analysis of electromagnetic scattering from metallic
+  and penetrable cylinders with edges using a multifilament current model, IEE
+  Proc. H 136~(6) (1989) 431--438.
+\newblock \href {https://doi.org/10.1049/ip-h-2.1989.0079}
+  {\path{doi:10.1049/ip-h-2.1989.0079}}.
+
+\bibitem{shifman1997}
+Y.~Shifman, M.~Friedmann, Y.~Leviatan, Analysis of electromagnetic scattering
+  by cylinders with edges using a hybrid moment method, IEE Proc. Microw.
+  Antennas Propag. 144~(4) (1997) 235--240.
+\newblock \href {https://doi.org/10.1049/ip-map:19971186}
+  {\path{doi:10.1049/ip-map:19971186}}.
+
 \bibitem{gopal2019siam}
 A.~Gopal, L.~N. Trefethen, Solving {L}aplace problems with corner singularities
   via rational functions, SIAM J. Numer. Anal. 57 (2019) 2074--2094.
@@ -251,6 +265,13 @@ D.~Khavinson, E.~Lundberg, A tale of ellipsoids in potential theory, Notices
   Amer. Math. Soc. 61~(2) (2014) 148--156.
 \newblock \href {https://doi.org/10.1090/noti1082}
   {\path{doi:10.1090/noti1082}}.
+
+\bibitem{bespalov2010}
+A.~Bespalov, N.~Heuer, R.~Hiptmair, Convergence of the natural $hp$-{BEM} for
+  the electric field integral equation on polyhedral surfaces, SIAM J. Numer.
+  Anal. 48 (2010) 1518--1529.
+\newblock \href {https://doi.org/10.1137/090766620}
+  {\path{doi:10.1137/090766620}}.
 
 \bibitem{vanbladel1996}
 J.~G. Van~Bladel, Singular Electromagnetic Fields and Sources, IEEE Press,

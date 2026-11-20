@@ -114,7 +114,7 @@ class Cube:
     classes are assembled and factorised once; solve() then takes any wave
     whose classes are among them.
       q          : ratio of the depths, 2^{-1/2} (two per octave, the paper's layout) or 1/2
-      extra_modes: extra modes per unit line length (default: 2 s (s + 1) for s = k/(2π) - 1 > 0)
+      extra_modes: extra modes per unit line length (default: 2 s (s + 1) for s = 2 H k/(2π) - 1 > 0)
       tails      : with or without the singular tails
       J = None gives the usual layout that fails: only the base grid, n_base × n_base per face
     """
@@ -136,7 +136,7 @@ class Cube:
         base = np.concatenate([np.insert(np.column_stack((U, V)), ax, 0.3, axis=1) for ax in range(3)])
         vertex = H - self.depths[:, None] / np.sqrt(3) * np.ones((1, 3))
         self.pe, self.pm = np.concatenate((base, vertex)), vertex
-        self.lines = [Line(ax, d, n0 + int(round(ex * (1 - d / H))) + int(np.ceil(2 * np.log(2 * H / d))), kind)
+        self.lines = [Line(ax, d, n0 + int(round(ex * 2 * (H - d))) + int(np.ceil(2 * np.log(2 * H / d))), kind)
                       for d in self.depths for ax in range(3) for kind in "em"]
         if tails:                                                # the six lines at d_min (three axes, e and m) continue as tails
             self.lines += [Line(ln.ax, ln.d, ln.n, ln.kind, tail=True) for ln in self.lines[-6:]]
@@ -186,8 +186,7 @@ class Cube:
             cmap[i, self.keep[c]] = np.arange(self.unknowns[c])
         T = np.eye(3)[None] if T is None else np.ascontiguousarray(T)
         nc = T.shape[1]
-        A = (np.zeros((len(x) * nc, nmax), complex, order="F")[None] if len(classes) == 1   # F-ordered so QR can overwrite A[0]
-             else np.zeros((len(classes), len(x) * nc, nmax), complex))
+        A = np.moveaxis(np.zeros((len(x) * nc, nmax, len(classes)), complex, order="F"), 2, 0)   # each A[i] is F-ordered
         sgn = np.array([[sign(c, R) for R in REFL] for c in classes])
         x = np.ascontiguousarray(x)
 
@@ -221,6 +220,9 @@ class Cube:
 
     def field(self, coef, pts, batch=1000):
         """Scattered field at the points pts (P, 3), in batches"""
+        pts = np.asarray(pts, float)
+        if not len(pts):
+            return np.empty((0, 3), complex)
         cl, out = list(coef), []
         for i in range(0, len(pts), batch):
             A = self.matrix(pts[i:i + batch], None, cl)
@@ -245,6 +247,7 @@ def solve(J, d=(0, 0, -1.0), p=(0, 1.0, 0), pts=None, k=2 * np.pi, max_gb=None, 
         ram = pages * os.sysconf("SC_PAGE_SIZE") / 2 ** 30 if pages > 0 else 12.0
         max_gb = min(6.0, 0.55 * ram)
     d, p = np.asarray(d, float), np.asarray(p, float)
+    pts = None if pts is None else np.asarray(pts, float)
     t0 = time.time()
     orbit = orbits(classes_of(k, d, p, REFL))
     todo, E, sols = list(orbit), (None if pts is None else np.zeros((len(pts), 3), complex)), []

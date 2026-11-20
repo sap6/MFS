@@ -34,9 +34,12 @@ def timed(f, *args):
 
 
 if "--run" in sys.argv:
+    shape = sys.argv[-1]
+    if shape not in ("sphere", "torus", "almond"):
+        sys.exit("usage: python figures/cost.py --run sphere|torus|almond")
     from mfs import bem                         # before bempp: it lets the OpenCL driver see all of the memory
     bempp = bem.bempp
-    shape, (d, p) = sys.argv[-1], core.wave()
+    d, p = core.wave()
     if shape == "sphere":
         # 400 points on the sphere of radius 2, against the Mie series
         pts = 2.0 * core.fibonacci(400)
@@ -94,7 +97,7 @@ ax = axs[0, 1]
 res = np.load(data("cost_torus.npz"))
 curve(ax, res["mfs"][:, 1], res["mfs"][:, 2], BLUE, "o", "-", "MFS")
 curve(ax, res["bem"][:, 1], res["bem"][:, 2], ORANGE, "D", "-.", "Bempp, with symmetry")
-ax.set_title(r"(b) torus, $R = 1$, $a = 0.5$", loc="left", fontsize=8.5)
+ax.set_title(r"(b) torus, $R = 1$, $a = 0.5$, $k = 2\pi$", loc="left", fontsize=8.5)
 ax.set_xlim(right=250)
 
 ax = axs[1, 0]
@@ -102,15 +105,16 @@ res = np.load(data("cost_almond.npz"))
 ref = res[f"mfs_E{len(res['mfs']) - 1}"]
 curve(ax, res["mfs"][:-1, 2], [rel(res[f"mfs_E{i}"], ref) for i in range(len(res["mfs"]) - 1)], BLUE, "o", "-", "MFS")
 curve(ax, res["bem"][:, 1], [rel(res[f"bem_E{i}"], ref) for i in range(len(res["bem"]))], ORANGE, "D", "-.", "Bempp, with symmetry")
-ax.set_title("(c) almond, 1.19 GHz, nose-on", loc="left", fontsize=8.5)
-ax.set_xticks([2, 5, 10, 20, 50])
+ax.set_title(r"(c) almond, $1.19$ GHz, nose-on", loc="left", fontsize=8.5)
+ax.set_ylim(3e-5, 1.2e-1)
+ax.set_xticks([1, 2, 5, 10, 20, 50])
 ax.xaxis.set_major_formatter(plt.FuncFormatter(lambda v, pos: f"{v:g}"))
 
 ax = axs[1, 1]
 res = np.load(data("cube_convergence.npz"))
 ref, jref = res["ref_E"], int(res["ref_info"][0])
 for key, col, mk, ls, lab in (("dense", BLUE, "o", "-", "MFS (two depths per octave)"),
-                              ("tail", NAVY, "h", (0, (6, 1.5)), "MFS, one depth per octave")):
+                              ("tail", NAVY, "h", (0, (6, 1.5)), "MFS (one depth per octave)")):
     rows = [r for r in res[key] if 4 <= r[0] < jref]
     curve(ax, [r[1] for r in rows], [rel(res[f"{key}_E{int(r[0])}"], ref) for r in rows], col, mk, ls, lab)
 u = np.load(data("cube_bempp_uniform.npz"))
@@ -118,10 +122,10 @@ keep = u["ndof"] > 1000
 curve(ax, u["t"][keep], [rel(E, ref) for E in u["E"][keep]], ORANGE, "D", "-.", "Bempp, quasi-uniform")
 env = np.load(data("cube_cases_k1.npz"))["env"]
 curve(ax, env[:, 5], env[:, 6], RUST, "X", (0, (3, 1)), "Bempp, graded, with symmetry")
-ax.set_title("(d) cube, side one wavelength", loc="left", fontsize=8.5)
+ax.set_title(r"(d) unit cube, $k = 2\pi$, standard wave", loc="left", fontsize=8.5)
 ax.set_ylim(1.5e-7, 3e-2)
 
-locs = {(0, 0): ("lower left", None), (0, 1): ("center right", (1.01, 0.48)),
+locs = {(0, 0): ("lower left", None), (0, 1): ("lower left", None),
         (1, 0): ("upper right", None), (1, 1): ("lower left", (0.0, -0.01))}
 for idx, ax in np.ndenumerate(axs):
     loc, anchor = locs[idx]

@@ -52,6 +52,8 @@ def bempp_run(case, g, reg, sing, n, ref):
 
 if "--scan" in sys.argv or "--run" in sys.argv:
     case = sys.argv[-1]
+    if case not in CASES:
+        sys.exit(f"usage: python figures/cube_cases.py [--scan|--run] {'|'.join(CASES)}")
     k, d, p, pts = setup(case)
     if "--scan" in sys.argv:
         # Every grading with every quadrature and mesh size (1.5 to 1.9 on the finest mesh), against the reference
@@ -89,21 +91,21 @@ if "--scan" in sys.argv or "--run" in sys.argv:
         np.savez(data(f"cube_cases_{case}.npz"), mfs=mfs, bem=bem, env=env[np.argsort(env[:, 5])])
 
 # The figure: three panels (the standard wave is panel (d) of Figure 10)
-fig, axs = plt.subplots(1, 3, figsize=(6.6, 2.9), sharey=True)
+fig, axs = plt.subplots(1, 3, figsize=(6.6, 2.9), sharex=True, sharey=True)
 panels = (("k1o", "(a) $k = 2\\pi$, general wave"), ("k2", "(b) $k = 4\\pi$, two wavelengths"), ("k3", "(c) $k = 6\\pi$, three wavelengths"))
 for ax, (case, title) in zip(axs, panels):
     res = np.load(data(f"cube_cases_{case}.npz"))
     mfs = res["mfs"]
     for pts, col, mk, ls, zo, label in (
         (mfs[mfs[:, 0] == 2], BLUE, "o", "-", 4, "MFS (two depths per octave)"),
-        (mfs[mfs[:, 0] == 1], NAVY, "h", (0, (6, 1.5)), 3, "MFS, one depth per octave"),
+        (mfs[mfs[:, 0] == 1], NAVY, "h", (0, (6, 1.5)), 3, "MFS (one depth per octave)"),
         (res["env"][res["env"][:, 6] < 2.5e-2], RUST, "X", (0, (3, 1)), 2, "Bempp, graded, with symmetry"),
     ):
         curve(ax, pts[:, 5], pts[:, 6], col, mk, ls, label, 4.8, 1.4, 0.6, zorder=zo)
     ax.set_title(title, loc="left", fontsize=8.5)
     ax.set_xlabel("wall time [s]  (2 cores)")
     ax.xaxis.set_minor_formatter(plt.NullFormatter())
-axs[0].set_ylabel("relative error of the scattered field")
+axs[0].set(xlim=(0.8, 400), ylim=(1e-5, 3.5e-2), ylabel="relative error of the scattered field")
 h, lab = axs[0].get_legend_handles_labels()
 fig.legend(h, lab, frameon=False, fontsize=8, ncol=3, loc="lower center", bbox_to_anchor=(0.5, 0.005))
 finish(fig, axs, "fig_cube_cases", rect=(0, 0.09, 1, 1))

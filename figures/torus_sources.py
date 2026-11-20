@@ -43,6 +43,6 @@ axes[1].set_ylabel(r"coefficient norm $\|\boldsymbol{\alpha}\|$")
 for ax in axes:
     ax.set_xlabel(r"source torus radius $a_s/a$")
 axes[1].legend(frameon=False, fontsize=8, loc="upper right")
-axes[0].set_title(r"$19200$ unknowns, $k = 2\pi$", loc="left", fontsize=8.5)
-axes[1].set_title(r"dotted: $a_s = R-\sqrt{R^2-a^2}$ (focal ring)", loc="left", fontsize=8.5)
+axes[0].set_title(r"(a) boundary residual ($k = 2\pi$, $19200$ unknowns)", loc="left", fontsize=8.5)
+axes[1].set_title(r"(b) coefficient norm (dotted: focal ring)", loc="left", fontsize=8.5)
 finish(fig, axes, "fig_torus_sources")

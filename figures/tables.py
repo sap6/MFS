@@ -38,20 +38,26 @@ write("cube_mfs_short", [f"    {int(J)} & {int(unk) // 2} & {int(rows)} & {tm(t)
                          for J, t, unk, rows, opt in d["dense"] if J >= 4])
 
 # Table 4: the sphere (400 and 1200 sources), the torus and the almond (layout 6:3), with Bempp's largest mesh
+# Columns: Shape, Method, whole-body unknowns, unknowns solved for the incident wave, wall time, error
 s, t, a = np.load(data("cost_sphere.npz")), np.load(data("cost_torus.npz")), np.load(data("cost_almond.npz"))
 aref = a[f"mfs_E{len(a['mfs']) - 1}"]
-row = lambda shape, method, unk, time, err: f"    {shape} & {method} & {int(unk)} & {tm(time)} & {sci(err)} \\\\"
-write("summary", [*[row("Sphere" if int(r[0]) == 1200 else "", "MFS", *r) for r in s["mfs"] if int(r[0]) in (1200, 3600)],
-                  row("", "Bempp", *s["bem"][-1][:3]),
-                  "    \\midrule", *[row("Torus", "MFS", *r[:3]) for r in t["mfs"] if int(r[0]) == 21120],
-                  row("", "Bempp", *t["bem"][-1][:3]), "    \\midrule",
-                  row("Almond", "MFS $6{:}3$", *a["mfs"][3][1:3], rel(a["mfs_E3"], aref)),
-                  row("", "Bempp", *a["bem"][-1], rel(a[f"bem_E{len(a['bem']) - 1}"], aref))])
+nsrc, ncls, talm = int(a["mfs"][3, 0]), int(a["mfs"][3, 1]), a["mfs"][3, 2]
+alm_tot = 12 * nsrc + 2 * (ncls - 3 * nsrc) * 9 // 5     # four classes: two even in z (5 tail/row), two odd (4 tail/row)
+nbem = int(a["bem"][-1, 0])
+row = lambda sh, m, tot, sol, tm_, err: f"    {sh} & {m} & {int(tot)} & {int(sol)} & {tm(tm_)} & {sci(err)} \\\\"
+write("summary", [*[row("Sphere" if int(r[0]) == 1200 else "", "MFS", r[0], r[0], r[1], r[2]) for r in s["mfs"] if int(r[0]) in (1200, 3600)],
+                  row("", "Bempp", s["bem"][-1, 0], s["bem"][-1, 0], s["bem"][-1, 1], s["bem"][-1, 2]),
+                  "    \\midrule", *[row("Torus", "MFS", r[0], 2 * r[0] // 160, r[1], r[2]) for r in t["mfs"] if int(r[0]) == 21120],
+                  row("", "Bempp", t["bem"][-1, 0], 2 * t["bem"][-1, 0] // 448, t["bem"][-1, 1], t["bem"][-1, 2]), "    \\midrule",
+                  row("Almond", "MFS $6{:}3$", alm_tot, ncls, talm, rel(a["mfs_E3"], aref)),
+                  row("", "Bempp", nbem, nbem // 4, a["bem"][-1, 1], rel(a[f"bem_E{len(a['bem']) - 1}"], aref))])
 
 # Table 5: both ends of the cube comparison. Time for an error of about 1e-3 (at most 1.2e-3);
-# Bempp's most accurate run (the end of its lower envelope) and the first MFS level below it
+# Bempp's most accurate run and the first MFS level below it
 rows = []
-for case, label in (("k1", "Standard wave"), ("k1o", "General wave"), ("k2", "Two wavelengths"), ("k3", "Three wavelengths")):
+labels = (("k1", r"Standard ($k=2\pi$)"), ("k1o", r"General ($k=2\pi$)"),
+          ("k2", r"Standard ($k=4\pi$)"), ("k3", r"Standard ($k=6\pi$)"))
+for case, label in labels:
     c = np.load(data(f"cube_cases_{case}.npz"))
     mfs, bem = [(r[5], r[6]) for r in c["mfs"]], [(r[5], r[6]) for r in c["bem"]]
     tb, tm_ = min(t for t, e in bem if e <= 1.2e-3), min(t for t, e in mfs if e <= 1.2e-3)

@@ -66,10 +66,10 @@ class Torus:
 
 
 class Solution:
-    """Dipole positions y (N, 3) and moments alpha (N, 3)"""
+    """Dipole positions y (N, 3), moments alpha (N, 3) and torus radii (R, a)"""
 
-    def __init__(self, y, alpha, k):
-        self.y, self.alpha, self.k = y, alpha, k
+    def __init__(self, y, alpha, k, R=1.0, a=0.5):
+        self.y, self.alpha, self.k, self.R, self.a = y, alpha, k, R, a
 
     def field(self, pts):
         """Scattered field at pts (P, 3)"""
@@ -110,7 +110,7 @@ def solve(torus, k, rhs, ns, nphi, a_s, rings=2):
     # Back to the dipoles: alpha_q = (1/nphi) Σ_m ah_m e^{2πi mq/nphi}, from cylindrical to Cartesian components
     y, ph = ring_points(rho, z, nphi)
     alpha = np.einsum("qjc,qca->jqa", np.fft.ifft(ah, axis=0), frame(ph))
-    return Solution(y.reshape(-1, 3), alpha.reshape(-1, 3), k)
+    return Solution(y.reshape(-1, 3), alpha.reshape(-1, 3), k, torus.R, torus.a)
 
 
 def scatter(k, d, p, ns, nphi, R=1.0, a=0.5, a_s=None, rings=2):
@@ -118,9 +118,9 @@ def scatter(k, d, p, ns, nphi, R=1.0, a=0.5, a_s=None, rings=2):
     return solve(Torus(R, a), k, lambda x: -plane_wave(x, k, d, p), ns, nphi, 0.5 * a if a_s is None else a_s, rings)
 
 
-def residual(sol, d, p, R=1.0, a=0.5, n=1500):
+def residual(sol, d, p, R=None, a=None, n=1500):
     """Relative tangential boundary residual at random points of the surface"""
-    xt, Tt = Torus(R, a).test_points(n)
+    xt, Tt = Torus(sol.R if R is None else R, sol.a if a is None else a).test_points(n)
     got = np.einsum("mca,ma->mc", Tt, sol.field(xt))
     want = -np.einsum("mca,ma->mc", Tt, plane_wave(xt, sol.k, d, p))
     return rel(got, want)

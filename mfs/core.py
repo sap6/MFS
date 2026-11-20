@@ -33,7 +33,7 @@ def wave(theta=0.0, phi=0.0, psi=90.0):
 
 def dyadic(x, y, k):
     """
-    G(x, y) = (I + ∇∇/k²) e^{ikr}/r, the field of an electric dipole at y
+    G(x, y) = (I + ∇∇/k²) e^{ikr}/r, the field of an electric dipole at y (with 1/(4π) absorbed into the moment)
       x: field points, shape (M, 3)
       y: source points, shape (N, 3)
       Returns an array of shape (M, N, 3, 3)
@@ -50,7 +50,7 @@ def dyadic(x, y, k):
 
 def magnetic(x, y, k):
     """
-    (1/k) ∇ × (e^{ikr}/r β), the field of a magnetic dipole at y, as a matrix acting on β
+    (1/k) ∇ × (e^{ikr}/r β), the field of a magnetic dipole at y (1/(4π) absorbed), as a matrix acting on β
       x: field points, shape (M, 3)
       y: source points, shape (N, 3)
       Returns an array of shape (M, N, 3, 3)
@@ -137,7 +137,8 @@ def class_part(x, k, d, p, refl, cls):
 def classes_of(k, d, p, refl):
     """The parity classes that the wave (d, p) excites; a class is labelled by its signs, like the reflections"""
     x = np.random.default_rng(0).uniform(-0.5, 0.5, (40, 3))
-    return [tuple(R) for R in refl if np.abs(class_part(x, k, d, p, refl, tuple(R))).max() > 1e-12]
+    tol = 1e-12 * max(float(np.linalg.norm(p)), 1e-300)
+    return [tuple(int(v) for v in R) for R in refl if np.abs(class_part(x, k, d, p, refl, tuple(R))).max() > tol]
 
 
 # Least squares
@@ -176,7 +177,8 @@ class CSNE:
             G = blas.zherk(1.0, A.T, trans=0, lower=0)
             np.conj(G, out=G)
         self.scale = np.sqrt(np.real(np.diag(G)))              # column norms
-        G /= self.scale[:, None] * self.scale[None, :]
+        G /= self.scale[:, None]
+        G /= self.scale[None, :]
         self.R = sla.cho_factor(G, overwrite_a=True, check_finite=False)   # raises LinAlgError if not positive definite
         dR = np.abs(np.diag(self.R[0]))
         if dR.max() > max_cond * 1e-3 * dR.min():             # the diagonal of R underestimates cond(A) by up to 1e3

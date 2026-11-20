@@ -5,7 +5,7 @@ the azimuth (0 = nose-on), HH and VV, at 3.5, 5.125, 7 and 10.25 GHz: the MFS
 Benchmark Suite (Kelley et al. 2020, problem III-A; data in data/austin_almond).
 
     python figures/almond_rcs.py          # the figure and the table, from data/
-    python figures/almond_rcs.py --run    # solve again (2 to 6 minutes per frequency)
+    python figures/almond_rcs.py --run    # solve again (1 to 3 minutes per frequency)
 """
 import sys
 
@@ -41,9 +41,10 @@ for j, (fx, f) in enumerate(FREQS.items()):
         th = ref.max() - 80.0
         print(f"{f:8.3f}   {pol}   {np.mean(np.abs(np.maximum(mfs, th) - np.maximum(ref, th))):.3f}")
         ax = axes[i, j]
-        ax.plot(phi, austin("meas.m1", fx, pol)[1], "-", color="#9a988f", lw=0.9, label="measured (Kelley et al. 2020)", zorder=1)
-        ax.plot(phi, mfs, "-", color=BLUE, lw=1.3, label="MFS (this work)", zorder=3)
-        ax.plot(phi[::12], ref[::12], "o", color=ORANGE, ms=3.2, mfc="white", mew=0.9, label="reference simulation", zorder=4)
+        ax.plot(phi, austin("meas.m1", fx, pol)[1], "-", color="#aba9a0", lw=0.85, label="measured (Kelley et al. 2020)", zorder=1)
+        ax.plot(phi, mfs, "-", color=BLUE, lw=1.35, label="MFS (this work)", zorder=3)
+        ax.plot(phi, ref, ls=(0, (2.2, 1.6)), color=ORANGE, lw=1.05, label="reference simulation", zorder=4)
+        ax.set_ylim(-74, -16)
         ax.set_title(f"{f:g} GHz, {pol}", loc="left", fontsize=8.5)
         ax.set_xticks([0, 60, 120, 180])
         if i == 1:

@@ -6,7 +6,7 @@
 set -e
 cd "$(dirname "$0")"
 if [ -f main.log ]; then
-    ! grep -E "Warning:.*undefined" main.log || exit 1
+    ! grep -E "Warning:.*(undefined|multiply-defined)|Rerun to get" main.log || exit 1
 fi
 rm -rf overleaf mfs-paper-overleaf.zip
 mkdir -p overleaf/sections overleaf/tables overleaf/figures
@@ -23,7 +23,7 @@ if command -v pdflatex >/dev/null 2>&1 && command -v bibtex >/dev/null 2>&1; the
      bibtex main >/dev/null
      pdflatex -interaction=nonstopmode main.tex >/dev/null
      pdflatex -interaction=nonstopmode main.tex >/dev/null
-     if [ -f main.log ]; then ! grep -E "Warning:.*undefined" main.log || exit 1; fi
+     if [ -f main.log ]; then ! grep -E "Warning:.*(undefined|multiply-defined)|Rerun to get" main.log || exit 1; fi
      rm -f main.aux main.log main.out main.blg main.spl main.pdf)
 fi
 (cd overleaf && python3 -c "import shutil; shutil.make_archive('../mfs-paper-overleaf', 'zip', '.')")

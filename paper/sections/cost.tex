@@ -14,12 +14,14 @@ For Bempp we used its fastest assembly backend. On the cube, we also graded the 
 
 \begin{table}[htbp]
   \centering
-  \caption{Selected runs of \autoref{fig:costall}(a)--(c): unknowns, wall time and error, measured as in the figure. The sphere has $N = 400$ and $N = 1200$ sources. For the MFS on the almond, the unknowns of the excited parity class are shown; all other counts are for the whole body, which the symmetry splits into smaller systems for the torus and the almond (\ref{app:bempp}). The cube is summarised in \autoref{tab:cubeends}.}
+  \caption{Selected runs of \autoref{fig:costall}(a)--(c): whole-body unknowns (Total), unknowns solved for the incident wave after symmetry reduction (Solved), wall time and error, measured as in the figure. On the torus, the axial wave excites two azimuthal Fourier modes ($m = \pm1$); on the almond, the nose-on wave excites one of the four mirror-symmetry classes (\ref{app:bempp}). The cube is summarised in \autoref{tab:cubeends}.}
   \label{tab:summary}
   \small
-  \begin{tabular}{llrrl}
+  \begin{tabular}{llrrrl}
     \toprule
-    Shape & Method & Unknowns & Time [s] & Error \\
+     &  & \multicolumn{2}{c}{Unknowns} &  &  \\
+    \cmidrule(lr){3-4}
+    Shape & Method & Total & Solved & Time [s] & Error \\
     \midrule
 \tablebody{summary}
     \bottomrule
@@ -28,14 +30,14 @@ For Bempp we used its fastest assembly backend. On the cube, we also graded the 
 
 \subsection{Smooth bodies and the almond}
 
-On the sphere, the torus and the almond, the MFS reaches errors between $6\times10^{-5}$ and $2\times10^{-14}$ in ten seconds or less. In contrast, on the largest meshes that we ran, the smallest errors of Bempp lie between $3\times10^{-4}$ and $2\times10^{-3}$, with run times of $66$ to $159$ seconds. Note that for the torus and the almond the reference is the finest MFS layout, so these numbers measure the convergence of each method towards the MFS limit. The independent checks are the cross-section of the torus (\autoref{sec:torus}) and the benchmark of the almond (\autoref{sec:almond}). Because Bempp uses lowest-order elements on flat triangles, its error is inversely proportional to the number of unknowns (that is, $O(h^2)$ in the mesh width $h$). Such a gap at high accuracy is therefore expected when comparing a spectrally convergent method with a low-order solver, and a boundary element method of high order should narrow it. Similar behaviour appears at a higher frequency, $3.5$\,GHz, with the almond three wavelengths long. There the MFS (layout $5{:}2$) reaches $4\times10^{-5}$ in six seconds, while Bempp reaches $3\times10^{-3}$ in eight seconds and $1\times10^{-3}$ in about a minute.
+On the sphere, the torus and the almond, the MFS reaches errors between $6\times10^{-5}$ and $2\times10^{-14}$ in ten seconds or less. In contrast, on the largest meshes that we ran, the smallest errors of Bempp lie between $3\times10^{-4}$ and $2\times10^{-3}$, with run times of $66$ to $159$ seconds. Note that for the torus and the almond the reference is the finest MFS layout, so these numbers measure the convergence of each method towards the MFS limit. The independent checks are the cross-section of the torus (\autoref{sec:torus}) and the benchmark of the almond (\autoref{sec:almond}). Because Bempp uses lowest-order elements on flat triangles, its error is inversely proportional to the number of unknowns (that is, $O(h^2)$ in the mesh width $h$). Such a gap at high accuracy is therefore expected when comparing a spectrally convergent method with a low-order solver, and a boundary element method of higher order \cite{bespalov2010} should narrow it. Similar behaviour appears at a higher frequency, $3.5$\,GHz, with the almond three wavelengths long. There the MFS (layout $5{:}2$) reaches $4\times10^{-5}$ in six seconds, while Bempp reaches $3\times10^{-3}$ in eight seconds and $1\times10^{-3}$ in about a minute.
 
 These errors are measured at a distance of one radius or more from the body. Closer to the surface, the difference between the two methods grows (\autoref{fig:nearfield}). The MFS field is a finite sum of dipole fields, so it is evaluated in the same way at every point outside the body. For the sphere with $N = 400$, the MFS error is largest at the surface, where it is $3\times10^{-7}$; with $N = 1200$ it is below $10^{-13}$ at every distance. In contrast, the boundary element field is evaluated by integrating the Green's function over the mesh triangles. When the evaluation point approaches the surface closer than the triangle width, the kernel becomes nearly singular and fixed-order quadrature loses accuracy. With the standard quadrature of the library, the error of Bempp on the mesh whose elements have size $0.07$ is $4\times10^{-3}$ down to a distance of $0.03$. It then grows to $8\%$ at the distance $0.01$ and exceeds $100\%$ at $10^{-3}$. A boundary element code can remove this difficulty with special quadrature for nearly singular integrals, but the MFS has no such integrals. Its field is accurate up to the surface wherever the boundary condition is fitted well, which for the cube excludes the immediate neighbourhood of the edges (\autoref{fig:edgeresidual}).
 
 \begin{figure}[htbp]
   \centering
   \includegraphics[width=0.68\textwidth]{fig_sphere_nearfield.pdf}
-  \caption{Unit sphere, $k = 2\pi$: error of the scattered field against the Mie series as a function of the distance from the surface, for the MFS ($R_s = 0.5$) with $N = 400$ and $N = 1200$ sources and for Bempp with $4824$ and $9750$ unknowns (elements of size $0.1$ and $0.07$).}
+  \caption{Unit sphere, $k = 2\pi$: error of the scattered field against the Mie series as a function of the distance from the surface, for the MFS ($R_s = 0.5$) with $1200$ and $3600$ unknowns ($N = 400$ and $1200$ sources) and for Bempp with $4824$ and $9750$ unknowns (triangles of size $0.1$ and $0.07$, below which fixed-order quadrature loses accuracy).}
   \label{fig:nearfield}
 \end{figure}
 
@@ -43,17 +45,18 @@ These errors are measured at a distance of one radius or more from the body. Clo
 
 On the cube the comparison is closer, because the boundary element method handles edges well once the mesh is graded. On Bempp's default quasi-uniform meshes, its error is still $2\times10^{-3}$ after more than two minutes; on graded meshes, in contrast, its best runs are much faster.
 
-\autoref{tab:cubeends} gives both ends of the comparison for the four cases of the cube, between the best MFS layout (one or two depths per octave) and the best Bempp configuration at each accuracy. Figures~\ref{fig:cubecases} and~\ref{fig:costall}(d) show the curves. At an error of about $10^{-3}$, the boundary element method is faster at one wavelength: by about half for the standard wave ($1.9$ seconds against $2.8$) and twice as fast for the general wave ($2.5$ seconds against $5.3$). The two methods are level at two wavelengths ($6.1$ and $6.8$ seconds), whereas at three wavelengths the MFS with one depth per octave is slightly faster ($14$ seconds against $17$). At the other end of the comparison, Bempp's most accurate run uses the finest mesh that fits into memory ($41472$ unknowns) and takes between four and five minutes in every case ($249$ to $286$ seconds). In contrast, the MFS reaches a smaller error in an eighth to a third of that time ($32$ to $89$ seconds), with the two-depth layout at $J = 9$ at one and two wavelengths and the one-depth layout at $J = 8$ at three (where the two-depth layout at $J = 8$ reaches $1.6\times10^{-4}$ in $74$ seconds).
+\autoref{tab:cubeends} gives both ends of the comparison for the four cases of the cube, between the best MFS layout (one or two depths per octave) and the best Bempp configuration at each accuracy. Figures~\ref{fig:cubecases} and~\ref{fig:costall}(d) show the curves. At an error of about $10^{-3}$, the boundary element method is faster at one wavelength: about one and a half times as fast for the standard wave ($1.9$ seconds against $2.8$) and twice as fast for the general wave ($2.5$ seconds against $5.3$). The two methods are level at two wavelengths ($6.1$ and $6.8$ seconds), whereas at three wavelengths the MFS with one depth per octave is slightly faster ($14$ seconds against $17$). At the other end of the comparison, Bempp's most accurate run uses the finest mesh that fits into memory ($41472$ unknowns) and takes between four and five minutes in every case ($249$ to $286$ seconds). In contrast, the MFS reaches a smaller error in an eighth to a third of that time ($32$ to $89$ seconds), with the two-depth layout at $J = 9$ at one and two wavelengths and the one-depth layout at $J = 8$ at three ($3.0\times10^{-4}$ in $32$ seconds against Bempp's $3.1\times10^{-4}$ in $273$ seconds, while the two-depth layout at $J = 8$ reaches $1.6\times10^{-4}$ in $74$ seconds).
 
 \begin{table}[htbp]
   \centering
-  \caption{Unit cube, both ends of the comparison. Left: wall time of the fastest run of each code with an error of about $10^{-3}$ (at most $1.2\times10^{-3}$; for the MFS, the faster of one and two depths per octave is taken). Right: the most accurate run of Bempp (a slower run that gains less than $3\%$ in accuracy is not counted), and the first MFS run with a smaller error, each with its wall time. The first two cases are at one wavelength.}
+  \caption{Unit cube, both ends of the comparison. Left: wall time of the fastest run of each code with an error of about $10^{-3}$ (at most $1.2\times10^{-3}$; for the MFS, the faster of one and two depths per octave is taken). Right: the most accurate run of Bempp (on the $41472$-unknown mesh) and the first MFS run with a smaller error, each with its wall time.}
   \label{tab:cubeends}
   \small
   \setlength{\tabcolsep}{4pt}
   \begin{tabular}{lrrlrlr}
     \toprule
      & \multicolumn{2}{c}{Time [s] for $10^{-3}$} & \multicolumn{2}{c}{Bempp, most accurate} & \multicolumn{2}{c}{MFS, first better} \\
+    \cmidrule(lr){2-3}\cmidrule(lr){4-5}\cmidrule(lr){6-7}
     Case & Bempp & MFS & Error & [s] & Error & [s] \\
     \midrule
 \tablebody{cube_ends}
@@ -67,4 +70,4 @@ Including the variant with one depth per octave (\autoref{sec:cuberesults}) move
 
 \subsection{What the comparison shows}
 
-On the sphere and the torus the MFS is ahead at every accuracy that we tested, and on the almond at errors below $10^{-2}$ at $1.19$\,GHz (and below about $5\times10^{-3}$ at $3.5$\,GHz). On the cube, its strength is not its speed at low accuracy at one wavelength (Bempp is one and a half to two times faster around $10^{-3}$), but its rate of convergence and its scaling to higher accuracy and frequency. The smallest error of the boundary element method on each mesh decays algebraically in the total number of unknowns $N_u$, as $\varepsilon\propto N_u^{-p}$. Its effective exponent $p$ falls from about $1.4$ on the coarser meshes to between $0.8$ and $1$ on the finer ones, whereas the effective exponent of the MFS rises from about $2.7$ to $5$ (\autoref{fig:cubeconv}). Thus, although the MFS uses more unknowns at coarse tolerances, it overtakes the boundary element code at moderate accuracy and reaches accuracies that the boundary element code does not reach on our machine.
+On the sphere, the torus and the nose-on almond at $1.19$\,GHz, the MFS is ahead across the entire accuracy range of the boundary element runs (and at errors below about $5\times10^{-3}$ on the almond at $3.5$\,GHz). On the cube, its strength is not its speed at low accuracy at one wavelength (Bempp is one and a half to two times faster around $10^{-3}$), but its rate of convergence and its scaling to higher accuracy and frequency. The smallest error of the boundary element method on each mesh decays algebraically in the total number of unknowns $N_u$, as $\varepsilon\propto N_u^{-p}$. Its effective exponent $p$ falls from about $1.4$ on the coarser meshes to between $0.8$ and $1$ on the finer ones, whereas the effective exponent of the MFS rises from about $2.7$ to $5$ (\autoref{fig:cubeconv}). Thus, although the MFS uses more unknowns at coarse tolerances, it overtakes the boundary element code at moderate accuracy and reaches accuracies that the boundary element code does not reach on our machine.
