@@ -58,8 +58,9 @@ ax.text(0.78, 0.78, r"$\psi = 0$", color=MUTED, ha="left", va="bottom", fontsize
 ax.text(0.06, -0.95, r"$\phi = 0$  (graded $\Gamma$)", ha="left", va="center", fontsize=7.8, color=INK)
 ax.text(-1.00, 0.07, r"$\phi = 3\pi/2$", ha="left", va="bottom", fontsize=8.0, color=INK)
 
-ax.text(-0.99, -0.88, "skeleton $\\mathcal{M}$ ($\\psi = \\pm\\pi$)\nfree ($\\bullet$) + tail ($\\circ$)",
-        color=BLUE, ha="left", va="center", fontsize=7.3)
+ax.text(-0.08, -0.84, "skeleton $\\mathcal{M}$ ($\\psi = \\pm\\pi$)\nfree ($\\bullet$) + tail ($\\circ$)",
+        color=BLUE, ha="right", va="center", fontsize=7.3, zorder=6,
+        bbox=dict(boxstyle="round,pad=0.08", fc=BODY, ec="none"))
 ax.text(-0.99, -0.45, "conductor", color=MUTED, ha="left", va="center", fontsize=8.0)
 ax.text(0.46, 0.16, "exterior", color=MUTED, ha="center", va="center", fontsize=8.2)
 

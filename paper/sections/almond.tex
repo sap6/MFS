@@ -32,6 +32,13 @@ In practice, the quantity of interest is the monostatic radar cross-section $\si
 
 \autoref{fig:almondbench} and \autoref{tab:almondbench} compare layout $6{:}3$ against the measurements and $397674$-unknown reference simulation of the Austin RCS Benchmark Suite \cite{kelley2020} at $3.5$, $5.125$, $7$ and $10.25$\,GHz (up to $8.6$ wavelengths long). Averaged above the suite's $80$\,dB dynamic-range floor, the MFS differs from the reference simulation by $0.04$ to $0.14$\,dB for HH and $0.01$ to $0.02$\,dB for VV, comparable to the $0.07$ and $0.02$\,dB mesh uncertainty of the reference itself at $7$\,GHz \cite{kelley2020}, while both simulations lie well within the stated $\pm1$\,dB (HH) and $\pm2$\,dB (VV) measurement uncertainty ($0.6\text{--}1.8$\,dB). Pointwise differences are largest on the steep flanks of destructive-interference HH nulls, peaking at $4.3$\,dB at $10.25$\,GHz and $35.5^\circ$ ($-66.7$ versus $-71.1$\,dBsm): layouts $6{:}3$ and $8{:}5$ agree to $0.024$\,dB there, and shifting the curve by $0.1^\circ$ halves the discrepancy.
 
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\textwidth]{fig_almond_benchmark.pdf}
+  \caption{NASA almond: monostatic radar cross-section against azimuth ($0^\circ$ is nose-on, $0.5^\circ$ steps) at four frequencies for HH and VV polarisation, comparing the MFS (layout $6{:}3$) with the reference simulation and measurements of the Austin benchmark \cite{kelley2020}.}
+  \label{fig:almondbench}
+\end{figure}
+
 \begin{table}[htbp]
   \centering
   \caption{NASA almond, monostatic cross-section: mean absolute difference in dB between the MFS (layout $6{:}3$) and the reference simulation of the Austin benchmark \cite{kelley2020}, over $361$ look angles above the suite's $80$\,dB dynamic-range floor.}
@@ -45,10 +52,3 @@ In practice, the quantity of interest is the monostatic radar cross-section $\si
     \bottomrule
   \end{tabular}
 \end{table}
-
-\begin{figure}[htbp]
-  \centering
-  \includegraphics[width=\textwidth]{fig_almond_benchmark.pdf}
-  \caption{NASA almond: monostatic radar cross-section against azimuth ($0^\circ$ is nose-on, $0.5^\circ$ steps) at four frequencies for HH and VV polarisation, comparing the MFS (layout $6{:}3$) with the reference simulation and measurements of the Austin benchmark \cite{kelley2020}.}
-  \label{fig:almondbench}
-\end{figure}

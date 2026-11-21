@@ -10,7 +10,13 @@ In this section we compare accuracy against wall time for the MFS and Bempp (\au
   \label{fig:costall}
 \end{figure}
 
-\begin{table}[htbp]
+\subsection{Smooth bodies and the almond}
+
+On the sphere, the torus and the nose-on almond at $1.19$\,GHz, the MFS reaches errors between $5.6\times10^{-5}$ and $3.5\times10^{-14}$ in ten seconds or less, whereas Bempp's largest meshes reach $2.6\times10^{-4}$ to $2.3\times10^{-3}$ in $130$ to $329$ seconds (for the torus and almond the reference is the finest MFS layout, independently verified in Sections~\ref{sec:torus} and~\ref{sec:almond}). Because lowest-order RWG elements on flat triangles converge like $O(h^2)\propto N_u^{-1}$, this gap at high accuracy against a spectral or root-exponential method is expected, and higher-order boundary elements \cite{bespalov2010} would narrow it. The same contrast appears at $3.5$\,GHz (three wavelengths long), where layouts $5{:}2$ and $6{:}3$ on the almond reach $2.8\times10^{-4}$ in $4.3$\,s and $4.6\times10^{-5}$ in $8.4$\,s, against $3.1\times10^{-3}$ in $17$\,s and $1.1\times10^{-3}$ in $133$\,s for Bempp.
+
+Closer to the surface $\Gamma$, the difference between the two methods grows sharply (\autoref{fig:nearfield}). Because the MFS field is a finite sum of smooth interior dipole fields, it is evaluated identically everywhere outside $\Omega$: on the sphere it stays below $3\times10^{-7}$ ($N = 400$) and $10^{-13}$ ($N = 1200$) right up to $\Gamma$ (and up to $\Gamma$ away from polyhedral edges, \autoref{fig:edgeresidual}). Evaluating a boundary element field within one triangle width of $\Gamma$, in contrast, makes the surface integral nearly singular. Without specialised near-singular quadrature, Bempp's error on the $h = 0.07$ sphere mesh stays at $4\times10^{-3}$ down to distance $0.03$, but rises to $8\%$ at $0.01$ and exceeds $100\%$ at $10^{-3}$.
+
+\begin{table}[tbp]
   \centering
   \caption{Selected runs of \autoref{fig:costall}(a)--(c): whole-body unknowns (Total), unknowns solved for the incident wave after symmetry reduction (Solved), wall time and error, measured as in the figure. On the torus, the axial wave excites two azimuthal Fourier modes ($m = \pm1$); on the almond, the nose-on wave excites one of the four mirror-symmetry classes (\ref{app:bempp}). The cube is summarised in \autoref{tab:cubeends}, and the regular tetrahedron in \autoref{sec:tetrahedron}.}
   \label{tab:summary}
@@ -25,12 +31,6 @@ In this section we compare accuracy against wall time for the MFS and Bempp (\au
     \bottomrule
   \end{tabular}
 \end{table}
-
-\subsection{Smooth bodies and the almond}
-
-On the sphere, the torus and the nose-on almond at $1.19$\,GHz, the MFS reaches errors between $5.6\times10^{-5}$ and $3.5\times10^{-14}$ in ten seconds or less, whereas Bempp's largest meshes reach $2.6\times10^{-4}$ to $2.3\times10^{-3}$ in $130$ to $329$ seconds (for the torus and almond the reference is the finest MFS layout, independently verified in Sections~\ref{sec:torus} and~\ref{sec:almond}). Because lowest-order RWG elements on flat triangles converge like $O(h^2)\propto N_u^{-1}$, this gap at high accuracy against a spectral or root-exponential method is expected, and higher-order boundary elements \cite{bespalov2010} would narrow it. The same contrast appears at $3.5$\,GHz (three wavelengths long), where layouts $5{:}2$ and $6{:}3$ on the almond reach $2.8\times10^{-4}$ in $4.3$\,s and $4.6\times10^{-5}$ in $8.4$\,s, against $3.1\times10^{-3}$ in $17$\,s and $1.1\times10^{-3}$ in $133$\,s for Bempp.
-
-Closer to the surface $\Gamma$, the difference between the two methods grows sharply (\autoref{fig:nearfield}). Because the MFS field is a finite sum of smooth interior dipole fields, it is evaluated identically everywhere outside $\Omega$: on the sphere it stays below $3\times10^{-7}$ ($N = 400$) and $10^{-13}$ ($N = 1200$) right up to $\Gamma$ (and up to $\Gamma$ away from polyhedral edges, \autoref{fig:edgeresidual}). Evaluating a boundary element field within one triangle width of $\Gamma$, in contrast, makes the surface integral nearly singular. Without specialised near-singular quadrature, Bempp's error on the $h = 0.07$ sphere mesh stays at $4\times10^{-3}$ down to distance $0.03$, but rises to $8\%$ at $0.01$ and exceeds $100\%$ at $10^{-3}$.
 
 \begin{figure}[htbp]
   \centering

@@ -155,7 +155,7 @@ ax.set_ylim(1.5e-7, 3e-2)
 ax.set_xticks([2, 5, 10, 50, 200, 500])
 ax.xaxis.set_major_formatter(plt.FuncFormatter(lambda v, pos: f"{v:g}"))
 
-locs = {(0, 0): ("lower left", None), (0, 1): ("lower left", None),
+locs = {(0, 0): ("lower left", None), (0, 1): ("center right", (1.0, 0.44)),
         (1, 0): ("upper right", None), (1, 1): ("lower left", (0.0, -0.01))}
 for idx, ax in np.ndenumerate(axs):
     loc, anchor = locs[idx]
@@ -164,6 +164,5 @@ for idx, ax in np.ndenumerate(axs):
     ax.xaxis.set_minor_formatter(plt.NullFormatter())
 for ax in axs[1]:
     ax.set_xlabel("wall time [s]  (2 cores)")
-for ax in axs[:, 0]:
-    ax.set_ylabel("relative error of the scattered field")
-finish(fig, axs, "fig_cost_all")
+fig.supylabel("relative error of the scattered field", fontsize=9, x=0.012)
+finish(fig, axs, "fig_cost_all", rect=(0.025, 0, 1, 1))

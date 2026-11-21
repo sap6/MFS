@@ -47,5 +47,6 @@ for key, col, mk, ls, label in (
     curve(ax, res["delta"], res[key], col, mk, ls, label, 4.5, 1.4, 0.6, zorder=3)
 ax.set(xlabel="distance from the surface", ylabel="relative error against Mie")
 ax.set_title(r"unit sphere, $k = 2\pi$: error near the surface", loc="left", fontsize=8.5)
-ax.legend(frameon=False, fontsize=7.8, loc="center", bbox_to_anchor=(0.48, 0.22), ncol=2, columnspacing=0.8, handlelength=2.1)
+ax.legend(frameon=True, facecolor="white", framealpha=0.90, edgecolor="none", fontsize=7.8,
+          loc="center", bbox_to_anchor=(0.48, 0.22), ncol=2, columnspacing=0.8, handlelength=2.1)
 finish(fig, ax, "fig_sphere_nearfield")

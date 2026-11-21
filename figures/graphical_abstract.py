@@ -52,7 +52,7 @@ ins.set(xlim=(H - zw, H + 0.004), ylim=(H - zw, H + 0.004), xticks=[], yticks=[]
 for sp in ins.spines.values():
     sp.set_edgecolor(RUST)
     sp.set_linewidth(0.65)
-ins.text(H - 0.93 * zw, H - 0.13 * zw, "zoom", fontsize=6.4, color=RUST, va="top")
+ins.text(H - 0.06 * zw, H - 0.90 * zw, "zoom", fontsize=6.4, color=RUST, ha="right", va="bottom")
 ax.add_patch(ConnectionPatch(xyA=(H - zw, H - 0.25 * zw), coordsA=ax.transData,
                              xyB=(1.0, 0.72), coordsB=ins.transAxes, color=RUST, lw=0.5, ls=":"))
 

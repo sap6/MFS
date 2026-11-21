@@ -55,14 +55,14 @@ ax.axvline(0.0, color=MUTED, lw=0.8, ls=(0, (4, 2)), zorder=1)
 ax.plot(R, 0.0, "+", color=MUTED, ms=5.0, mew=0.9, zorder=3)
 ax.plot(rho_f, 0.0, "*", color=RUST, ms=6.8, zorder=6)
 ax.text(0.03, 0.78, "axis\n$\\rho=0$", fontsize=7.0, color=MUTED, va="top")
-ax.annotate("focal ring\n$\\sqrt{R^2-a^2}$", xy=(rho_f, 0.06), xytext=(0.76, 0.72),
-            fontsize=6.3, color=RUST, ha="center", va="top", zorder=7,
-            bbox=dict(boxstyle="round,pad=0.08", fc=BODY, ec="none"),
+ax.annotate("focal ring $\\sqrt{R^2-a^2}$", xy=(rho_f, 0.06), xytext=(0.12, 1.06),
+            fontsize=6.5, color=RUST, ha="left", va="top", zorder=7,
             arrowprops=dict(arrowstyle="-", color=RUST, lw=0.55, shrinkA=0, shrinkB=2))
 ax.text(R + 0.03, 0.03, "$R$", fontsize=7.3, color=MUTED)
-ax.set(xlim=(-0.06, 1.88), ylim=(-0.92, 0.92), aspect="equal", xlabel=r"radial $\rho$", ylabel="$z$",
+ax.set(xlim=(-0.06, 1.88), ylim=(-0.90, 1.08), aspect="equal", xlabel=r"radial $\rho$", ylabel="$z$",
        xticks=[0, 0.6, 1.0, 1.8])
-ax.legend(frameon=False, fontsize=6.9, loc="upper center", bbox_to_anchor=(0.48, -0.25), ncol=1,
+ax.set_anchor("N")
+ax.legend(frameon=False, fontsize=6.9, loc="upper center", bbox_to_anchor=(0.48, -0.22), ncol=1,
           handletextpad=0.3, labelspacing=0.25)
 ax.set_title("(a) meridian cut ($a/R = 0.8$)", loc="left", fontsize=8.4)
 ax.grid(False)

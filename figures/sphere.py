@@ -64,11 +64,12 @@ ax.add_patch(FancyArrowPatch((bx0, by0), (bx0 - 0.34 * by0, by0 + 0.34 * bx0),
 ax.text(bx0 - 0.36 * by0 + 0.04, by0 + 0.36 * bx0, r"$\mathbf{t}_i$", fontsize=7.5, color=INK)
 ax.annotate("", xy=(Rs * np.cos(-0.35), Rs * np.sin(-0.35)), xytext=(0, 0),
             arrowprops=dict(arrowstyle="->", color=ORANGE, lw=0.8))
-ax.text(0.24, -0.22, "$R_s$", fontsize=7.5, color=ORANGE)
+ax.text(0.17, -0.20, "$R_s$", fontsize=7.5, color=ORANGE)
 
 ax.set(xlim=(-1.22, 1.22), ylim=(-1.18, 1.22), aspect="equal")
+ax.set_anchor("N")
 ax.axis("off")
-ax.legend(frameon=False, fontsize=6.9, loc="upper center", bbox_to_anchor=(0.50, -0.06), ncol=1,
+ax.legend(frameon=False, fontsize=6.9, loc="upper center", bbox_to_anchor=(0.50, -0.05), ncol=1,
           handletextpad=0.3, labelspacing=0.25)
 ax.set_title("(a) placement ($R_s < 1$)", loc="left", fontsize=8.4)
 

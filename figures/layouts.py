@@ -76,7 +76,7 @@ def cube_layout(J=6, fname="fig_cube_layout"):
     for sp in ins.spines.values():
         sp.set_edgecolor(RUST)
         sp.set_linewidth(0.7)
-    ins.text(H - 0.94 * zw, H - 0.12 * zw, r"$\times 16$ zoom", fontsize=6.4, color=RUST, va="top")
+    ins.text(H - 0.06 * zw, H - 0.90 * zw, r"$\times 16$ zoom", fontsize=6.4, color=RUST, ha="right", va="bottom")
     ax.add_patch(ConnectionPatch(xyA=(H - zw, H - 0.25 * zw), coordsA=ax.transData,
                                  xyB=(1.0, 0.72), coordsB=ins.transAxes, color=RUST, lw=0.55, ls=":"))
 
@@ -197,8 +197,9 @@ def almond_layout(n_mid=6, n_F=3, fname="fig_almond_layout"):
     ax.text(3.5, 53.0, "cut (b)", fontsize=6.9, color=MUTED)
     ax.plot([x_tip_mm - 5.5, x_tip_mm - 5.5, x_tip_mm + 0.4, x_tip_mm + 0.4, x_tip_mm - 5.5],
             [0, 3.9, 3.9, 0, 0], color=RUST, lw=0.65, zorder=5)
-    ax.text(x_tip_mm - 1.0, 15.5, "tip (c)", fontsize=6.9, color=RUST, ha="right")
+    ax.text(x_tip_mm - 2.0, 21.0, "tip (c)", fontsize=6.9, color=RUST, ha="right")
     ax.set(xlabel="$x$ [mm]", ylabel="$y$ [mm]", aspect="equal", xlim=(-112, 156), ylim=(0, 62))
+    ax.set_anchor("N")
     ax.legend(frameon=False, fontsize=7.0, loc="upper center", bbox_to_anchor=(0.48, -0.82), ncol=2,
               markerscale=2.2, handletextpad=0.3, columnspacing=0.55)
     ax.set_title("(a) mid-plane $z = 0$ (layout $6{:}3$)", loc="left", fontsize=8.4)
@@ -217,7 +218,7 @@ def almond_layout(n_mid=6, n_F=3, fname="fig_almond_layout"):
     ax.plot(etas_arr[n_mid:] * a0, np.zeros(n_F + 1), "o", color=BLUE, ms=3.1, zorder=5)
     ax.plot(almond.ETA_F * a0, 0.0, "*", color=ORANGE, ms=5.5, zorder=6)
 
-    ins_b = ax.inset_axes([0.10, 0.52, 0.86, 0.43])
+    ins_b = ax.inset_axes([0.10, 0.56, 0.86, 0.40])
     ins_b.set_facecolor("white")
     ph_z = np.linspace(0, np.arccos(0.81), 120)
     ins_b.fill_between(np.cos(ph_z), 0, np.sin(ph_z) / 3.0, color="#f5f4f0", lw=0)
@@ -233,7 +234,7 @@ def almond_layout(n_mid=6, n_F=3, fname="fig_almond_layout"):
     for sp in ("top", "right", "left"):
         ins_b.spines[sp].set_visible(False)
 
-    ax.set(xlabel="$y$ [mm]", ylabel="$z$ [mm]", xlim=(0, 52), ylim=(-2, 39))
+    ax.set(xlabel="$y$ [mm]", ylabel="$z$ [mm]", xlim=(0, 52), ylim=(-2, 42))
     ax.legend(frameon=False, fontsize=7.0, loc="upper center", bbox_to_anchor=(0.48, -0.27), ncol=1, handletextpad=0.3)
     ax.set_title("(b) section $x = 0$ & rim zoom", loc="left", fontsize=8.4)
 
@@ -260,7 +261,7 @@ def almond_layout(n_mid=6, n_F=3, fname="fig_almond_layout"):
     ax.plot([xcut, xcut], [0.0, 2.35], color=MUTED, lw=0.65, ls=":", zorder=1)
     ax.text(xcut - 0.12, 1.85, "1 mm\ncut-off", ha="right", va="center", fontsize=6.7, color=MUTED)
 
-    ins_c = ax.inset_axes([0.38, 0.62, 0.60, 0.29])
+    ins_c = ax.inset_axes([0.44, 0.67, 0.54, 0.25])
     ins_c.set_facecolor("white")
     r_bnd = x_tip_mm - rim_b[:, 0] * 1e3
     r_row_tail = (xt_tip - tpts[trow == n_mid + n_F, 0]) * 1e3
@@ -270,12 +271,12 @@ def almond_layout(n_mid=6, n_F=3, fname="fig_almond_layout"):
     ins_c.plot(r_row_tail[::11], np.full_like(r_row_tail[::11], -0.14), "o", mfc="white", mec=ORANGE, ms=2.5, mew=0.65)
     ins_c.axvline(abs(xcut), color=MUTED, lw=0.6, ls=":")
     ins_c.set(xscale="log", xlim=(8e-5, 6.2), ylim=(-0.48, 0.62), xticks=[1e-4, 1e-2, 1.0], yticks=[])
-    ins_c.tick_params(labelsize=6.1, pad=1.1)
-    ins_c.set_title(r"$\Gamma$ & outer row vs $r$ [mm]", fontsize=6.0, color=ORANGE, loc="left", pad=1.5)
+    ins_c.tick_params(labelsize=6.4, pad=1.2)
+    ins_c.set_title(r"$\Gamma$ & outer row vs $r$ [mm]", fontsize=6.5, color=ORANGE, loc="left", pad=1.8)
     for sp in ("top", "right", "left"):
         ins_c.spines[sp].set_visible(False)
 
-    ax.set(xlabel="offset from tip [mm]", ylabel="$y$ [mm]", xlim=(-5.5, 0.35), ylim=(0, 4.3))
+    ax.set(xlabel="offset from tip [mm]", ylabel="$y$ [mm]", xlim=(-5.5, 0.35), ylim=(0, 4.85))
     ax.legend(frameon=False, fontsize=6.9, loc="upper center", bbox_to_anchor=(0.48, -0.27), ncol=2,
               markerscale=1.5, handletextpad=0.25, columnspacing=0.5)
     ax.set_title("(c) conical tip & 4-decade tail", loc="left", fontsize=8.4)
