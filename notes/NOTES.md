@@ -1,6 +1,6 @@
 # Project notes
 
-Last updated: 2026-11-20 (regular tetrahedron benchmark + symmetric graded Bempp, general convex-wedge & focal-ring derivations, FMM conditioning remark, graphical abstract & JCP cover letter; see `notes/HANDOFF.md`). The research scripts named in the items are in
+Last updated: 2026-11-21 (20-hour JCP campaign: fair MFS kernel/evaluation speedups across all 5 shapes, monotonic `m = 1` + `2.2e-4` Bempp confirmation on regular tetrahedron, full 2-pass alternating re-timing on 2-core Intel Xeon @ 2.3 GHz, redesigned super-clear source/boundary placement figures, exact `r -> inf` far fields, sphere TE resonance & referee audit, 24 journal pages; see `notes/HANDOFF.md`). The research scripts named in the items are in
 `validation/` at commit 9f5a721. Companion files: `DERIVATIONS.md` (proofs and exponent tables),
 `LITERATURE.md` (T6), `PAPER_OUTLINE.md` (T7). Problem throughout:
 exterior scattering of a plane wave by a perfectly conducting (PEC) body,
@@ -8,7 +8,7 @@ tangential E_sc = -tangential E_inc on the surface, least-squares collocation.
 
 ## Start here
 
-- **20 Nov: read `notes/HANDOFF.md` first** (current repository state, fifth benchmark shape `mfs/tetrahedron.py` + `data/tetrahedron_convergence.npz`, unified cube boundary/mode/quadrature rules, copy-free almond MFS speedup, graphical abstract, cover letter, and remaining author-only decisions).
+- **21 Nov: read `notes/HANDOFF.md` first** (authoritative state: 16 passing `pytest` tests with `MFS_TEST_BEMPP=1`, all 5 shapes re-timed across 2 alternating passes on the 2-core Intel Xeon @ 2.3 GHz / 8 GB VM, exact `r -> inf` far fields in `Cube.far`, `Tetrahedron.far` and `almond.far_field`, redesigned 13 figures, `paper/main_3p.pdf` at 24 journal pages and `paper/main.pdf` at 40 preprint pages with zero LaTeX/BibTeX warnings or bad boxes).
 - **Since 18 Nov the repository has a new layout** (see the "part three"
   block below and `../CLAUDE.md`): `mfs/`, `figures/`, `data/`, `notebooks/`,
   `tests/`, `paper/`, `thesis/`, `notes/`. Script names in the items below
@@ -16,7 +16,7 @@ tangential E_sc = -tangential E_inc on the surface, least-squares collocation.
 - Everything is committed on branch `ccr-116c520c-fts35f`. No
   pull request exists. Nothing was ever pushed to `sap6/mfs-paper`; it is
   still the thesis text (commit 4f8731f).
-- The paper is `paper/main.tex` (one document, 49 preprint pages, 28 in
+- The paper is `paper/main.tex` (one document, 40 preprint pages, 24 in
   the journal `3p,times` layout, zero LaTeX warnings or overfull boxes). Section 6 lists what the paper may and may not claim.
 - The blocks below are in reverse order of time. The newest one is
   authoritative; older blocks are kept as the record and are superseded
@@ -81,7 +81,7 @@ Done (all committed):
 Open (authors):
 - [ ] Merge into `main` without squashing (Colab links, CI badge and pip install point to `main`); push the local tag `research-scripts` (= 9f5a721)? Asked.
 - [ ] LICENSE holder ("Sap"); Zenodo release and DOI; whether `CLAUDE.md` and `notes/` stay public.
-- [ ] Not changed (noted by the review): the cube and almond far fields are evaluated at r = 1e6 and 1e5 m; at J = 4 the pattern changes by 9e-7 from 1e6 to 1e7, the optical mismatch by 9e-8 (Table 2 quotes 9.3e-7 at J = 12; no conclusion depends on it).
+- [x] Resolved 21 Nov: `Cube.far`, `Tetrahedron.far` and `almond.far_field` now evaluate the exact analytical `r -> inf` far-field pattern via root-panel multipole contraction (`test_polyhedra_far_field_contraction`), rather than finite-radius spheres.
 
 ### Seventh session, part two: the humanising pass (18 Nov, READ FIRST)
 

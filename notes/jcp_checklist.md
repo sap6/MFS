@@ -1,4 +1,4 @@
-# JCP submission checklist (20 November 2026)
+# JCP submission checklist (21 November 2026)
 
 Checked against the Elsevier guide for authors of the Journal of
 Computational Physics. The guide itself could not be downloaded from this
@@ -20,7 +20,7 @@ guide.
 | Graphical abstract (encouraged, optional) | `figures/fig_graphical_abstract.pdf` / `.png` (`figures/graphical_abstract.py`) | done |
 | Cover letter | `notes/cover_letter_jcp.md` | done (fill `[Submission Date]`) |
 | Reference style: numbered (elsarticle-num) | elsarticle-num | done |
-| Length | no page limit known; 24 pages in the journal `3p,times` layout (39 preprint pages), concise and accessible | fine |
+| Length | no page limit known; 24 pages in the journal `3p,times` layout (40 preprint pages), concise and accessible | fine |
 
 The JCP home page also says the journal "strongly encourages authors to
 make available all software or data that would allow published results to

@@ -31,6 +31,17 @@ def test_sphere():
     assert core.rel(core.field(pts, y, alpha, K), mie.scattered_field(pts, K, D, P)) < 2.1e-9
 
 
+def test_sphere_interior_te_resonance():
+    # Section 3.1: electric dipoles on |y| = R_s cannot radiate the n = 1 TE mode when j_1(k R_s) = 0
+    from scipy.optimize import brentq
+    from scipy.special import spherical_jn
+    pts = 2.0 * core.fibonacci(200)
+    exact = mie.scattered_field(pts, K, D, P)
+    R_res = brentq(lambda x: spherical_jn(1, x), 4.0, 5.0) / K
+    y, alpha = sphere.solve(400, R=R_res)
+    assert core.rel(core.field(pts, y, alpha, K), exact) > 0.2
+
+
 def test_torus():
     # A field with a known exterior: dipoles inside the tube, away from the source torus
     yk = np.array([[1.08, 0.0, 0.05], [-0.3, 0.95, -0.06]])
@@ -131,6 +142,18 @@ def test_tetrahedron_and_rotation():
     cf, _, _ = full.solve(DW, PW)
     assert len(ir["unknowns"]) == 2 and len(cf) == 4
     assert core.rel(Er, full.field(cf, pts)) < 1e-10
+
+
+def test_tetrahedron_oblique_and_multik():
+    # Section 5.6: convergence under the oblique wave (all 4 D_2 classes) and at two wavelengths (k = 4*pi)
+    pts = 2.0 * core.fibonacci(80)
+    E3, _, i3 = tetrahedron.solve(3, DW, PW, pts=pts)
+    E4, _, i4 = tetrahedron.solve(4, DW, PW, pts=pts)
+    E5, _, i5 = tetrahedron.solve(5, DW, PW, pts=pts)
+    assert core.rel(E4, E5) < 0.45 * core.rel(E3, E5) and i5["optical"] < 0.25 * i3["optical"]
+    _, _, m3 = tetrahedron.solve(3, pts=np.empty((0, 3)), k=2 * K)
+    _, _, m4 = tetrahedron.solve(4, pts=np.empty((0, 3)), k=2 * K)
+    assert m4["optical"] < 0.45 * m3["optical"] and m4["residual"] < 0.6 * m3["residual"]
 
 
 def test_polyhedra_far_field_contraction():

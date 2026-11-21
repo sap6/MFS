@@ -192,7 +192,7 @@ print("Bempp graded (n, q, N_u, t, err):",
 tbem_env = envelope([(float(r[3]), float(r[4])) for r in tc["bem"]])
 tm2_env = envelope([(float(tdense[J][1]), terr[J]) for J in range(3, 10)])
 tmall_env = envelope([(float(tdense[J][1]), terr[J]) for J in range(3, 10)] + [(float(tone[J][1]), teo[J]) for J in tone])
-print("Bempp time envelope:", [(round(t, 1), f"{e:.2e}") for t, e in tbem_env])
+print("Bempp time envelope:", [(round(float(t), 1), f"{e:.2e}") for t, e in tbem_env])
 print("Tet crossover interp: two depths", [f"{x:.2e}" for x in cross(tm2_env, tbem_env)],
       "both", [f"{x:.2e}" for x in cross(tmall_env, tbem_env)])
 
