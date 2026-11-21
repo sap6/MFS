@@ -58,7 +58,7 @@ if "--bem-one" in sys.argv:
 
 import os
 import numpy as np
-from matplotlib.patches import Polygon
+from matplotlib.patches import ConnectionPatch, Polygon
 from style import BLUE, GREEN, INK, MUTED, NAVY, ORANGE, PURPLE, RUST, curve, data, envelope, finish, plt, rel
 
 from mfs import core, lines, tetrahedron
@@ -199,19 +199,18 @@ ax_wall.add_patch(Polygon([[-0.5, 0.0], [0.5, 0.0], [0.0, h_wall]], closed=True,
 b_in = (1.0 - 0.56) * h_wall
 ax_wall.add_patch(Polygon([[-0.28, b_in], [0.28, b_in], [0.0, h_wall]], closed=True, facecolor="#e3ece8", edgecolor=GREEN,
                           lw=0.65, ls="--", zorder=1))
-ax_wall.text(0.0, 0.252, "inner base", fontsize=6.7, color=GREEN, ha="center", va="center")
+ax_wall.text(-0.028, 0.245, "inner base", fontsize=6.5, color=GREEN, ha="center", va="center")
 
 # Free lightning edge lines d_j = 0.14 * (2^{-1/2})^j with stretched t(u) nodes clustering towards corners
 d_vis = 0.14 * (2.0 ** -0.5) ** np.arange(0, 8)
 u_samp = np.linspace(-0.88, 0.88, 9)
 for idx_d, dv in enumerate(d_vis):
     tmax = 0.5 - 1.5 * dv
-    ax_wall.plot([-tmax, tmax], [dv, dv], color=BLUE, lw=0.85, zorder=3)
-    if idx_d in (0, 3, 6):
-        lam_v = np.log((1.0 - 1.5 * dv) / (1.5 * dv))
-        t_nodes = 0.5 * np.tanh(0.5 * lam_v * u_samp)
-        t_nodes = t_nodes[np.abs(t_nodes) <= tmax]
-        ax_wall.plot(t_nodes, np.full_like(t_nodes, dv), "o", color=BLUE, ms=1.8, zorder=4)
+    ax_wall.plot([-tmax, tmax], [dv, dv], color=BLUE, lw=0.80, zorder=3)
+    lam_v = np.log((1.0 - 1.5 * dv) / (1.5 * dv))
+    t_nodes = 0.5 * np.tanh(0.5 * lam_v * u_samp)
+    t_nodes = t_nodes[np.abs(t_nodes) <= tmax]
+    ax_wall.plot(t_nodes, np.full_like(t_nodes, dv), "o", color=BLUE, ms=1.45, zorder=4)
     # Vertex dipoles along side rays O v_0 and O v_1
     frac = dv / h_wall
     for sgn_t in (-1.0, 1.0):
@@ -237,7 +236,7 @@ for b_t in (0.0, 0.03, 0.07, 0.16, 0.50):
 # Zoom inset in upper-right of ax_wall magnifying corner v_0 = (0.5, 0) (3 corner rays + tail + line cut-off)
 zw_t, zh_t = 0.095, 0.068
 ax_wall.plot([0.5 - zw_t, 0.5, 0.5, 0.5 - zw_t, 0.5 - zw_t], [0, 0, zh_t, zh_t, 0], color=RUST, lw=0.55, zorder=6)
-ins_w = ax_wall.inset_axes([0.56, 0.44, 0.44, 0.47])
+ins_w = ax_wall.inset_axes([0.58, 0.48, 0.42, 0.45])
 ins_w.set_facecolor("white")
 ins_w.add_patch(Polygon([[0.5 - zw_t, 0.0], [0.5, 0.0], [0.5 - 0.5 * zh_t / h_wall, zh_t], [0.5 - zw_t, zh_t]],
                         closed=True, facecolor="#f5f4f0", edgecolor="none"))
@@ -255,11 +254,14 @@ for ang_f in (0.8, 0.4, 0.2):
     ins_w.plot(0.5 - r_pts / nrm, r_pts * ang_f / nrm, "o-", color=ORANGE, lw=0.65, ms=1.8, mfc="white", mew=0.55)
 ins_w.plot([0.5 - zw_t, 0.5], [0.0, 0.0], color=INK, lw=1.0)
 ins_w.plot([0.5, 0.5 - 0.5 * zh_t / h_wall], [0.0, zh_t], color=MUTED, lw=0.65, ls=(0, (2, 1.5)))
-ins_w.set_title("corner zoom", fontsize=6.6, color=RUST, loc="right", pad=1.8)
+ins_w.text(0.501, zh_t - 0.005, "corner\nzoom", fontsize=5.9, color=RUST, ha="right", va="top")
 ins_w.set(xlim=(0.5 - zw_t, 0.506), ylim=(-0.006, zh_t), xticks=[], yticks=[], aspect="equal")
 for sp in ins_w.spines.values():
     sp.set_edgecolor(RUST)
     sp.set_linewidth(0.55)
+ax_wall.add_artist(ConnectionPatch(xyA=(0.5 - zw_t, zh_t), coordsA=ax_wall.transData,
+                                   xyB=(0.5 - zw_t, -0.006), coordsB=ins_w.transData,
+                                   color=RUST, lw=0.5, ls=":", zorder=6))
 
 ax_wall.plot([-0.5, 0.5], [0.0, 0.0], color=INK, lw=1.15, zorder=5)
 ax_wall.plot([-0.5, 0.0, 0.5], [0.0, h_wall, 0.0], color=MUTED, lw=0.75, ls=(0, (3, 2)), zorder=2)
@@ -268,8 +270,9 @@ ax_wall.text(0.0, h_wall + 0.018, "$O$", fontsize=6.8, color=MUTED, ha="center",
 ax_wall.text(-0.50, -0.025, "$v_1$", fontsize=6.8, color=INK, ha="center", va="top")
 ax_wall.text(0.50, -0.025, "$v_0$", fontsize=6.8, color=INK, ha="center", va="top")
 ax_wall.text(0.0, -0.028, r"graded $\Gamma$ + 9-line tail", fontsize=6.7, color=ORANGE, ha="center", va="top")
-ax_wall.text(-0.37, 0.145, "lines\n$t(u)$", fontsize=6.7, color=BLUE, ha="center", va="bottom")
-ax_wall.set(xlim=(-0.56, 0.59), ylim=(-0.095, 0.42), aspect="equal")
+ax_wall.text(-0.42, 0.085, "lines\n$t(u)$", fontsize=6.5, color=BLUE, ha="center", va="bottom")
+ax_wall.text(-0.30, 0.255, "vertex\ndipoles", fontsize=6.3, color=NAVY, ha="center", va="bottom")
+ax_wall.set(xlim=(-0.56, 0.59), ylim=(-0.095, 0.45), aspect="equal")
 ax_wall.axis("off")
 ax_wall.set_title(r"(b) unfolded wall $O v_0 v_1$", loc="left", fontsize=8.1, pad=1)
 
@@ -277,8 +280,8 @@ ax_wall.set_title(r"(b) unfolded wall $O v_0 v_1$", loc="left", fontsize=8.1, pa
 xs = np.array([np.sqrt(curves["dense"][0, 0]) - 4, np.sqrt(curves["dense"][-1, 0]) + 6])
 ax_conv.semilogy(xs, np.exp(np.polyval(p, xs)), color=MUTED, lw=0.85, zorder=1)
 ax_conv.annotate(rf"${np.exp(p[1]):.2f}\,\exp({p[0]:.4f}\sqrt{{N_u}})$",
-                 xy=(118.0, np.exp(np.polyval(p, 118.0))), xytext=(80.0, 8.5e-3),
-                 fontsize=7.1, color=MUTED, ha="left", va="bottom",
+                 xy=(108.0, np.exp(np.polyval(p, 108.0))), xytext=(88.0, 5.5e-3),
+                 fontsize=7.0, color=MUTED, ha="left", va="bottom",
                  arrowprops=dict(arrowstyle="-", color=MUTED, lw=0.55, shrinkA=1, shrinkB=2))
 for key, (col, mk, ls, label) in {"plain": (PURPLE, "^", ":", "plain MFS (inner copy)"),
                                   "notail": (GREEN, "s", "--", "MFS without tails"),

@@ -94,9 +94,16 @@ def cube_layout(J=6, fname="fig_cube_layout"):
     nd_d = H - nodes[::-1]
     y_bnd, y_src = 0.24, -0.14
     for k_p, (a_p, b_p) in enumerate(zip(pan_d[:-1], pan_d[1:])):
+        col_p = "#e3e2dd" if k_p % 2 == 0 else "#f2f1ed"
         if a_p > 0:
-            col_p = "#e3e2dd" if k_p % 2 == 0 else "#f2f1ed"
             ax.fill_between([a_p, b_p], y_bnd - 0.055, y_bnd + 0.055, color=col_p, edgecolor=MUTED, lw=0.45, zorder=1)
+        else:
+            a0_p = 6.5e-5
+            ax.fill_between([a0_p, b_p], y_bnd - 0.055, y_bnd + 0.055, color=col_p, edgecolor="none", zorder=1)
+            ax.plot([a0_p, b_p], [y_bnd + 0.055, y_bnd + 0.055], color=MUTED, lw=0.45, zorder=2)
+            ax.plot([a0_p, b_p], [y_bnd - 0.055, y_bnd - 0.055], color=MUTED, lw=0.45, zorder=2)
+            ax.plot([3.5e-6, a0_p], [y_bnd + 0.055, y_bnd + 0.055], color=MUTED, lw=0.45, ls=":", zorder=2)
+            ax.plot([3.5e-6, a0_p], [y_bnd - 0.055, y_bnd - 0.055], color=MUTED, lw=0.45, ls=":", zorder=2)
     for p_v in pan_d[pan_d > 0]:
         ax.plot([p_v, p_v], [y_bnd - 0.065, y_bnd + 0.065], color=MUTED, lw=0.55, zorder=2)
     ax.plot(nd_d, np.full_like(nd_d, y_bnd), ".", color=INK, ms=2.6, zorder=3)
@@ -228,7 +235,7 @@ def almond_layout(n_mid=6, n_F=3, fname="fig_almond_layout"):
     ins_b.plot(etas_arr[n_mid:], np.zeros(n_F + 1), "o", color=BLUE, ms=3.6, mec="white", mew=0.4, zorder=5)
     ins_b.axvline(almond.ETA_F, color=ORANGE, lw=0.85, ls=(0, (3, 1.5)), zorder=3)
     ins_b.text(almond.ETA_F + 0.006, 0.148, r"$\eta_F$", fontsize=6.8, color=ORANGE, ha="left")
-    ins_b.text(0.816, 0.048, r"rim zoom ($\times 1/2$)", fontsize=6.3, color=BLUE)
+    ins_b.text(0.816, 0.048, r"rim zoom (gap $\times 1/2$)", fontsize=6.1, color=BLUE)
     ins_b.set(xlim=(0.81, 1.012), ylim=(-0.035, 0.21), xticks=[0.85, 0.94, 1.0], yticks=[])
     ins_b.tick_params(labelsize=6.3, pad=1.5)
     for sp in ("top", "right", "left"):

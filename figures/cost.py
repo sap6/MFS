@@ -151,7 +151,7 @@ curve(ax, u["t"][keep], [rel(E, ref) for E in u["E"][keep]], ORANGE, "D", "-.", 
 env = np.load(data("cube_cases_k1.npz"))["env"]
 curve(ax, env[:, 5], env[:, 6], RUST, "X", (0, (3, 1)), "Bempp, graded, with symmetry")
 ax.set_title(r"(d) unit cube, $k = 2\pi$, standard wave", loc="left", fontsize=8.5)
-ax.set_ylim(1.5e-7, 3e-2)
+ax.set_ylim(5e-8, 3e-2)
 ax.set_xticks([2, 5, 10, 50, 200, 500])
 ax.xaxis.set_major_formatter(plt.FuncFormatter(lambda v, pos: f"{v:g}"))
 

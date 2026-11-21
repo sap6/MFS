@@ -18,17 +18,17 @@ ax.plot([-L, 0], [0, 0], color=INK, lw=1.45, zorder=3)                         #
 ax.plot([0, 0.76], [0, 0.76], color=MUTED, lw=0.8, ls=(0, (4, 3)), zorder=1)   # exterior bisector, psi = 0
 ax.plot([0, -0.94], [0, -0.94], color=BLUE, lw=1.35, alpha=0.55, zorder=2)     # wall of the skeleton
 
-# Dyadically graded boundary panels + 3 Gauss nodes per panel on both faces
-g3 = 0.5 * (1.0 + np.polynomial.legendre.leggauss(3)[0])
+# Dyadically graded boundary panels + 4 Gauss nodes per panel on both faces
+g4 = 0.5 * (1.0 + np.polynomial.legendre.leggauss(4)[0])
 edges_b = np.array([0.0, 0.045, 0.09, 0.18, 0.36, 0.72, 1.00])
 for a, b in zip(edges_b[:-1], edges_b[1:]):
     if b >= 0.09:
         ax.plot([0, 0.032], [-b, -b], color=MUTED, lw=0.65, zorder=3)
         ax.plot([-b, -b], [0, 0.032], color=MUTED, lw=0.65, zorder=3)
-    pts_g = a + (b - a) * g3
+    pts_g = a + (b - a) * g4
     if b >= 0.09:
-        ax.plot(np.full_like(pts_g, 0.015), -pts_g, ".", color=INK, ms=3.1, zorder=4)
-        ax.plot(-pts_g, np.full_like(pts_g, 0.015), ".", color=INK, ms=3.1, zorder=4)
+        ax.plot(np.full_like(pts_g, 0.015), -pts_g, ".", color=INK, ms=2.6, zorder=4)
+        ax.plot(-pts_g, np.full_like(pts_g, 0.015), ".", color=INK, ms=2.6, zorder=4)
 
 # Geometric free depths (2 per octave) and singular tail depths (1 per octave) on skeleton wall
 c = 1.0 / np.sqrt(2.0)

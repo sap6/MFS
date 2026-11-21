@@ -2,4 +2,4 @@
 - A convex conducting polyhedron scatters like currents on its medial surface
 - Singular tails with computed edge, vertex and tip exponents add few unknowns
 - Root-exponential convergence on polyhedra while inner source surfaces stall
-- NASA almond radar cross-section within 0.14 dB of a published reference
+- NASA almond radar cross-section within 0.14 dB on average up to 10.25 GHz

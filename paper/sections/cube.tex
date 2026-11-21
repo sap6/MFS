@@ -24,7 +24,7 @@ maps the segment to $[-1,1]$ and resolves every length scale from $d$ to $1$ nea
 \begin{figure}[htbp]
   \centering
   \includegraphics[width=\textwidth]{fig_cube_layout.pdf}
-  \caption{Source and boundary collocation layout of the cube at level $J = 6$. (a) One quadrant of the cross-section through the middle of an edge, with a $\times16$ corner zoom resolving the free lines ($\times 2^{-1/2}$), nine-line tail ($\times 1/2$), and four-node Gauss--Legendre boundary panels on $\Gamma$. (b) Matched logarithmic distance scale comparing the dyadically halving boundary panels on $\Gamma$ with the free and tail line depths on $\mathcal{M}$. (c) Stretched map $t(u)$ along an edge line ($|t|\le\tfrac12-d$), showing how uniform samples in $u$ project onto exponentially clustered nodes near both vertices $t = \pm\tfrac12$.}
+  \caption{Source and boundary collocation layout of the cube at level $J = 6$. (a) One quadrant of the cross-section through the middle of an edge, with a $\times16$ corner zoom resolving the free lines ($\times 2^{-1/2}$), nine-line tail ($\times 1/2$), and four-node Gauss--Legendre boundary panels on $\Gamma$ (vertex dipoles sit at the same depths along the body diagonals). (b) Matched logarithmic distance scale comparing the dyadically halving boundary panels on $\Gamma$ with the free and tail line depths on $\mathcal{M}$. (c) Stretched map $t(u)$ along an edge line ($|t|\le\tfrac12-d$), showing how uniform samples in $u$ project onto exponentially clustered nodes near both vertices $t = \pm\tfrac12$.}
   \label{fig:cubelayout}
 \end{figure}
 
@@ -142,7 +142,7 @@ By \autoref{thm:skeleton}, the skeleton $\mathcal{M}$ consists of six isosceles 
 \begin{figure}[htbp]
   \centering
   \includegraphics[width=\textwidth]{fig_tetrahedron.pdf}
-  \caption{Regular tetrahedron of unit edge length, $k = 2\pi$. (a) Three-kite graded boundary $\Gamma$ and interior six-wall skeleton $\mathcal{M}$. (b) Unfolded triangular skeleton wall $O v_0 v_1$, with a corner zoom resolving the stretched free lines $t(u)$, inner base dipoles, nine-line edge tail and radial corner-tail rays. (c) Error of the scattered field against $\sqrt{N_u}$ ($N_u$ across all four $D_2$ classes), measured against the two-depth MFS layout at $J = 10$ ($N_u = 23316$). (d) Error against wall time on two cores, comparing the MFS ($1$ and $2$ depths per octave) with the lower envelope of symmetric graded Bempp.}
+  \caption{Regular tetrahedron of unit edge length, $k = 2\pi$. (a) Three-kite graded boundary $\Gamma$ and interior six-wall skeleton $\mathcal{M}$. (b) Unfolded triangular skeleton wall $O v_0 v_1$ showing the inner-tetrahedron cut, with a corner zoom resolving the stretched free lines $t(u)$, free vertex dipoles, nine-line edge tail and radial corner-tail rays. (c) Error of the scattered field against $\sqrt{N_u}$ ($N_u$ across all four $D_2$ classes), measured against the two-depth MFS layout at $J = 10$ ($N_u = 23316$). (d) Error against wall time on two cores, comparing the MFS ($1$ and $2$ depths per octave) with the lower envelope of symmetric graded Bempp.}
   \label{fig:tetrahedron}
 \end{figure}
 
