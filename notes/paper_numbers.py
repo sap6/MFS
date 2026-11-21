@@ -163,7 +163,7 @@ te = np.array([terr[J] for J in range(3, 9)])
 tb, ta = np.polyfit(np.sqrt(tN), np.log(te), 1)
 print(f"fit eps = {np.exp(ta):.3f} exp({tb:.4f} sqrt(N_u)), largest factor {np.exp(np.max(np.abs(ta + tb * np.sqrt(tN) - np.log(te)))):.2f} "
       f"(largest rel dev {np.max(np.abs(np.exp(ta + tb * np.sqrt(tN)) / te - 1)):.1%})")
-tdmin = 0.1 * 2.0 ** -np.arange(3, 9)
+tdmin = 0.14 * 2.0 ** -np.arange(3, 9)
 print(f"decay like d_min^{np.polyfit(np.log(tdmin), np.log(te), 1)[0]:.2f}")
 tone = {int(r[0]): r for r in tc["one"]}
 teo = {J: rel(tc[f"one_E{J}"], tref) for J in tone}
@@ -171,7 +171,7 @@ print("one depth J=3..8: errors", {J: f"{teo[J]:.2e}" for J, r in tone.items()},
       "times", {J: round(float(r[1]), 2) for J, r in tone.items()})
 tnt = {int(r[0]): rel(tc[f"notail_E{int(r[0])}"], tref) for r in tc["notail"]}
 print("no tails:", {J: f"{x:.2e}" for J, x in tnt.items()}, "tails reduce J = 8 by", round(tnt[8] / terr[8]),
-      f"decay like d_min^{np.polyfit(np.log(0.1 * 2.0 ** -np.array(sorted(tnt))), np.log([tnt[J] for J in sorted(tnt)]), 1)[0]:.2f}")
+      f"decay like d_min^{np.polyfit(np.log(0.14 * 2.0 ** -np.array(sorted(tnt))), np.log([tnt[J] for J in sorted(tnt)]), 1)[0]:.2f}")
 tpl = {int(r[0]): (sum(_tet.Tetrahedron(None, classes=[], n_base=int(r[0])).unknowns.values()), rel(tc[f"plain_E{int(r[0])}"], tref))
        for r in tc["plain"]}
 print("plain layout (N_u, err):", {nb: (nu, f"{e_:.2e}") for nb, (nu, e_) in tpl.items()})

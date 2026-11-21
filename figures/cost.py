@@ -23,14 +23,23 @@ from mfs import almond, core, mie, sphere, torus
 K = 2 * np.pi
 
 
-def timed(f, *args):
-    ts = []
-    for _ in range(2):
-        gc.collect()
-        t0 = time.time()
-        out = f(*args)
-        ts.append(time.time() - t0)
-    return out, min(ts)
+def alternate(mfs_jobs, bem_jobs):
+    """Run MFS and Bempp jobs twice in alternating passes, keeping the minimum wall time of each job"""
+    tm, tb = [[] for _ in mfs_jobs], [[] for _ in bem_jobs]
+    om, ob = [None] * len(mfs_jobs), [None] * len(bem_jobs)
+    for rep in range(2):
+        for i, fn in enumerate(mfs_jobs):
+            gc.collect()
+            t0 = time.time()
+            om[i] = fn()
+            tm[i].append(time.time() - t0)
+        for i, fn in enumerate(bem_jobs):
+            gc.collect()
+            t0 = time.time()
+            ob[i] = fn()
+            tb[i].append(time.time() - t0)
+        print(f"completed alternating pass {rep + 1}/2", flush=True)
+    return [(o, min(t)) for o, t in zip(om, tm)], [(o, min(t)) for o, t in zip(ob, tb)]
 
 
 if "--run" in sys.argv:
@@ -46,9 +55,12 @@ if "--run" in sys.argv:
         exact = mie.scattered_field(pts, K, d, p)
         mfs = lambda N: core.field(pts, *sphere.solve(N), K)
         mfs(50), bem.efie(bempp.shapes.sphere(h=0.4), K, d, p, pts)          # warm-up: compilation is not timed
-        rows = [(3 * N, t, rel(E, exact)) for N in (50, 100, 150, 200, 300, 400, 600, 800, 1200) for E, t in [timed(mfs, N)]]
-        bems = [(N, t, rel(E, exact)) for h in (0.2, 0.14, 0.1, 0.07, 0.056)
-                for (E, N), t in [timed(bem.efie, bempp.shapes.sphere(h=h), K, d, p, pts)]]
+        Ns = (50, 100, 150, 200, 300, 400, 600, 800, 1200)
+        grids = [bempp.shapes.sphere(h=h) for h in (0.2, 0.14, 0.1, 0.07, 0.056)]
+        m_res, b_res = alternate([(lambda N=N: mfs(N)) for N in Ns],
+                                 [(lambda g=g: bem.efie(g, K, d, p, pts)) for g in grids])
+        rows = [(3 * N, t, rel(E, exact)) for N, (E, t) in zip(Ns, m_res)]
+        bems = [(N, t, rel(E, exact)) for (E, N), t in b_res]
         np.savez(data("cost_sphere.npz"), mfs=np.array(rows), bem=np.array(bems))
     elif shape == "torus":
         # 200 points on the sphere of radius 2.5, against the finest MFS run (n_s = 56 rings of 240 dipoles)
@@ -59,12 +71,14 @@ if "--run" in sys.argv:
         def run(ns, nphi):
             sol = torus.scatter(K, d, p, ns, nphi)
             return sol, sol.field(pts)
-        for ns, nphi in ((6, 20), (8, 28), (12, 40), (16, 52), (20, 64), (24, 80), (28, 96), (36, 128), (44, 160)):
-            (sol, E), t = timed(run, ns, nphi)                              # the checks below are not timed
+        m_specs = ((6, 20), (8, 28), (12, 40), (16, 52), (20, 64), (24, 80), (28, 96), (36, 128), (44, 160))
+        b_specs = (12, 20, 28, 40, 56, 80, 112, 160, 224)
+        m_res, b_res = alternate([(lambda s=s: run(*s)) for s in m_specs],
+                                 [(lambda n=n: bem.torus(n, K, d, p, pts)) for n in b_specs])
+        for (ns, nphi), ((sol, E), t) in zip(m_specs, m_res):               # the checks below are not timed
             checks = (torus.residual(sol, d, p), torus.optical(sol, d, p)[1], np.linalg.norm(sol.alpha))
             rows.append((3 * ns * nphi, t, rel(E, Eref), *checks))
-        bems = [(N, t, rel(E, Eref)) for n in (12, 20, 28, 40, 56, 80, 112, 160, 224)
-                for (E, N), t in [timed(bem.torus, n, K, d, p, pts)]]
+        bems = [(N, t, rel(E, Eref)) for (E, N), t in b_res]
         ext, opt = torus.optical(ref, d, p)
         np.savez(data("cost_torus.npz"), ref=[3 * 56 * 240, torus.residual(ref, d, p), opt, ext],
                  mfs=np.array(rows), bem=np.array(bems))
@@ -73,14 +87,16 @@ if "--run" in sys.argv:
         k = 2 * np.pi * 1.19e9 / almond.C0
         pts = 0.3 * core.fibonacci(400)
         da, pa, out, rows, brows = np.array([-1.0, 0, 0]), np.array([0, 1.0, 0]), {}, [], []
-        almond.nose_on(k, 2, 0), bem.almond(12, 12, k, da, pa, pts)        # warm-up
-        for i, (n_mid, n_F) in enumerate(((3, 0), (4, 1), (5, 2), (6, 3), (8, 5))):
-            (src, c, E, shape_), t = timed(almond.nose_on, k, n_mid, n_F, pts)
+        almond.nose_on(k, 2, 0, pts), bem.almond(12, 12, k, da, pa, pts)    # warm-up
+        m_specs = ((3, 0), (4, 1), (5, 2), (6, 3), (8, 5))
+        b_specs = ((28, 28), (40, 36), (60, 56), (84, 76), (100, 92))
+        m_res, b_res = alternate([(lambda s=s: almond.nose_on(k, s[0], s[1], pts)) for s in m_specs],
+                                 [(lambda s=s: bem.almond(s[0], s[1], k, da, pa, pts)) for s in b_specs])
+        for i, ((src, c, E, shape_), t) in enumerate(m_res):
             ext, sca = almond.optical(k, src, c)                            # the check is not timed, as for Bempp
             rows.append((len(src[0]), shape_[1], t, abs(ext - sca) / sca))
             out[f"mfs_E{i}"] = E
-        for i, (n_t, n_s) in enumerate(((28, 28), (40, 36), (60, 56), (84, 76), (100, 92))):
-            (E, N), t = timed(bem.almond, n_t, n_s, k, da, pa, pts)
+        for i, ((E, N), t) in enumerate(b_res):
             brows.append((N, t))
             out[f"bem_E{i}"] = E
         np.savez(data("cost_almond.npz"), mfs=np.array(rows), bem=np.array(brows), **out)

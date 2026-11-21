@@ -83,7 +83,7 @@ c_bem = np.array(sorted(best_b.items()))
 rt = np.load(data("tetrahedron_convergence.npz"))
 ref_t = rt["ref_E"]
 t_dense = np.array([(sum(tetrahedron.Tetrahedron(int(r[0]), classes=[]).unknowns.values()),
-                     rel(rt[f"dense_E{int(r[0])}"], ref_t)) for r in rt["dense"] if 3 <= r[0] <= 8])
+                     rel(rt[f"dense_E{int(r[0])}"], ref_t)) for r in rt["dense"] if 3 <= r[0] <= 9])
 
 curve(ax, np.sqrt(c_plain[:, 0]), c_plain[:, 1], PURPLE, "^", ":", "inner surface", ms=4.3, lw=1.3, logx=False)
 curve(ax, np.sqrt(c_notail[:, 0]), c_notail[:, 1], GREEN, "s", "--", "no tail", ms=4.1, lw=1.3, logx=False)

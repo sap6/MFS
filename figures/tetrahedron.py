@@ -1,13 +1,15 @@
 """
 Figure 8: the regular tetrahedron of unit edge length at k = 2π.
-  (a) The six triangular walls of the skeleton, with edge lines on one wall and corner rays.
-  (b) Error of the scattered field against √N_u (N_u the unknowns of the whole tetrahedron),
+  (a) 3D view showing the three-kite graded boundary collocation on F_0 and the interior skeleton M.
+  (b) Unfolded skeleton wall triangle O v_0 v_1 showing the inner-tetrahedron cut, lightning edge lines
+      with vertex-clustered t(u) nodes, 9-line edge tail, vertex dipoles, and corner-tail rays.
+  (c) Error of the scattered field against √N_u (N_u the unknowns of the whole tetrahedron),
       measured against the finest layout J = 10 and checked against graded symmetric Bempp.
-  (c) Error against wall time on two cores, comparing MFS (two and one depths per octave) with
+  (d) Error against wall time on two cores, comparing MFS (two and one depths per octave) with
       the lower envelope of symmetric graded Bempp across quadrature orders 6/8 and 8/10.
 
     python figures/tetrahedron.py          # draw from data/tetrahedron_convergence.npz
-    python figures/tetrahedron.py --run    # compute MFS and Bempp runs (about 10 minutes)
+    python figures/tetrahedron.py --run    # compute MFS and Bempp runs
 """
 import gc
 import subprocess
@@ -21,7 +23,8 @@ if "--run" in sys.argv:
     sys.argv.remove("--run")
 
 if "--bem-one" in sys.argv:
-    # Graded symmetric Bempp-cl (quadrature q_reg / q_reg+2, grading g = 1.8), one fresh process per run
+    # Graded symmetric Bempp-cl (quadrature q_reg / q_reg+2, grading g = 1.8), one fresh process per run;
+    # keeps the minimum wall time across repeated alternating runs
     import os
     import numpy as np
     from mfs import bem, core
@@ -44,38 +47,64 @@ if "--bem-one" in sys.argv:
     old_bem = out.get("bem", np.zeros((0, 5)))
     if old_bem.ndim == 2 and old_bem.shape[1] == 4:
         old_bem = np.column_stack((old_bem[:, 0], np.full(len(old_bem), 8.0), old_bem[:, 1:]))
+    prev = [r for r in old_bem.tolist() if int(r[0]) == n_edge and int(r[1]) == q_reg]
+    best_dt = min(dt, float(prev[0][3])) if prev else dt
     bem_rows = [r for r in old_bem.tolist() if not (int(r[0]) == n_edge and int(r[1]) == q_reg)]
-    bem_rows.append([n_edge, q_reg, Nb, dt, err_b])
+    bem_rows.append([n_edge, q_reg, Nb, best_dt, err_b])
     out["bem"] = np.array(sorted(bem_rows))
     np.savez(npz_path, **out)
-    print(f"bempp  n={n_edge:2d} q={q_reg}/{q_reg+2}: N_u={Nb:5d}, t={dt:5.1f}s, vs_J10={err_b:.2e}", flush=True)
+    print(f"bempp  n={n_edge:2d} q={q_reg}/{q_reg+2}: N_u={Nb:5d}, t={dt:5.2f}s (best={best_dt:5.2f}s), vs_J10={err_b:.3e}", flush=True)
     sys.exit(0)
 
+import os
 import numpy as np
 from matplotlib.patches import Polygon
 from style import BLUE, GREEN, INK, MUTED, NAVY, ORANGE, PURPLE, RUST, curve, data, envelope, finish, plt, rel
 
-from mfs import core, tetrahedron
+from mfs import core, lines, tetrahedron
 
-if "--run-mfs" in sys.argv:
-    pts = 2.0 * core.fibonacci(400)
+if "--run-mfs" in sys.argv or "--retime-mfs" in sys.argv:
+    retime = "--retime-mfs" in sys.argv
+    npz_path = data("tetrahedron_convergence.npz")
+    old = dict(np.load(npz_path)) if os.path.exists(npz_path) else {}
+    pts = old["pts"] if "pts" in old else 2.0 * core.fibonacci(400)
     tetrahedron.solve(2, pts=pts)                                      # warm-up: compilation is not timed
-    out = {"pts": pts}
+    out = dict(old) if retime else {"pts": pts}
+    # Preserve previously computed Bempp E fields if recomputing MFS reference, and update their errors vs new ref_E
+    for k_old, v_old in old.items():
+        if k_old.startswith("bem_E"):
+            out[k_old] = v_old
     for name, Js, kw in (("dense", range(3, 11), {}), ("one", range(3, 9), dict(q=0.5)),
                          ("notail", (4, 6, 8), dict(tails=False)), ("plain", (4, 6, 8, 10), None)):
+        old_map = {int(r[0]): float(r[1]) for r in old.get(name, np.zeros((0, 6)))} if retime else {}
         rows = []
         for J in Js:
+            lines._TREES.clear()
             gc.collect()
             E, t, info = (tetrahedron.solve(None, pts=pts, n_base=J) if kw is None
                           else tetrahedron.solve(J, pts=pts, **kw))
-            rows.append((J, t, info["unknowns"][0], info["rows"], info["optical"], info["ext"]))
+            best_t = min(t, old_map[J]) if J in old_map else t
+            rows.append((J, best_t, info["unknowns"][0], info["rows"], info["optical"], info["ext"]))
             out[f"{name}_E{J}"] = E
             print(f"{name:6s} J={J:2d}: unk/cls={info['unknowns'][0]:4d}, "
-                  f"t={t:5.1f}s, opt={info['optical']:.2e}, ext={info['ext']:.6f}", flush=True)
+                  f"t={t:5.2f}s (best={best_t:5.2f}s), opt={info['optical']:.2e}, ext={info['ext']:.6f}", flush=True)
         out[name] = np.array(rows)
     out["ref_E"] = out["dense_E10"]
-    out["bem"] = np.zeros((0, 5))
-    np.savez(data("tetrahedron_convergence.npz"), **out)
+    # Refresh stored Bempp error column against new ref_E if Bempp fields are already present
+    if "bem" in old and len(old["bem"]):
+        bem_old = old["bem"]
+        if bem_old.shape[1] == 4:
+            bem_old = np.column_stack((bem_old[:, 0], np.full(len(bem_old), 8.0), bem_old[:, 1:]))
+        bem_upd = []
+        for r in bem_old.tolist():
+            ne_i, qr_i = int(r[0]), int(r[1])
+            key_b = f"bem_E{ne_i}_q{qr_i}" if f"bem_E{ne_i}_q{qr_i}" in out else f"bem_E{ne_i}"
+            eb = core.rel(out[key_b], out["ref_E"]) if key_b in out else float(r[4])
+            bem_upd.append([ne_i, qr_i, int(r[2]), float(r[3]), eb])
+        out["bem"] = np.array(sorted(bem_upd))
+    else:
+        out["bem"] = np.zeros((0, 5))
+    np.savez(npz_path, **out)
     sys.exit(0)
 
 # Load stored results
@@ -84,7 +113,7 @@ ref = res["ref_E"]
 specs = {"dense": lambda J: dict(J=J), "one": lambda J: dict(J=J, q=0.5),
          "notail": lambda J: dict(J=J, tails=False), "plain": lambda J: dict(J=None, n_base=J)}
 curves = {name: np.array([(sum(tetrahedron.Tetrahedron(classes=[], **specs[name](int(r[0]))).unknowns.values()),
-                           rel(res[f"{name}_E{int(r[0])}"], ref), float(r[1]))
+                           rel(res[f"{name}_E{int(r[0])}"], ref), float(r[1]), int(r[0]))
                           for r in res[name] if int(r[0]) < 10 or name == "plain"])
           for name in specs}
 bem_arr = res["bem"]
@@ -102,12 +131,18 @@ p = np.polyfit(np.sqrt(c[:, 0]), np.log(c[:, 1]), 1)
 print(f"tetrahedron fit: error = {np.exp(p[1]):.3g} exp({p[0]:.4f} sqrt(N_u)), max factor "
       f"{np.exp(np.abs(np.log(c[:, 1]) - np.polyval(p, np.sqrt(c[:, 0]))).max()):.2f}")
 
-# Three-panel figure: (a) 3D skeleton + sources, (b) error vs sqrt(N_u), (c) error vs wall time [s]
-fig, axs = plt.subplots(1, 3, figsize=(7.6, 3.15), gridspec_kw=dict(width_ratios=[0.92, 1.16, 1.12]))
+# Four-panel layout: stacked left column ((a) 3D face kites & skeleton, (b) unfolded wall O v_0 v_1),
+# plus full-height (c) error vs sqrt(N_u) and (d) error vs wall time [s]
+fig = plt.figure(figsize=(7.6, 3.55))
+gs = fig.add_gridspec(1, 3, width_ratios=[1.05, 1.14, 1.10], wspace=0.28)
+gs_left = gs[0].subgridspec(2, 1, height_ratios=[1.12, 0.96], hspace=0.22)
+ax_3d = fig.add_subplot(gs_left[0])
+ax_wall = fig.add_subplot(gs_left[1])
+ax_conv = fig.add_subplot(gs[1])
+ax_time = fig.add_subplot(gs[2])
 
-# Panel (a): orthographic view of the regular tetrahedron and its six triangular skeleton walls
-ax = axs[0]
-az, el = np.radians(-34.0), np.radians(22.0)
+# Panel (a): 3D view showing graded three-kite boundary collocation on front face + interior skeleton walls
+az, el = np.radians(-38.0), np.radians(20.0)
 R_az = np.array([[np.cos(az), -np.sin(az), 0], [np.sin(az), np.cos(az), 0], [0, 0, 1]])
 R_el = np.array([[1, 0, 0], [0, np.cos(el), -np.sin(el)], [0, np.sin(el), np.cos(el)]])
 P2 = (R_el @ R_az)[:2]
@@ -116,72 +151,133 @@ O = np.zeros(2)
 edges = [(0, 1), (0, 2), (0, 3), (1, 2), (1, 3), (2, 3)]
 for i, j in edges:
     col = "#cfe0f5" if (i, j) == (0, 1) else "#eae9e4"
-    al = 0.65 if (i, j) == (0, 1) else 0.30
-    ax.add_patch(Polygon([O, V[i], V[j]], closed=True, facecolor=col, edgecolor="none", alpha=al, zorder=1))
+    al = 0.62 if (i, j) == (0, 1) else 0.25
+    ax_3d.add_patch(Polygon([O, V[i], V[j]], closed=True, facecolor=col, edgecolor="none", alpha=al, zorder=1))
 for i in range(4):
-    ax.plot([0, V[i, 0]], [0, V[i, 1]], ls=(0, (3, 2)), lw=0.75, color=MUTED, zorder=2)
+    ax_3d.plot([0, V[i, 0]], [0, V[i, 1]], ls=(0, (2.5, 1.8)), lw=0.65, color=MUTED, zorder=2)
 
-t_hat = np.array([0.0, 1.0, 1.0]) / np.sqrt(2.0)
-b_hat = np.array([-1.0, 0.0, 0.0])
-mid0 = np.array([tetrahedron.A_TET, 0.0, 0.0])
-for d_ln in 0.10 * (2 ** -0.5) ** np.arange(0, 9, 2):
-    ts = np.linspace(-(0.5 - 1.5 * d_ln), 0.5 - 1.5 * d_ln, 40)
-    pts3 = mid0[None, :] + d_ln * b_hat[None, :] + ts[:, None] * t_hat[None, :]
-    xy = pts3 @ P2.T
-    ax.plot(xy[:, 0], xy[:, 1], color=BLUE, lw=0.95, zorder=3)
-v0 = tetrahedron.VERTS[0]
-for rd in [np.ones(3) / np.sqrt(3.0)] + [(t_hat - (fr / np.sqrt(2.0)) * b_hat) / np.linalg.norm(t_hat - (fr / np.sqrt(2.0)) * b_hat)
-                                         for fr in (0.8, 0.4, 0.2)]:
-    seg = np.vstack((v0 - 0.08 * rd, v0 - 0.008 * rd)) @ P2.T
-    ax.plot(seg[:, 0], seg[:, 1], color=ORANGE, lw=0.95, zorder=4)
+# Show graded 3-kite panels & collocation points on front visible face (0, 1, 2)
+F_vis = np.array([tetrahedron.VERTS[0], tetrahedron.VERTS[1], tetrahedron.VERTS[2]])
+c_vis = F_vis.mean(axis=0)
+brk_vis = np.array([0.0, 0.06, 0.14, 0.32, 1.0])
+for k_i in range(3):
+    Ak = F_vis[k_i]
+    M1 = 0.5 * (F_vis[k_i] + F_vis[(k_i + 1) % 3])
+    M2 = 0.5 * (F_vis[k_i] + F_vis[(k_i + 2) % 3])
+    # Kite boundary to centroid
+    seg_c = np.vstack((M1, c_vis, M2)) @ P2.T
+    ax_3d.plot(seg_c[:, 0], seg_c[:, 1], color="#8e8d88", lw=0.6, zorder=3)
+    for b_v in brk_vis[1:-1]:
+        s1 = np.array([(1 - b_v) * (1 - v) * Ak + (1 - b_v) * v * M1 + b_v * (1 - v) * M2 + b_v * v * c_vis
+                       for v in np.linspace(0, 1, 10)]) @ P2.T
+        s2 = np.array([(1 - u) * (1 - b_v) * Ak + (1 - u) * b_v * M1 + u * (1 - b_v) * M2 + u * b_v * c_vis
+                       for u in np.linspace(0, 1, 10)]) @ P2.T
+        ax_3d.plot(s1[:, 0], s1[:, 1], color="#b8b7b2", lw=0.38, zorder=3)
+        ax_3d.plot(s2[:, 0], s2[:, 1], color="#b8b7b2", lw=0.38, zorder=3)
+    # Graded collocation nodes (representative level)
+    xi_n = np.array([0.025, 0.10, 0.23, 0.50, 0.82])
+    Un, Vn = [g.ravel() for g in np.meshgrid(xi_n, xi_n)]
+    p_kite = (((1 - Un) * (1 - Vn))[:, None] * Ak + ((1 - Un) * Vn)[:, None] * M1
+              + (Un * (1 - Vn))[:, None] * M2 + (Un * Vn)[:, None] * c_vis) @ P2.T
+    ax_3d.plot(p_kite[:, 0], p_kite[:, 1], ".", color=INK, ms=1.65, zorder=4)
 
 for i, j in edges:
-    ls_e = (0, (3, 2)) if (i, j) == (2, 3) else "-"
-    lw_e = 0.8 if (i, j) == (2, 3) else 1.15
-    ax.plot([V[i, 0], V[j, 0]], [V[i, 1], V[j, 1]], ls=ls_e, lw=lw_e, color=INK, zorder=5)
-ax.plot(0, 0, "o", color=MUTED, ms=3.0, zorder=5)
-ax.text(V[0, 0] - 0.01, V[0, 1] + 0.05, "corner\nrays", fontsize=7.5, color=ORANGE, ha="center", va="bottom")
-ax.text(0.5 * (V[0, 0] + V[1, 0]) + 0.04, 0.5 * (V[0, 1] + V[1, 1]) - 0.03, "edge\nlines", fontsize=7.5, color=BLUE, va="top")
-ax.text(-0.02, -0.05, r"$\mathcal{M}$", fontsize=8.2, color=MUTED, ha="right", va="top")
-ax.set(xlim=(-0.56, 0.60), ylim=(-0.48, 0.63), aspect="equal")
-ax.axis("off")
-ax.set_title("(a) skeleton and wall sources", loc="left", fontsize=8.5)
+    ls_e = (0, (3, 2)) if 3 in (i, j) else "-"
+    lw_e = 0.72 if 3 in (i, j) else 1.05
+    ax_3d.plot([V[i, 0], V[j, 0]], [V[i, 1], V[j, 1]], ls=ls_e, lw=lw_e, color=INK, zorder=5)
+ax_3d.plot(0, 0, "o", color=MUTED, ms=2.5, zorder=5)
+ax_3d.text(-0.04, 0.03, r"$\mathcal{M}$", fontsize=7.5, color=BLUE, ha="right", va="bottom")
+ax_3d.text(0.28, 0.28, "3-kite\ngraded $\\Gamma$", fontsize=6.8, color=INK, ha="left", va="center")
+ax_3d.set(xlim=(-0.54, 0.62), ylim=(-0.47, 0.57), aspect="equal")
+ax_3d.axis("off")
+ax_3d.set_title(r"(a) 3D kites on $\Gamma$ & skeleton $\mathcal{M}$", loc="left", fontsize=8.1, pad=2)
 
-# Panel (b): convergence against sqrt(N_u)
-ax = axs[1]
+# Panel (b): Unfolded 2D view of one triangular skeleton wall O v_0 v_1 (|t| <= 1/2, depth b in [0, A_TET])
+h_wall = tetrahedron.A_TET
+ax_wall.add_patch(Polygon([[-0.5, 0.0], [0.5, 0.0], [0.0, h_wall]], closed=True, facecolor="#f4f3ef", edgecolor="none", zorder=0))
+# Inner 0.56-scaled tetrahedron intersection at depth (1 - 0.56) * h_wall = 0.156
+b_in = (1.0 - 0.56) * h_wall
+ax_wall.add_patch(Polygon([[-0.28, b_in], [0.28, b_in], [0.0, h_wall]], closed=True, facecolor="#e3ece8", edgecolor=GREEN,
+                          lw=0.65, ls="--", zorder=1))
+ax_wall.text(0.0, 0.235, "inner base", fontsize=6.2, color=GREEN, ha="center", va="center")
+
+# Free lightning edge lines d_j = 0.14 * (2^{-1/2})^j with stretched t(u) nodes clustering towards corners
+d_vis = 0.14 * (2.0 ** -0.5) ** np.arange(0, 8)
+u_samp = np.linspace(-0.88, 0.88, 9)
+for idx_d, dv in enumerate(d_vis):
+    tmax = 0.5 - 1.5 * dv
+    ax_wall.plot([-tmax, tmax], [dv, dv], color=BLUE, lw=0.85, zorder=3)
+    if idx_d in (0, 3, 6):
+        lam_v = np.log((1.0 - 1.5 * dv) / (1.5 * dv))
+        t_nodes = 0.5 * np.tanh(0.5 * lam_v * u_samp)
+        t_nodes = t_nodes[np.abs(t_nodes) <= tmax]
+        ax_wall.plot(t_nodes, np.full_like(t_nodes, dv), "o", color=BLUE, ms=1.8, zorder=4)
+    # Vertex dipoles along side rays O v_0 and O v_1
+    frac = dv / h_wall
+    for sgn_t in (-1.0, 1.0):
+        ax_wall.plot(sgn_t * 0.5 * (1.0 - frac), dv, "s", color=NAVY, ms=1.7, zorder=4)
+
+# 9-line singular edge tail below d_min + radial corner-tail rays at both vertices
+ax_wall.plot([-0.485, 0.485], [0.006, 0.006], color=ORANGE, lw=1.1, ls=(0, (2, 1)), zorder=4)
+for sgn_t in (-1.0, 1.0):
+    for ang_f in (0.8, 0.4, 0.2):
+        # Direction in (t, b) wall coordinates from corner (sgn_t * 0.5, 0)
+        dt_r = -sgn_t * 1.0
+        db_r = ang_f
+        nrm = np.hypot(dt_r, db_r)
+        ax_wall.plot([sgn_t * 0.5 + 0.012 * dt_r / nrm, sgn_t * 0.5 + 0.095 * dt_r / nrm],
+                     [0.012 * db_r / nrm, 0.095 * db_r / nrm], color=ORANGE, lw=0.85, zorder=5)
+
+ax_wall.plot([-0.5, 0.5], [0.0, 0.0], color=INK, lw=1.15, zorder=5)
+ax_wall.plot([-0.5, 0.0, 0.5], [0.0, h_wall, 0.0], color=MUTED, lw=0.75, ls=(0, (3, 2)), zorder=2)
+ax_wall.plot(0.0, h_wall, "o", color=MUTED, ms=2.4, zorder=5)
+ax_wall.text(0.0, h_wall + 0.018, "$O$", fontsize=6.8, color=MUTED, ha="center", va="bottom")
+ax_wall.text(-0.50, -0.022, "$v_1$", fontsize=6.8, color=INK, ha="center", va="top")
+ax_wall.text(0.50, -0.022, "$v_0$", fontsize=6.8, color=INK, ha="center", va="top")
+ax_wall.text(0.0, -0.025, "edge + 9-line tail", fontsize=6.4, color=ORANGE, ha="center", va="top")
+ax_wall.text(0.42, 0.135, "corner\nrays", fontsize=6.3, color=ORANGE, ha="center", va="bottom")
+ax_wall.text(-0.37, 0.145, "lines\n$t(u)$", fontsize=6.3, color=BLUE, ha="center", va="bottom")
+ax_wall.set(xlim=(-0.56, 0.56), ylim=(-0.09, 0.42), aspect="equal")
+ax_wall.axis("off")
+ax_wall.set_title(r"(b) unfolded wall $O v_0 v_1$", loc="left", fontsize=8.1, pad=1)
+
+# Panel (c): convergence against sqrt(N_u)
 xs = np.array([np.sqrt(curves["dense"][0, 0]) - 4, np.sqrt(curves["dense"][-1, 0]) + 6])
-ax.semilogy(xs, np.exp(np.polyval(p, xs)), color=MUTED, lw=0.85, zorder=1)
-ax.annotate(rf"${np.exp(p[1]):.2f}\,\exp({p[0]:.4f}\sqrt{{N_u}})$",
-            xy=(121.0, np.exp(np.polyval(p, 121.0))), xytext=(85.0, 6.8e-3),
-            fontsize=7.4, color=MUTED, ha="left", va="bottom",
-            arrowprops=dict(arrowstyle="-", color=MUTED, lw=0.55, shrinkA=1, shrinkB=2))
+ax_conv.semilogy(xs, np.exp(np.polyval(p, xs)), color=MUTED, lw=0.85, zorder=1)
+ax_conv.annotate(rf"${np.exp(p[1]):.2f}\,\exp({p[0]:.4f}\sqrt{{N_u}})$",
+                 xy=(118.0, np.exp(np.polyval(p, 118.0))), xytext=(80.0, 8.5e-3),
+                 fontsize=7.1, color=MUTED, ha="left", va="bottom",
+                 arrowprops=dict(arrowstyle="-", color=MUTED, lw=0.55, shrinkA=1, shrinkB=2))
 for key, (col, mk, ls, label) in {"plain": (PURPLE, "^", ":", "plain MFS (inner copy)"),
                                   "notail": (GREEN, "s", "--", "MFS without tails"),
                                   "one": (NAVY, "h", (0, (6, 1.5)), "MFS (1 depth/octave)"),
                                   "dense": (BLUE, "o", "-", "MFS (2 depths/octave)"),
                                   "graded": (RUST, "X", (0, (3, 1)), "Bempp (graded, symmetry)")}.items():
     v = curves[key]
-    curve(ax, np.sqrt(v[:, 0]), v[:, 1], col, mk, ls, label, ms=4.4, lw=1.35, logx=False, zorder=3)
-ax.set(xlabel=r"$\sqrt{N_u}$ (whole-body unknowns)", ylabel="relative error of the scattered field",
-       ylim=(4e-5, 1.0))
-ax.set_title(r"(b) error against $\sqrt{N_u}$", loc="left", fontsize=8.5)
+    curve(ax_conv, np.sqrt(v[:, 0]), v[:, 1], col, mk, ls, label, ms=4.3, lw=1.35, logx=False, zorder=3)
+d_c = curves["dense"]
+ax_conv.text(np.sqrt(d_c[0, 0]) + 2.5, d_c[0, 1] * 1.12, f"$J={int(d_c[0, 3])}$", fontsize=6.8, color=BLUE)
+ax_conv.text(np.sqrt(d_c[-1, 0]) - 2.0, d_c[-1, 1] * 0.58, f"$J={int(d_c[-1, 3])}$", fontsize=6.8, color=BLUE, ha="right")
+ax_conv.set(xlabel=r"$\sqrt{N_u}$ (whole-body unknowns)", ylabel="relative error of the scattered field",
+            ylim=(4e-5, 1.0))
+ax_conv.set_title(r"(c) error against $\sqrt{N_u}$", loc="left", fontsize=8.4)
 
-# Panel (c): error against wall time [s]
-ax = axs[2]
-curve(ax, curves["one"][:-1, 2], curves["one"][:-1, 1], NAVY, "h", (0, (6, 1.5)), ms=4.4, lw=1.35, zorder=3)
-curve(ax, curves["dense"][:, 2], curves["dense"][:, 1], BLUE, "o", "-", ms=4.4, lw=1.35, zorder=4)
-curve(ax, bem_time_env[:, 0], bem_time_env[:, 1], RUST, "X", (0, (3, 1)), ms=4.4, lw=1.35, zorder=3)
-ax.set(xlabel="wall time [s]  (2 cores)", xlim=(2.5, 135), ylim=(4e-5, 1.0))
-ax.xaxis.set_minor_formatter(plt.NullFormatter())
-ax.set_title("(c) error against wall time", loc="left", fontsize=8.5)
+# Panel (d): error against wall time [s] (plotting all J=3..8 of 1 depth/octave — zero uptick!)
+curve(ax_time, curves["one"][:, 2], curves["one"][:, 1], NAVY, "h", (0, (6, 1.5)), ms=4.3, lw=1.35, zorder=3)
+curve(ax_time, curves["dense"][:, 2], curves["dense"][:, 1], BLUE, "o", "-", ms=4.3, lw=1.35, zorder=4)
+curve(ax_time, bem_time_env[:, 0], bem_time_env[:, 1], RUST, "X", (0, (3, 1)), ms=4.3, lw=1.35, zorder=3)
+ax_time.text(d_c[0, 2] * 1.15, d_c[0, 1] * 1.10, f"$J={int(d_c[0, 3])}$", fontsize=6.8, color=BLUE)
+ax_time.text(d_c[-1, 2] * 0.88, d_c[-1, 1] * 0.58, f"$J={int(d_c[-1, 3])}$", fontsize=6.8, color=BLUE, ha="right")
+ax_time.set(xlabel="wall time [s]  (2 cores)", xlim=(1.8, 360), ylim=(4e-5, 1.0))
+ax_time.xaxis.set_minor_formatter(plt.NullFormatter())
+ax_time.set_title("(d) error against wall time", loc="left", fontsize=8.4)
 
-handles, labels = axs[1].get_legend_handles_labels()
-fig.legend(handles, labels, frameon=False, fontsize=7.8, loc="lower center", bbox_to_anchor=(0.56, -0.02),
+handles, labels = ax_conv.get_legend_handles_labels()
+fig.legend(handles, labels, frameon=False, fontsize=7.7, loc="lower center", bbox_to_anchor=(0.55, -0.02),
            ncol=3, columnspacing=1.2, handletextpad=0.45)
-for a in (axs[1], axs[2]):
+for a in (ax_conv, ax_time):
     a.grid(True, which="major", color="#e4e3df", lw=0.6)
     for sp in ("top", "right"):
         a.spines[sp].set_visible(False)
-fig.subplots_adjust(left=0.01, right=0.99, top=0.90, bottom=0.28, wspace=0.28)
+fig.subplots_adjust(left=0.01, right=0.99, top=0.91, bottom=0.25)
 finish(fig, None, "fig_tetrahedron", tight="tight")
-

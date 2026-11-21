@@ -5,7 +5,8 @@ and (-a, -a, a), a = 1 / (2 sqrt(2)).
 
 By Theorem 1 the sources lie on the skeleton, the six triangular bisector walls
 joining the edges to the origin:
-  * edge lines parallel to each edge at the depths d_j = 0.1 q^j down to d_min = 0.1 · 2^{-J},
+  * edge lines parallel to each edge at the depths d_j = 0.14 q^j down to d_min = 0.14 · 2^{-J},
+    meeting the 0.56-scaled inner tetrahedron (edge depth (1 - 0.56)/(2 sqrt(2)) = 0.156),
     each with an electric and a magnetic dipole density (Legendre modes in a stretched variable);
   * vertex points on the four rays from the origin to the vertices, and a uniform grid of
     electric dipoles on the faces of an inner tetrahedron;
@@ -93,7 +94,7 @@ def face_kites(sc, w):
 
 class Tetrahedron:
     """
-    MFS for the regular tetrahedron of unit edge length at level J (smallest depth 0.1 · 2^{-J}).
+    MFS for the regular tetrahedron of unit edge length at level J (smallest depth 0.14 · 2^{-J}).
       q      : depth ratio, 2^{-1/2} (two per octave) or 1/2
       tails  : with or without the edge and corner singular tails
       J=None : plain inner-tetrahedron layout (n_base barycentric order per face) that stalls
@@ -105,7 +106,7 @@ class Tetrahedron:
         if J is None:
             self.depths, ex = np.zeros(0), 0.0
         else:
-            self.depths = 0.1 * q ** np.arange(m * J + 1)
+            self.depths = 0.14 * q ** np.arange(m * J + 1)
             n0 = max(4, 2 * J - 4)
             ex = 2 * s * (s + 1) if extra_modes is None else extra_modes
 
@@ -144,14 +145,16 @@ class Tetrahedron:
                                        ([np.ones((n_ray_slots, 3), bool)] if n_ray_slots else [])).ravel() for c in CLASSES}
         self.unknowns = {c: int(kp.sum()) for c, kp in self.keep.items()}
 
-        # Graded boundary points on F_0 (xi = 1 - 2 sc, so H/8 in sc gives four panels per kite side), weighted by sqrt(area · dist)
-        ng = 2 + max(m, 1 + int(np.ceil(0.5 * s)))
-        d_min = self.depths[-1] if len(self.depths) else 0.1
-        levels = max(2, int(np.ceil(np.log2(H / d_min))))
-        sc, w = graded_nodes(levels, ng, min(H / 8, np.pi / (4 * k)))
+        # Graded boundary points on F_0 (|dx/d(sc)| = 1 along each half-edge, so H/4 matches the cube);
+        # since nu_1 = 0.32221 < 1/2, weighting by dist · r_v^{1 - 2 nu_1} keeps |E|^2 bounded at vertices too
+        ng = max(4, 2 + max(m, 1 + int(np.ceil(0.5 * s))))
+        d_min = self.depths[-1] if len(self.depths) else 0.14
+        levels = max(2, int(np.ceil(np.log2(2 * H / d_min))))
+        sc, w = graded_nodes(levels, ng, min(H / 4, np.pi / (2 * k)))
         self.x, W, dist = face_kites(sc, w)
         self.T = tangent_basis(np.tile(-v_hat, (len(self.x), 1)))
-        self.rw = np.sqrt(W * dist)
+        rv = np.min([np.linalg.norm(self.x - v, axis=1) for v in FACE0], axis=0)
+        self.rw = np.sqrt(W * dist * (rv ** (1.0 - 2.0 * NU[0])))
         self.rows = 2 * len(self.x)
 
         self.fac, self.t_assemble, self.t_factor = {}, 0.0, 0.0

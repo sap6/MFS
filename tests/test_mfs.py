@@ -120,7 +120,7 @@ def test_tetrahedron_and_rotation():
     d = np.load(os.path.join(DATA, "tetrahedron_convergence.npz"))
     E, _, info = tetrahedron.solve(4, pts=d["pts"])
     assert core.rel(E, d["dense_E4"]) < 1e-10
-    assert info["unknowns"] == [1436]
+    assert info["unknowns"] == [1376]
     assert tetrahedron.solve(2, pts=np.empty((0, 3)))[0].shape == (0, 3)
     pts = 2.0 * core.fibonacci(50)
     Er, _, ir = tetrahedron.solve(2, DW, PW, pts=pts)
