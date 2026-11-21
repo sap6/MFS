@@ -38,7 +38,7 @@ badge at the top of each notebook, or below.
 |---|---|---|
 | [1. The sphere](notebooks/1_sphere.ipynb) [![Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/sap6/MFS/blob/main/notebooks/1_sphere.ipynb) | five-line MFS solve against the Mie series, $\exp(-c\sqrt{N})$ convergence and $R_s$ conditioning, near-surface field | under a minute |
 | [2. The torus](notebooks/2_torus.ipynb) [![Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/sap6/MFS/blob/main/notebooks/2_torus.ipynb) | azimuthal Fourier decoupling (axial vs oblique waves), optical theorem, focal-ring bound on the source torus | under a minute |
-| [3. The cube](notebooks/3_cube.ipynb) [![Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/sap6/MFS/blob/main/notebooks/3_cube.ipynb) | why an inner cube stalls, skeleton layout, edge residual with and without singular tails, oblique-wave total field | about three minutes |
+| [3. The cube & tetrahedron](notebooks/3_cube.ipynb) [![Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/sap6/MFS/blob/main/notebooks/3_cube.ipynb) | why inner copies stall, skeleton layout, edge residual with/without tails, oblique wave, and regular tetrahedron | about five minutes |
 | [4. The NASA almond](notebooks/4_almond.ipynb) [![Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/sap6/MFS/blob/main/notebooks/4_almond.ipynb) | mid-plane focal-curve layout and tip tail, nose-on convergence, 3.5 GHz monostatic RCS against the Austin benchmark | about three minutes |
 
 ## Install
