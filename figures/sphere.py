@@ -8,6 +8,7 @@ dependence on R_s for N = 400.
     python figures/sphere.py --run    # solve again (about 20 seconds)
 """
 import json
+import os
 import sys
 
 import numpy as np
@@ -32,7 +33,9 @@ if "--run" in sys.argv:
                         bc=rel(np.einsum("mab,mb->ma", T, core.field(u, y, alpha, K)), -inc),
                         alpha_norm=float(np.linalg.norm(alpha))))
         print(sweep, R, N, f"{res[-1]['mid']:.2e}", flush=True)
-    json.dump(res, open(data("sphere_convergence.json"), "w"), indent=1)
+    path = data("sphere_convergence.json")
+    old = [r for r in json.load(open(path)) if abs(r["k"] - K) > 1e-9] if os.path.exists(path) else []
+    json.dump(res + old, open(path, "w"), indent=1)
 
 res = [r for r in json.load(open(data("sphere_convergence.json"))) if abs(r["k"] - K) < 1e-9]
 fig, axs = plt.subplots(1, 3, figsize=(7.5, 2.75), gridspec_kw=dict(width_ratios=[0.94, 1.16, 1.16]))

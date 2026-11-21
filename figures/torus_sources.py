@@ -55,9 +55,9 @@ ax.axvline(0.0, color=MUTED, lw=0.8, ls=(0, (4, 2)), zorder=1)
 ax.plot(R, 0.0, "+", color=MUTED, ms=5.0, mew=0.9, zorder=3)
 ax.plot(rho_f, 0.0, "*", color=RUST, ms=6.8, zorder=6)
 ax.text(0.03, 0.78, "axis\n$\\rho=0$", fontsize=7.0, color=MUTED, va="top")
-ax.annotate("focal ring\n$\\sqrt{R^2-a^2}$", xy=(rho_f, -0.05), xytext=(0.64, -0.38),
-            fontsize=6.6, color=RUST, ha="center", va="top",
-            bbox=dict(boxstyle="square,pad=0.08", fc="#eeede8", ec="none"),
+ax.annotate("focal ring\n$\\sqrt{R^2-a^2}$", xy=(rho_f, 0.06), xytext=(0.76, 0.72),
+            fontsize=6.3, color=RUST, ha="center", va="top", zorder=7,
+            bbox=dict(boxstyle="round,pad=0.08", fc=BODY, ec="none"),
             arrowprops=dict(arrowstyle="-", color=RUST, lw=0.55, shrinkA=0, shrinkB=2))
 ax.text(R + 0.03, 0.03, "$R$", fontsize=7.3, color=MUTED)
 ax.set(xlim=(-0.06, 1.88), ylim=(-0.92, 0.92), aspect="equal", xlabel=r"radial $\rho$", ylabel="$z$",

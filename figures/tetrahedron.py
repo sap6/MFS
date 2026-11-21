@@ -228,16 +228,48 @@ for sgn_t in (-1.0, 1.0):
         ax_wall.plot([sgn_t * 0.5 + 0.012 * dt_r / nrm, sgn_t * 0.5 + 0.095 * dt_r / nrm],
                      [0.012 * db_r / nrm, 0.095 * db_r / nrm], color=ORANGE, lw=0.85, zorder=5)
 
+# Dyadic boundary kite panel ticks along bottom edge v_1 -- v_0
+for b_t in (0.0, 0.03, 0.07, 0.16, 0.50):
+    for sgn_t in (-1.0, 1.0):
+        tx = sgn_t * (0.5 - 0.5 * b_t)
+        ax_wall.plot([tx, tx], [-0.014, 0.0], color=MUTED, lw=0.5, zorder=3)
+
+# Zoom inset in upper-right of ax_wall magnifying corner v_0 = (0.5, 0) (3 corner rays + tail + line cut-off)
+zw_t, zh_t = 0.095, 0.068
+ax_wall.plot([0.5 - zw_t, 0.5, 0.5, 0.5 - zw_t, 0.5 - zw_t], [0, 0, zh_t, zh_t, 0], color=RUST, lw=0.55, zorder=6)
+ins_w = ax_wall.inset_axes([0.62, 0.48, 0.38, 0.43])
+ins_w.set_facecolor("white")
+ins_w.add_patch(Polygon([[0.5 - zw_t, 0.0], [0.5, 0.0], [0.5 - 0.5 * zh_t / h_wall, zh_t], [0.5 - zw_t, zh_t]],
+                        closed=True, facecolor="#f5f4f0", edgecolor="none"))
+for dv in d_vis[d_vis <= zh_t]:
+    tm = 0.5 - 1.5 * dv
+    if tm > 0.5 - zw_t:
+        ins_w.plot([0.5 - zw_t, tm], [dv, dv], color=BLUE, lw=0.8)
+        ins_w.plot(tm, dv, "o", color=BLUE, ms=1.8)
+    ins_w.plot(0.5 * (1.0 - dv / h_wall), dv, "s", color=NAVY, ms=1.9)
+for dt_tail in 0.14 * (2.0 ** -0.5) ** 7 * 0.5 ** np.arange(1, 5):
+    ins_w.plot([0.5 - zw_t, 0.5 - 1.5 * d_vis[-1]], [dt_tail, dt_tail], color=ORANGE, lw=0.65, ls=":")
+for ang_f in (0.8, 0.4, 0.2):
+    nrm = np.hypot(1.0, ang_f)
+    r_pts = 0.072 * (0.68 ** np.arange(5))
+    ins_w.plot(0.5 - r_pts / nrm, r_pts * ang_f / nrm, "o-", color=ORANGE, lw=0.65, ms=1.7, mfc="white", mew=0.55)
+ins_w.plot([0.5 - zw_t, 0.5], [0.0, 0.0], color=INK, lw=1.0)
+ins_w.plot([0.5, 0.5 - 0.5 * zh_t / h_wall], [0.0, zh_t], color=MUTED, lw=0.65, ls=(0, (2, 1.5)))
+ins_w.set_title("corner zoom", fontsize=6.0, color=RUST, loc="right", pad=1.8)
+ins_w.set(xlim=(0.5 - zw_t, 0.506), ylim=(-0.006, zh_t), xticks=[], yticks=[], aspect="equal")
+for sp in ins_w.spines.values():
+    sp.set_edgecolor(RUST)
+    sp.set_linewidth(0.55)
+
 ax_wall.plot([-0.5, 0.5], [0.0, 0.0], color=INK, lw=1.15, zorder=5)
 ax_wall.plot([-0.5, 0.0, 0.5], [0.0, h_wall, 0.0], color=MUTED, lw=0.75, ls=(0, (3, 2)), zorder=2)
 ax_wall.plot(0.0, h_wall, "o", color=MUTED, ms=2.4, zorder=5)
 ax_wall.text(0.0, h_wall + 0.018, "$O$", fontsize=6.8, color=MUTED, ha="center", va="bottom")
-ax_wall.text(-0.50, -0.022, "$v_1$", fontsize=6.8, color=INK, ha="center", va="top")
-ax_wall.text(0.50, -0.022, "$v_0$", fontsize=6.8, color=INK, ha="center", va="top")
-ax_wall.text(0.0, -0.025, "edge + 9-line tail", fontsize=6.4, color=ORANGE, ha="center", va="top")
-ax_wall.text(0.42, 0.135, "corner\nrays", fontsize=6.3, color=ORANGE, ha="center", va="bottom")
+ax_wall.text(-0.50, -0.025, "$v_1$", fontsize=6.8, color=INK, ha="center", va="top")
+ax_wall.text(0.50, -0.025, "$v_0$", fontsize=6.8, color=INK, ha="center", va="top")
+ax_wall.text(0.0, -0.028, r"graded $\Gamma$ + 9-line tail", fontsize=6.2, color=ORANGE, ha="center", va="top")
 ax_wall.text(-0.37, 0.145, "lines\n$t(u)$", fontsize=6.3, color=BLUE, ha="center", va="bottom")
-ax_wall.set(xlim=(-0.56, 0.56), ylim=(-0.09, 0.42), aspect="equal")
+ax_wall.set(xlim=(-0.56, 0.59), ylim=(-0.095, 0.42), aspect="equal")
 ax_wall.axis("off")
 ax_wall.set_title(r"(b) unfolded wall $O v_0 v_1$", loc="left", fontsize=8.1, pad=1)
 
@@ -269,6 +301,8 @@ curve(ax_time, bem_time_env[:, 0], bem_time_env[:, 1], RUST, "X", (0, (3, 1)), m
 ax_time.text(d_c[0, 2] * 1.15, d_c[0, 1] * 1.10, f"$J={int(d_c[0, 3])}$", fontsize=6.8, color=BLUE)
 ax_time.text(d_c[-1, 2] * 0.88, d_c[-1, 1] * 0.58, f"$J={int(d_c[-1, 3])}$", fontsize=6.8, color=BLUE, ha="right")
 ax_time.set(xlabel="wall time [s]  (2 cores)", xlim=(1.8, 360), ylim=(4e-5, 1.0))
+ax_time.set_xticks([2, 5, 10, 20, 50, 100, 250])
+ax_time.xaxis.set_major_formatter(plt.FuncFormatter(lambda v, pos: f"{v:g}"))
 ax_time.xaxis.set_minor_formatter(plt.NullFormatter())
 ax_time.set_title("(d) error against wall time", loc="left", fontsize=8.4)
 

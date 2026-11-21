@@ -57,16 +57,28 @@ def local_orders(N_err):
 
 # Smooth bodies and Almond (Sections 3, 6, 7.1)
 print("== Sections 3, 6 & 7.1")
+import json  # noqa: E402
+sc_json = [r for r in json.load(open(D + "sphere_convergence.json")) if abs(r["k"] - 2 * np.pi) < 1e-9]
+print("Sphere Fig 1 (r=1.5, R_s=0.5):", [(r["N"], f"mid={r['mid']:.2e}", f"bc={r['bc']:.2e}") for r in sc_json if r["sweep"] == "N" and r["R"] == 0.5 and r["N"] in (100, 400, 1200)])
 cs, ct, ca = np.load(D + "cost_sphere.npz"), np.load(D + "cost_torus.npz"), np.load(D + "cost_almond.npz")
 aref = ca[f"mfs_E{len(ca['mfs']) - 1}"]
-print("Sphere MFS:", [(int(r[0]), round(float(r[1]), 2), f"{r[2]:.2e}") for r in cs["mfs"] if int(r[0]) in (300, 1200, 3600)],
-      "Bempp finest:", (int(cs["bem"][-1, 0]), round(float(cs["bem"][-1, 1]), 1), f"{cs['bem'][-1, 2]:.2e}"))
+print("Sphere MFS (r=2.0):", [(int(r[0]), round(float(r[1]), 2), f"{r[2]:.2e}") for r in cs["mfs"] if int(r[0]) in (300, 1200, 3600)],
+      "Bempp all:", [(int(r[0]), round(float(r[1]), 1), f"{r[2]:.2e}") for r in cs["bem"]])
+print("Torus ref:", (int(ct["ref"][0]), f"bc={ct['ref'][1]:.2e}", f"opt={ct['ref'][2]:.2e}", f"ext={ct['ref'][3]:.6f}"))
 print("Torus MFS:", [(int(r[0]), round(float(r[1]), 2), f"err={r[2]:.2e}", f"bc={r[3]:.2e}", f"opt={r[4]:.2e}")
-                     for r in ct["mfs"] if int(r[0]) in (1440, 21120)],
+                     for r in ct["mfs"] if int(r[0]) in (360, 1440, 21120)],
       "Bempp finest:", (int(ct["bem"][-1, 0]), round(float(ct["bem"][-1, 1]), 1), f"{ct['bem'][-1, 2]:.2e}"))
-alm_mfs = [(int(r[1]), round(float(r[2]), 2), f"{rel(ca[f'mfs_E{i}'], aref):.2e}") for i, r in enumerate(ca["mfs"][:-1])]
+alm_mfs = [(int(r[1]), round(float(r[2]), 2), f"{rel(ca[f'mfs_E{i}'], aref):.2e}", f"opt={r[3]:.2e}") for i, r in enumerate(ca["mfs"][:-1])]
 alm_bem = [(int(r[0]), round(float(r[1]), 2), f"{rel(ca[f'bem_E{i}'], aref):.2e}") for i, r in enumerate(ca["bem"])]
-print("Almond 1.19 GHz MFS:", alm_mfs, "Bempp:", alm_bem)
+print("Almond 1.19 GHz MFS:", alm_mfs, "ref 8:5:", (int(ca["mfs"][-1, 1]), round(float(ca["mfs"][-1, 2]), 2), f"opt={ca['mfs'][-1, 3]:.2e}"), "Bempp:", alm_bem)
+if os.path.exists(D + "cost_almond35.npz"):
+    ca35 = np.load(D + "cost_almond35.npz")
+    aref35 = ca35[f"mfs_E{len(ca35['mfs']) - 1}"]
+    print("Almond 3.5 GHz MFS:", [(int(r[1]), round(float(r[2]), 2), f"{rel(ca35[f'mfs_E{i}'], aref35):.2e}") for i, r in enumerate(ca35["mfs"][:-1])],
+          "Bempp:", [(int(r[0]), round(float(r[1]), 2), f"{rel(ca35[f'bem_E{i}'], aref35):.2e}") for i, r in enumerate(ca35["bem"])])
+snf = np.load(D + "sphere_nearfield.npz")
+print("Sphere nearfield max(mfs400), max(mfs1200):", f"{snf['mfs400'].max():.2e}", f"{snf['mfs1200'].max():.2e}",
+      "bem9750 at delta ~0.03, 0.01, 1e-3:", [(round(float(d_), 4), f"{e_:.2e}") for d_, e_ in zip(snf["delta"], snf["bem9750"]) if any(abs(np.log10(d_) - x) < 0.15 for x in (-1.5, -2.0, -3.0))])
 
 # Section 5.4: the standard wave
 c = np.load(D + "cube_convergence.npz")
@@ -177,5 +189,10 @@ tpl = {int(r[0]): (sum(_tet.Tetrahedron(None, classes=[], n_base=int(r[0])).unkn
 print("plain layout (N_u, err):", {nb: (nu, f"{e_:.2e}") for nb, (nu, e_) in tpl.items()})
 print("Bempp graded (n, q, N_u, t, err):",
       [(int(r[0]), f"{int(r[1])}/{int(r[1])+2}", int(r[2]), round(float(r[3]), 1), f"{r[4]:.2e}") for r in tc["bem"]])
-print("Bempp time envelope:", [(round(t, 1), f"{e:.2e}") for t, e in envelope([(float(r[3]), float(r[4])) for r in tc["bem"]])])
+tbem_env = envelope([(float(r[3]), float(r[4])) for r in tc["bem"]])
+tm2_env = envelope([(float(tdense[J][1]), terr[J]) for J in range(3, 10)])
+tmall_env = envelope([(float(tdense[J][1]), terr[J]) for J in range(3, 10)] + [(float(tone[J][1]), teo[J]) for J in tone])
+print("Bempp time envelope:", [(round(t, 1), f"{e:.2e}") for t, e in tbem_env])
+print("Tet crossover interp: two depths", [f"{x:.2e}" for x in cross(tm2_env, tbem_env)],
+      "both", [f"{x:.2e}" for x in cross(tmall_env, tbem_env)])
 

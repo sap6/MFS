@@ -244,9 +244,11 @@ def almond_layout(n_mid=6, n_F=3, fname="fig_almond_layout"):
     ax.plot(X[sel] - x_tip_mm, Y[sel], color=INK, lw=1.15, zorder=3)
     ax.plot(X[sel] - x_tip_mm, almond.ETA_F * Y[sel], color=ORANGE, lw=0.9, ls=(0, (3, 1.5)), zorder=4)
 
-    rim_b = xb[(xb[:, 0] * 1e3 > x_tip_mm - 5.5) & (xb[:, 2] == xb[:, 2].min())]
-    ax.plot(rim_b[:, 0] * 1e3 - x_tip_mm, np.hypot(rim_b[:, 1], rim_b[:, 2]) * 1e3 + 0.07,
-            ".", color=INK, ms=2.6, zorder=5, label=r"$\Gamma$ nodes ($\geq 0.5$ mm)")
+    xb_tip = xb[xb[:, 0] * 1e3 > x_tip_mm - 5.5]
+    ux_tip = np.unique(np.round(xb_tip[:, 0], 9))
+    rim_b = np.array([xb_tip[np.isclose(xb_tip[:, 0], ux)][np.argmin(xb_tip[np.isclose(xb_tip[:, 0], ux), 2])] for ux in ux_tip])
+    ax.plot(rim_b[:, 0] * 1e3 - x_tip_mm, almond.semi_axes(rim_b[:, 0])[0] * 1e3 + 0.08,
+            ".", color=INK, ms=2.8, zorder=5, label=r"$\Gamma$ rings ($\geq 0.5$ mm)")
 
     near_m = pts_mid[:, 0] > x_tip_mm - 5.6
     near_f = pts_foc[:, 0] > x_tip_mm - 5.6
@@ -258,16 +260,18 @@ def almond_layout(n_mid=6, n_F=3, fname="fig_almond_layout"):
     ax.plot([xcut, xcut], [0.0, 2.35], color=MUTED, lw=0.65, ls=":", zorder=1)
     ax.text(xcut - 0.12, 1.85, "1 mm\ncut-off", ha="right", va="center", fontsize=6.7, color=MUTED)
 
-    ins_c = ax.inset_axes([0.30, 0.70, 0.67, 0.26])
+    ins_c = ax.inset_axes([0.38, 0.62, 0.60, 0.29])
     ins_c.set_facecolor("white")
+    r_bnd = x_tip_mm - rim_b[:, 0] * 1e3
     r_row_tail = (xt_tip - tpts[trow == n_mid + n_F, 0]) * 1e3
     r_row_free = x_tip_mm - pts_foc[(pts_foc[:, 0] > x_tip_mm - 5.5) & (pts_foc[:, 1] > 0.85 * almond.ETA_F * almond.semi_axes(pts_foc[:, 0] * 1e-3)[0] * 1e3), 0]
-    ins_c.plot(r_row_free[::2], np.zeros_like(r_row_free[::2]), "o", color=BLUE, ms=2.6, mec="white", mew=0.3)
-    ins_c.plot(r_row_tail[::11], np.zeros_like(r_row_tail[::11]), "o", mfc="white", mec=ORANGE, ms=2.6, mew=0.65)
+    ins_c.plot(r_bnd, np.full_like(r_bnd, 0.26), ".", color=INK, ms=2.6, zorder=4)
+    ins_c.plot(r_row_free[::2], np.full_like(r_row_free[::2], -0.14), "o", color=BLUE, ms=2.5, mec="white", mew=0.3)
+    ins_c.plot(r_row_tail[::11], np.full_like(r_row_tail[::11], -0.14), "o", mfc="white", mec=ORANGE, ms=2.5, mew=0.65)
     ins_c.axvline(abs(xcut), color=MUTED, lw=0.6, ls=":")
-    ins_c.set(xscale="log", xlim=(8e-5, 6.0), ylim=(-0.45, 0.85), xticks=[1e-4, 1e-2, 1.0], yticks=[])
+    ins_c.set(xscale="log", xlim=(8e-5, 6.2), ylim=(-0.48, 0.62), xticks=[1e-4, 1e-2, 1.0], yticks=[])
     ins_c.tick_params(labelsize=6.1, pad=1.1)
-    ins_c.text(1.5e-4, 0.28, r"outer row vs $\log_{10} r$ [mm]", fontsize=6.1, color=ORANGE)
+    ins_c.set_title(r"$\Gamma$ & outer row vs $r$ [mm]", fontsize=6.0, color=ORANGE, loc="left", pad=1.5)
     for sp in ("top", "right", "left"):
         ins_c.spines[sp].set_visible(False)
 

@@ -47,8 +47,8 @@ if any(fl in sys.argv for fl in ("--run", "--pass1", "--pass2")):
     reps = 2 if "--run" in sys.argv else 1
     use_prev = "--pass2" in sys.argv
     shape = sys.argv[-1]
-    if shape not in ("sphere", "torus", "almond"):
-        sys.exit("usage: python figures/cost.py [--run|--pass1|--pass2] sphere|torus|almond")
+    if shape not in ("sphere", "torus", "almond", "almond35"):
+        sys.exit("usage: python figures/cost.py [--run|--pass1|--pass2] sphere|torus|almond|almond35")
     from mfs import bem                         # before bempp: it lets the OpenCL driver see all of the memory
     bempp = bem.bempp
     d, p = core.wave()
@@ -90,9 +90,10 @@ if any(fl in sys.argv for fl in ("--run", "--pass1", "--pass2")):
         ext, opt = torus.optical(ref, d, p)
         np.savez(data("cost_torus.npz"), ref=[3 * 56 * 240, torus.residual(ref, d, p), opt, ext],
                  mfs=np.array(rows), bem=np.array(bems))
-    elif shape == "almond":
-        # Nose-on at 1.19 GHz, 400 points on the sphere of radius 0.3 m; the layout 8:5 is the reference
-        k = 2 * np.pi * 1.19e9 / almond.C0
+    elif shape in ("almond", "almond35"):
+        # Nose-on at 1.19 or 3.5 GHz, 400 points on the sphere of radius 0.3 m; layout 8:5 is the reference
+        freq_hz = 1.19e9 if shape == "almond" else 3.5e9
+        k = 2 * np.pi * freq_hz / almond.C0
         pts = 0.3 * core.fibonacci(400)
         da, pa, out, rows, brows = np.array([-1.0, 0, 0]), np.array([0, 1.0, 0]), {}, [], []
         almond.nose_on(k, 2, 0, pts), bem.almond(12, 12, k, da, pa, pts)    # warm-up
@@ -109,7 +110,7 @@ if any(fl in sys.argv for fl in ("--run", "--pass1", "--pass2")):
         for i, ((E, N), t) in enumerate(b_res):
             brows.append((N, t))
             out[f"bem_E{i}"] = E
-        np.savez(data("cost_almond.npz"), mfs=np.array(rows), bem=np.array(brows), **out)
+        np.savez(data(f"cost_{shape}.npz"), mfs=np.array(rows), bem=np.array(brows), **out)
     sys.exit(0)
 
 # The figure
@@ -125,7 +126,7 @@ res = np.load(data("cost_torus.npz"))
 curve(ax, res["mfs"][:, 1], res["mfs"][:, 2], BLUE, "o", "-", "MFS")
 curve(ax, res["bem"][:, 1], res["bem"][:, 2], ORANGE, "D", "-.", "Bempp, with symmetry")
 ax.set_title(r"(b) torus, $R = 1$, $a = 0.5$, $k = 2\pi$", loc="left", fontsize=8.5)
-ax.set_xlim(right=250)
+ax.set_xlim(right=320)
 
 ax = axs[1, 0]
 res = np.load(data("cost_almond.npz"))
@@ -134,7 +135,7 @@ curve(ax, res["mfs"][:-1, 2], [rel(res[f"mfs_E{i}"], ref) for i in range(len(res
 curve(ax, res["bem"][:, 1], [rel(res[f"bem_E{i}"], ref) for i in range(len(res["bem"]))], ORANGE, "D", "-.", "Bempp, with symmetry")
 ax.set_title(r"(c) almond, $1.19$ GHz, nose-on", loc="left", fontsize=8.5)
 ax.set_ylim(3e-5, 1.2e-1)
-ax.set_xticks([1, 2, 5, 10, 20, 50])
+ax.set_xticks([1, 2, 5, 10, 20, 50, 100])
 ax.xaxis.set_major_formatter(plt.FuncFormatter(lambda v, pos: f"{v:g}"))
 
 ax = axs[1, 1]
@@ -151,6 +152,8 @@ env = np.load(data("cube_cases_k1.npz"))["env"]
 curve(ax, env[:, 5], env[:, 6], RUST, "X", (0, (3, 1)), "Bempp, graded, with symmetry")
 ax.set_title(r"(d) unit cube, $k = 2\pi$, standard wave", loc="left", fontsize=8.5)
 ax.set_ylim(1.5e-7, 3e-2)
+ax.set_xticks([2, 5, 10, 50, 200, 500])
+ax.xaxis.set_major_formatter(plt.FuncFormatter(lambda v, pos: f"{v:g}"))
 
 locs = {(0, 0): ("lower left", None), (0, 1): ("lower left", None),
         (1, 0): ("upper right", None), (1, 1): ("lower left", (0.0, -0.01))}
