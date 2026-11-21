@@ -126,7 +126,7 @@ res = np.load(data("cost_torus.npz"))
 curve(ax, res["mfs"][:, 1], res["mfs"][:, 2], BLUE, "o", "-", "MFS")
 curve(ax, res["bem"][:, 1], res["bem"][:, 2], ORANGE, "D", "-.", "Bempp, with symmetry")
 ax.set_title(r"(b) torus, $R = 1$, $a = 0.5$, $k = 2\pi$", loc="left", fontsize=8.5)
-ax.set_xlim(right=320)
+ax.set_xlim(right=600)
 
 ax = axs[1, 0]
 res = np.load(data("cost_almond.npz"))
@@ -155,7 +155,7 @@ ax.set_ylim(1.5e-7, 3e-2)
 ax.set_xticks([2, 5, 10, 50, 200, 500])
 ax.xaxis.set_major_formatter(plt.FuncFormatter(lambda v, pos: f"{v:g}"))
 
-locs = {(0, 0): ("lower left", None), (0, 1): ("center right", (1.0, 0.44)),
+locs = {(0, 0): ("lower left", None), (0, 1): ("center right", (1.02, 0.55)),
         (1, 0): ("upper right", None), (1, 1): ("lower left", (0.0, -0.01))}
 for idx, ax in np.ndenumerate(axs):
     loc, anchor = locs[idx]
