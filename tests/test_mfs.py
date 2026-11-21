@@ -116,11 +116,14 @@ def test_line_tree_cache_cap():
 
 
 def test_tetrahedron_and_rotation():
-    # Section 5.6: level J = 4 reproduces the stored field, and 2-matrix ROT matches all 4 classes
+    # Section 5.6: level J = 4 reproduces the stored field, m=1 is strictly monotonic, and 2-matrix ROT matches all 4 classes
     d = np.load(os.path.join(DATA, "tetrahedron_convergence.npz"))
     E, _, info = tetrahedron.solve(4, pts=d["pts"])
     assert core.rel(E, d["dense_E4"]) < 1e-10
     assert info["unknowns"] == [1376]
+    one_errs = [core.rel(d[f"one_E{int(r[0])}"], d["ref_E"]) for r in d["one"]]
+    assert all(one_errs[i + 1] < one_errs[i] for i in range(len(one_errs) - 1))
+    assert float(d["dense"][-1, 4]) < 3e-5
     assert tetrahedron.solve(2, pts=np.empty((0, 3)))[0].shape == (0, 3)
     pts = 2.0 * core.fibonacci(50)
     Er, _, ir = tetrahedron.solve(2, DW, PW, pts=pts)
@@ -128,6 +131,21 @@ def test_tetrahedron_and_rotation():
     cf, _, _ = full.solve(DW, PW)
     assert len(ir["unknowns"]) == 2 and len(cf) == 4
     assert core.rel(Er, full.field(cf, pts)) < 1e-10
+
+
+def test_polyhedra_far_field_contraction():
+    # Appendix B: root-panel multipole contraction in Cube.far and Tetrahedron.far matches r -> inf limit of .field()
+    dirs = core.fibonacci(30)
+    r_inf = 1e6
+    pts_inf = r_inf * dirs
+    phase = r_inf * np.exp(-1j * K * r_inf)
+    for cls_obj in (cube.Cube(3, classes=core.classes_of(K, DW, PW, cube.REFL)),
+                    tetrahedron.Tetrahedron(3, classes=core.classes_of(K, DW, PW, tetrahedron.REFL))):
+        coef, _, _ = cls_obj.solve(DW, PW)
+        F_exact = cls_obj.far(coef, dirs)
+        F_asymp = phase * cls_obj.field(coef, pts_inf)
+        assert core.rel(F_exact, F_asymp) < 2e-5
+        assert cls_obj.far(coef, np.empty((0, 3))).shape == (0, 3)
 
 
 def test_cone():

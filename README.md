@@ -27,7 +27,7 @@ sphere, a torus, a cube, a regular tetrahedron and the NASA almond:
 
 *Error of the scattered field against computing time for the MFS and for the
 boundary element library Bempp, both using the same symmetries of the body
-(Figure 10 of the paper).*
+(Figure 11 of the paper).*
 
 ## Try it in the browser
 
@@ -39,7 +39,7 @@ badge at the top of each notebook, or below.
 | [1. The sphere](notebooks/1_sphere.ipynb) [![Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/sap6/MFS/blob/main/notebooks/1_sphere.ipynb) | five-line MFS solve against the Mie series, $\exp(-c\sqrt{N})$ convergence and $R_s$ conditioning, near-surface field | under a minute |
 | [2. The torus](notebooks/2_torus.ipynb) [![Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/sap6/MFS/blob/main/notebooks/2_torus.ipynb) | azimuthal Fourier decoupling (axial vs oblique waves), optical theorem, focal-ring bound on the source torus | under a minute |
 | [3. The cube](notebooks/3_cube.ipynb) [![Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/sap6/MFS/blob/main/notebooks/3_cube.ipynb) | why an inner cube stalls, skeleton layout, edge residual with and without singular tails, oblique-wave total field | about three minutes |
-| [4. The NASA almond](notebooks/4_almond.ipynb) [![Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/sap6/MFS/blob/main/notebooks/4_almond.ipynb) | mid-plane focal-curve layout and tip tail, nose-on convergence, 3.5 GHz monostatic RCS against the Austin benchmark | about two minutes |
+| [4. The NASA almond](notebooks/4_almond.ipynb) [![Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/sap6/MFS/blob/main/notebooks/4_almond.ipynb) | mid-plane focal-curve layout and tip tail, nose-on convergence, 3.5 GHz monostatic RCS against the Austin benchmark | about three minutes |
 
 ## Install
 
@@ -80,22 +80,22 @@ Every figure and table has a script in [`figures/`](figures). Run on its own,
 the script draws the figure in seconds from the results in [`data/`](data).
 With `--run` it computes those results again and overwrites `data/`
 (`git checkout -- data/` restores the paper's results); the times below are on
-two cores (Intel Xeon Platinum 8481C at 2.2 GHz, 8 GB RAM). The runs that
+two cores (Intel Xeon at 2.3 GHz, 8 GB RAM). The runs that
 involve Bempp need `pip install -e ".[bempp]"`.
 
 | In the paper | Script | To compute again |
 |---|---|---|
-| Figure 1: the sphere | [`figures/sphere.py`](figures/sphere.py) | 2 minutes |
-| Figure 2: the source torus | [`figures/torus_sources.py`](figures/torus_sources.py) | 1 minute |
+| Figure 1: the sphere | [`figures/sphere.py`](figures/sphere.py) | 20 seconds |
+| Figure 2: the source torus | [`figures/torus_sources.py`](figures/torus_sources.py) | 15 seconds |
 | Figures 3 and 9: source layouts | [`figures/layouts.py`](figures/layouts.py) | (a drawing) |
 | Figure 4: the wedge at an edge | [`figures/wedge.py`](figures/wedge.py) | (a sketch) |
 | Figure 5: the residual near an edge | [`figures/edge_residual.py`](figures/edge_residual.py) | 1 minute |
-| Figure 6, Table 2: convergence on the cube | [`figures/cube_convergence.py`](figures/cube_convergence.py) | 8 minutes, Bempp 4 more |
-| Figure 7, Table 5: other waves and larger cubes | [`figures/cube_cases.py`](figures/cube_cases.py) | 20 to 40 minutes per case (`--run CASE`: `k1`, `k1o`, `k2`, `k3`; `--scan CASE`: 2 hours) |
-| Figure 8: the regular tetrahedron | [`figures/tetrahedron.py`](figures/tetrahedron.py) | 6 minutes |
-| Figure 10, Table 3: almond radar cross-section | [`figures/almond_rcs.py`](figures/almond_rcs.py) | 7 minutes |
-| Figure 11, Table 4: comparison with Bempp | [`figures/cost.py`](figures/cost.py) | 3 to 8 minutes per shape (`--run SHAPE`: `sphere`, `torus`, `almond`) |
-| Figure 12: the field near the surface | [`figures/nearfield.py`](figures/nearfield.py) | a few minutes |
+| Figure 6, Table 2: convergence on the cube | [`figures/cube_convergence.py`](figures/cube_convergence.py) | 12 minutes, Bempp 8 more |
+| Figure 7, Table 5: other waves and larger cubes | [`figures/cube_cases.py`](figures/cube_cases.py) | 45 to 90 minutes per case (`--run CASE`: `k1`, `k1o`, `k2`, `k3`; `--scan CASE`: 2 hours) |
+| Figure 8: the regular tetrahedron | [`figures/tetrahedron.py`](figures/tetrahedron.py) | 15 minutes |
+| Figure 10, Table 3: almond radar cross-section | [`figures/almond_rcs.py`](figures/almond_rcs.py) | 12 minutes |
+| Figure 11, Table 4: comparison with Bempp | [`figures/cost.py`](figures/cost.py) | 2 to 10 minutes per shape (`--run SHAPE`: `sphere`, `torus`, `almond`, `almond35`) |
+| Figure 12: the field near the surface | [`figures/nearfield.py`](figures/nearfield.py) | 2 minutes |
 | Graphical abstract | [`figures/graphical_abstract.py`](figures/graphical_abstract.py) | seconds (from `data/`) |
 | Tables 2, 4, 5, C.1 | [`figures/tables.py`](figures/tables.py) | seconds |
 | Table A.1, vertex exponents | [`figures/cone_exponents.py`](figures/cone_exponents.py) | 5 minutes |
@@ -103,9 +103,8 @@ involve Bempp need `pip install -e ".[bempp]"`.
 Table 1 (the edge exponents) is derived in Section 5.2 and needs no code.
 
 Accuracy does not depend on the machine, but times do. For a fair comparison
-we ran both codes on the same machine with nothing else running; on the cube we
-ran each configuration of both codes twice, alternately, and kept the smaller
-time.
+we ran both codes on the same idle machine across two alternating passes and
+kept the smaller time of each configuration.
 
 ## What is where
 
