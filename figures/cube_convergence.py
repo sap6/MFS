@@ -72,7 +72,7 @@ print(f"error = {np.exp(p[1]):.3g} exp({p[0]:.4f} sqrt(N_u)), largest deviation 
       f"{np.exp(np.abs(np.log(c[:, 1]) - np.polyval(p, np.sqrt(c[:, 0]))).max()):.2f}")
 
 # The figure
-fig, ax = plt.subplots(figsize=(5.2, 3.8))
+fig, ax = plt.subplots(figsize=(5.2, 3.85))
 xs = np.array([np.sqrt(curves["dense"][0, 0]) - 4, np.sqrt(curves["dense"][-1, 0]) + 8])
 ax.semilogy(xs, np.exp(np.polyval(p, xs)), color=MUTED, lw=0.8, zorder=1)
 ax.annotate(rf"${np.exp(p[1]):.2f}\,\exp({p[0]:.4f}\sqrt{{N_u}})$", (153, 5.5e-4), fontsize=8.5, color=MUTED)
@@ -84,6 +84,15 @@ for key, (col, mk, ls, label) in {"plain": (PURPLE, "^", ":", "plain MFS (inner 
                                   "graded": (RUST, "X", (0, (3, 1)), "Bempp, graded meshes (best setting per mesh)")}.items():
     v = curves[key]
     curve(ax, np.sqrt(v[:, 0]), v[:, 1], col, mk, ls, label, lw=1.4, logx=False, zorder=3)
+
+# Level callouts linking markers to Table 2
+d0_xy = (np.sqrt(curves["dense"][0, 0]), curves["dense"][0, 1])
+d1_xy = (np.sqrt(curves["dense"][-1, 0]), curves["dense"][-1, 1])
+t1_xy = (np.sqrt(curves["tail"][-1, 0]), curves["tail"][-1, 1])
+ax.text(d0_xy[0] + 2.5, d0_xy[1] * 1.18, "$J=4$", fontsize=7.5, color=BLUE)
+ax.text(d1_xy[0] + 2.5, d1_xy[1] * 1.15, "$J=11$", fontsize=7.5, color=BLUE)
+ax.text(t1_xy[0] + 2.5, t1_xy[1] * 1.15, "$J=9$", fontsize=7.4, color=NAVY)
+
 ax.set(xlabel=r"$\sqrt{N_u}$,  $N_u$ = unknowns of the whole cube", ylabel="relative error of the scattered field")
 ax.set_title(r"unit cube, $k = 2\pi$: error against $\sqrt{N_u}$", loc="left", fontsize=8.5)
 ax.legend(frameon=False, fontsize=8, loc="upper center", bbox_to_anchor=(0.5, -0.18), ncol=2, columnspacing=1.0)

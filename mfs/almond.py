@@ -10,11 +10,11 @@ exponents of the tip cone (Appendix A).
 The almond is symmetric under y → -y and z → -z, so a wave splits into four
 parity classes, each solved on a quarter of the body.
 """
+import math
 import numpy as np
 from numba import njit, prange
 
 from .core import class_part, cross_sections, factor, sphere_rule, tangent_basis
-from .lines import dipoles
 
 L = 0.2524                                                  # length [m]
 T0, T1 = -0.416667, 0.58333                                 # rear end and tip, in units of L
@@ -28,6 +28,8 @@ REFL = np.array([[1.0, 1, 1], [1, -1, 1], [1, 1, -1], [1, -1, -1]])   # the imag
 # potential: electric type E = ∇(r^nu Y), magnetic type H = ∇(r^tau Z) (mfs.cone, Table A.1)
 CONE_NU = {(1, 1): (0.29959, 1.46427), (-1, 1): (1.10372, 2.24730), (1, -1): (1.04120, 2.10576), (-1, -1): (2.01295, 3.04849)}
 CONE_TAU = {(1, 1): (1.05604, 1.98580), (-1, 1): (0.96803, 1.96545), (1, -1): (0.87905, 1.75454), (-1, -1): (1.97538, 2.90094)}
+
+_COLLOC_CACHE = {}
 
 
 def semi_axes(x):
@@ -47,27 +49,162 @@ def midplane_comps(sz):
 
 @njit(parallel=True, fastmath=True, cache=True)
 def _block(x, T, y, comps, sy, k, out):
-    """out[m * nc + a, 3 * n + i]: row a of T[m] against dipole comps[i] at y[n], summed over the four images"""
-    nc, tmul = T.shape[1], 1 if T.shape[0] > 1 else 0
-    for m in prange(x.shape[0]):
-        Ge, Gm = np.empty((nc, 3), np.complex128), np.empty((nc, 3), np.complex128)
-        Tm, e = np.empty((nc, 3)), np.empty(3)
-        for a in range(nc):
-            out[m * nc + a, :] = 0.0
-        for g in range(2):                                      # y → ±y; the images across z = 0 repeat these (factor 2 below)
+    """out[m * nc + a, 3 * n + i]: row a of T[m] against dipole comps[i] at y[n], assembled columnwise in F-order"""
+    M, nc, N = x.shape[0], T.shape[1], y.shape[0]
+    tmul = 1 if T.shape[0] > 1 else 0
+    inv_k = 1.0 / k
+    c0, c1, c2 = comps[0], comps[1], comps[2]
+    for n in prange(N):
+        yn0, yn1, yn2 = y[n, 0], y[n, 1], y[n, 2]
+        col = 3 * n
+        for m in range(M):
+            mt = m * tmul
+            row = m * nc
+            dx0_p = x[m, 0] - yn0
+            dx1_p = x[m, 1] - yn1
+            dx2_p = x[m, 2] - yn2
+            r2_p = dx0_p * dx0_p + dx1_p * dx1_p + dx2_p * dx2_p
+            ir_p = 1.0 / np.sqrt(r2_p)
+            kr_p = k * (r2_p * ir_p)
+            ik_p = ir_p * inv_k
+            ik2_p = ik_p * ik_p
+            ph_p = (np.cos(kr_p) + 1j * np.sin(kr_p)) * ir_p
+            fI_p = (1.0 + 1j * ik_p - ik2_p) * ph_p
+            fR_p = (1.0 + 3j * ik_p - 3.0 * ik2_p) * ph_p * (ir_p * ir_p)
+            fm_p = (1j - ik_p) * ph_p * ir_p
+
+            dx1_m = -x[m, 1] - yn1
+            r2_m = dx0_p * dx0_p + dx1_m * dx1_m + dx2_p * dx2_p
+            ir_m = 1.0 / np.sqrt(r2_m)
+            kr_m = k * (r2_m * ir_m)
+            ik_m = ir_m * inv_k
+            ik2_m = ik_m * ik_m
+            ph_m = (np.cos(kr_m) + 1j * np.sin(kr_m)) * ir_m
+            fI_m = (1.0 + 1j * ik_m - ik2_m) * ph_m
+            fR_m = (1.0 + 3j * ik_m - 3.0 * ik2_m) * ph_m * (ir_m * ir_m)
+            fm_m = (1j - ik_m) * ph_m * ir_m
+            sg_m = 2.0 * sy
+
+            for a in range(nc):
+                t0, t1, t2 = T[mt, a, 0], T[mt, a, 1], T[mt, a, 2]
+                td_p = fR_p * (t0 * dx0_p + t1 * dx1_p + t2 * dx2_p)
+                ge0 = 2.0 * (fI_p * t0 - td_p * dx0_p)
+                ge1 = 2.0 * (fI_p * t1 - td_p * dx1_p)
+                ge2 = 2.0 * (fI_p * t2 - td_p * dx2_p)
+                gm0 = 2.0 * fm_p * (t1 * dx2_p - t2 * dx1_p)
+                gm1 = 2.0 * fm_p * (t2 * dx0_p - t0 * dx2_p)
+                gm2 = 2.0 * fm_p * (t0 * dx1_p - t1 * dx0_p)
+
+                t1m = -t1
+                td_m = fR_m * (t0 * dx0_p + t1m * dx1_m + t2 * dx2_p)
+                ge0 += sg_m * (fI_m * t0 - td_m * dx0_p)
+                ge1 += sg_m * (fI_m * t1m - td_m * dx1_m)
+                ge2 += sg_m * (fI_m * t2 - td_m * dx2_p)
+                gm0 += sg_m * fm_m * (t1m * dx2_p - t2 * dx1_m)
+                gm1 += sg_m * fm_m * (t2 * dx0_p - t0 * dx2_p)
+                gm2 += sg_m * fm_m * (t0 * dx1_m - t1m * dx0_p)
+
+                out[row + a, col] = ge0 if c0 == 0 else (ge1 if c0 == 1 else (ge2 if c0 == 2 else (gm0 if c0 == 3 else (gm1 if c0 == 4 else gm2))))
+                out[row + a, col + 1] = ge0 if c1 == 0 else (ge1 if c1 == 1 else (ge2 if c1 == 2 else (gm0 if c1 == 3 else (gm1 if c1 == 4 else gm2))))
+                out[row + a, col + 2] = ge0 if c2 == 0 else (ge1 if c2 == 1 else (ge2 if c2 == 2 else (gm0 if c2 == 3 else (gm1 if c2 == 4 else gm2))))
+
+
+@njit(parallel=True, fastmath=True, cache=True)
+def _eval_midplane(pts, y, c_vec, comps, sy, k, out):
+    """Direct evaluation of symmetrised mid-plane dipoles at pts (P, 3) without forming matrix A"""
+    P, N = pts.shape[0], y.shape[0]
+    inv_k = 1.0 / k
+    c0, c1, c2 = comps[0], comps[1], comps[2]
+    for m in prange(P):
+        s0, s1, s2 = 0.0j, 0.0j, 0.0j
+        for g in range(2):
+            ry = 1.0 if g == 0 else -1.0
             sg = 2.0 if g == 0 else 2.0 * sy
-            for q in range(3):
-                for a in range(nc):
-                    Tm[a, q] = T[m * tmul, a, q] * REFL[g, q]
-            for n in range(y.shape[0]):
-                for q in range(3):
-                    e[q] = x[m, q] * REFL[g, q] - y[n, q]
-                r = np.sqrt(e[0] * e[0] + e[1] * e[1] + e[2] * e[2])
-                e /= r
-                dipoles(Tm, e, k, r, Ge, Gm)
-                for i in range(comps.shape[0]):
-                    for a in range(nc):
-                        out[m * nc + a, 3 * n + i] += sg * (Ge[a, comps[i]] if comps[i] < 3 else Gm[a, comps[i] - 3])
+            px0, px1, px2 = pts[m, 0], pts[m, 1] * ry, pts[m, 2]
+            e0, e1, e2 = 0.0j, 0.0j, 0.0j
+            for n in range(N):
+                dx0 = px0 - y[n, 0]
+                dx1 = px1 - y[n, 1]
+                dx2 = px2 - y[n, 2]
+                r2 = dx0 * dx0 + dx1 * dx1 + dx2 * dx2
+                inv_r = 1.0 / np.sqrt(r2)
+                kr = k * (r2 * inv_r)
+                ik = inv_r * inv_k
+                ik2 = ik * ik
+                ph = (np.cos(kr) + 1j * np.sin(kr)) * inv_r
+                fI = (1.0 + 1j * ik - ik2) * ph
+                fR = (1.0 + 3j * ik - 3.0 * ik2) * ph * (inv_r * inv_r)
+                fm = (1j - ik) * ph * inv_r
+                ax, ay, az, bx, by, bz = 0.0j, 0.0j, 0.0j, 0.0j, 0.0j, 0.0j
+                for idx, cid in ((0, c0), (1, c1), (2, c2)):
+                    v = c_vec[n, idx]
+                    if cid == 0:
+                        ax = v
+                    elif cid == 1:
+                        ay = v
+                    elif cid == 2:
+                        az = v
+                    elif cid == 3:
+                        bx = v
+                    elif cid == 4:
+                        by = v
+                    else:
+                        bz = v
+                da = fR * (dx0 * ax + dx1 * ay + dx2 * az)
+                e0 += fI * ax - da * dx0 + fm * (dx1 * bz - dx2 * by)
+                e1 += fI * ay - da * dx1 + fm * (dx2 * bx - dx0 * bz)
+                e2 += fI * az - da * dx2 + fm * (dx0 * by - dx1 * bx)
+            s0 += sg * e0
+            s1 += sg * ry * e1
+            s2 += sg * e2
+        out[m, 0], out[m, 1], out[m, 2] = s0, s1, s2
+
+
+@njit(parallel=True, fastmath=True, cache=True)
+def _far_midplane(dirs, y, c_mat, comps, sy, k, diag, out):
+    """Exact r -> inf far-field pattern for W waves; if diag=True, dirs has shape (W, 3) and out has shape (W, 3)"""
+    D, N, W = dirs.shape[0], y.shape[0], c_mat.shape[2]
+    c0, c1, c2 = comps[0], comps[1], comps[2]
+    for m in prange(D):
+        w0 = m if diag else 0
+        w1 = m + 1 if diag else W
+        for w in range(w0, w1):
+            s0, s1, s2 = 0.0j, 0.0j, 0.0j
+            for g in range(2):
+                ry = 1.0 if g == 0 else -1.0
+                sg = 2.0 if g == 0 else 2.0 * sy
+                d0, d1, d2 = dirs[m, 0], dirs[m, 1] * ry, dirs[m, 2]
+                e0, e1, e2 = 0.0j, 0.0j, 0.0j
+                for n in range(N):
+                    ang = -k * (d0 * y[n, 0] + d1 * y[n, 1] + d2 * y[n, 2])
+                    ph = np.cos(ang) + 1j * np.sin(ang)
+                    ax, ay, az, bx, by, bz = 0.0j, 0.0j, 0.0j, 0.0j, 0.0j, 0.0j
+                    for idx, cid in ((0, c0), (1, c1), (2, c2)):
+                        v = c_mat[n, idx, w]
+                        if cid == 0:
+                            ax = v
+                        elif cid == 1:
+                            ay = v
+                        elif cid == 2:
+                            az = v
+                        elif cid == 3:
+                            bx = v
+                        elif cid == 4:
+                            by = v
+                        else:
+                            bz = v
+                    da = d0 * ax + d1 * ay + d2 * az
+                    fm = 1j * ph
+                    e0 += ph * (ax - da * d0) + fm * (d1 * bz - d2 * by)
+                    e1 += ph * (ay - da * d1) + fm * (d2 * bx - d0 * bz)
+                    e2 += ph * (az - da * d2) + fm * (d0 * by - d1 * bx)
+                s0 += sg * e0
+                s1 += sg * ry * e1
+                s2 += sg * e2
+            if diag:
+                out[m, 0, 0], out[m, 1, 0], out[m, 2, 0] = s0, s1, s2
+            else:
+                out[m, 0, w], out[m, 1, w], out[m, 2, w] = s0, s1, s2
 
 
 def tail_weights(tail, cls, n_e=2, n_m=1):
@@ -93,6 +230,18 @@ def tail_weights(tail, cls, n_e=2, n_m=1):
     return np.hstack(cols)
 
 
+def _expand_sources(y, c, cls, tail):
+    nf = 3 * len(y)
+    c2 = c[:, None] if c.ndim == 1 else c
+    if tail is None or not len(tail[0]):
+        return np.ascontiguousarray(y, dtype=float), np.ascontiguousarray(c2.reshape(len(y), 3, -1))
+    W = tail_weights(tail, cls)
+    ct = W @ c2[nf:]
+    y_all = np.ascontiguousarray(np.vstack((y, tail[0])), dtype=float)
+    c_all = np.ascontiguousarray(np.concatenate((c2[:nf], ct), axis=0).reshape(len(y_all), 3, -1))
+    return y_all, c_all
+
+
 def matrix(x, y, k, T=None, cls=(-1, 1), tail=None, batch=1024):
     """
     Fields of the dipoles at y on the mid-plane (and the tip tail, if given), symmetrised for cls
@@ -105,14 +254,14 @@ def matrix(x, y, k, T=None, cls=(-1, 1), tail=None, batch=1024):
     nc, nf = T_.shape[1], len(y) * len(comps)
     W = np.zeros((0, 0)) if tail is None else tail_weights(tail, cls)
     A = np.empty((len(x) * nc, nf + W.shape[1]), complex, order="F")
-    _block(x, T_, y, comps, float(cls[0]), k, A[:, :nf])
+    _block(x, T_, y, comps, float(cls[0]), float(k), A[:, :nf])
     if W.shape[1]:
         tpts = np.ascontiguousarray(tail[0])
-        buf = np.empty((min(len(x), batch) * nc, 3 * len(tpts)), complex)
+        buf = np.empty((min(len(x), batch) * nc, 3 * len(tpts)), complex, order="F")
         for i in range(0, len(x), batch):
             j = min(i + batch, len(x))
-            gb = buf[:(j - i) * nc]
-            _block(x[i:j], T_[i:j] if T_.shape[0] > 1 else T_, tpts, comps, float(cls[0]), k, gb)
+            gb = buf if (j - i) * nc == buf.shape[0] else np.empty(((j - i) * nc, 3 * len(tpts)), complex, order="F")
+            _block(x[i:j], T_[i:j] if T_.shape[0] > 1 else T_, tpts, comps, float(cls[0]), float(k), gb)
             A[i * nc:j * nc, nf:] = gb @ W
     return A
 
@@ -178,32 +327,71 @@ def surface_point(u, phi, rear):
     return np.stack((x * np.ones_like(phi), a * np.cos(phi), b * np.sin(phi)), axis=-1)
 
 
+def _count_collocation(s, hmax, tip_cut=0.002, end_cut=0.02):
+    """Fast scalar count of collocation points without forming surface arrays or finite-difference normals"""
+    rings, phi = [], 0.0
+    while phi < math.pi / 2:
+        sp, cp = math.sin(phi), math.cos(phi)
+        sp9, cp9 = math.sin(phi + 1e-9), math.cos(phi + 1e-9)
+        rd = math.sqrt((sp9 / 3.0) ** 2 + max(0.0, cp9 - ETA_F) ** 2)
+        dphi = min(s * rd / math.sqrt(sp * sp + cp * cp / 9.0), hmax / B_, math.pi / 2 - phi)
+        rings.append((phi + 0.5 * dphi, dphi))
+        phi += dphi
+    cnt = 0
+    for phi, _ in rings:
+        sp, cp = math.sin(phi), math.cos(phi)
+        rd = math.sqrt((sp / 3.0) ** 2 + max(0.0, cp - ETA_F) ** 2)
+        cf = cp * cp + sp * sp / 9.0
+        for rear in (False, True):
+            u, u_end = 0.0, ((math.pi / 2 - end_cut) if rear else L * (T1 - tip_cut))
+            while u < u_end:
+                if rear:
+                    cu, su = math.cos(u), math.sin(u)
+                    a = B_ * cu
+                    metric = math.sqrt((A_ * cu) ** 2 + (B_ * su) ** 2 * cf)
+                else:
+                    t = u / L
+                    a = 4.83345 * (math.sqrt(max(0.0, 1.0 - (t / 2.08335) ** 2)) - 0.96) * L
+                    metric = 1.0
+                du = min(min(s * a * rd, hmax) / metric, u_end - u)
+                cnt += 1
+                u += du
+    return cnt
+
+
 def collocation(s=0.35, hmax=0.012, tip_cut=0.002, end_cut=0.02):
     """
     Boundary points that refine towards the rim, as the sources do
       Returns points (M, 3), area weights (M,) and outward normals (M, 3)
     """
-    def rel_dist(phi):                                          # distance to the focal curve, relative to the half-width
-        return np.sqrt((np.sin(phi) / 3) ** 2 + np.maximum(0.0, np.cos(phi) - ETA_F) ** 2)
+    key = (round(float(s), 12), round(float(hmax), 12), tip_cut, end_cut)
+    if key in _COLLOC_CACHE:
+        return _COLLOC_CACHE[key]
 
-    # Angles around the cross-section, the same for every x (every section is a 3:1 ellipse)
+    def rel_dist(phi):                                          # distance to the focal curve, relative to the half-width
+        return math.sqrt((math.sin(phi) / 3.0) ** 2 + max(0.0, math.cos(phi) - ETA_F) ** 2)
+
     rings, phi = [], 0.0
-    while phi < np.pi / 2:
-        dphi = min(s * rel_dist(phi + 1e-9) / np.sqrt(np.sin(phi) ** 2 + np.cos(phi) ** 2 / 9), hmax / B_, np.pi / 2 - phi)
+    while phi < math.pi / 2:
+        sp, cp = math.sin(phi), math.cos(phi)
+        dphi = min(s * rel_dist(phi + 1e-9) / math.sqrt(sp * sp + cp * cp / 9.0), hmax / B_, math.pi / 2 - phi)
         rings.append((phi + 0.5 * dphi, dphi))
         phi += dphi
 
-    # Along the body, in the front and in the rear half, with outward normals by finite differences
-    pts, wts, nrm, e = [], [], [], 1e-7                         # e: step of the finite differences
+    pts, wts, nrm, e = [], [], [], 1e-7
     for phi, dphi in rings:
-        rd, cf = rel_dist(phi), np.cos(phi) ** 2 + np.sin(phi) ** 2 / 9
+        rd, cf = rel_dist(phi), math.cos(phi) ** 2 + math.sin(phi) ** 2 / 9.0
         for rear in (False, True):
-            u, u_end, ums, dus = 0.0, ((np.pi / 2 - end_cut) if rear else L * (T1 - tip_cut)), [], []
+            u, u_end, ums, dus = 0.0, ((math.pi / 2 - end_cut) if rear else L * (T1 - tip_cut)), [], []
             while u < u_end:
                 if rear:
-                    a, metric = B_ * np.cos(u), np.sqrt((A_ * np.cos(u)) ** 2 + (B_ * np.sin(u)) ** 2 * cf)
+                    cu, su = math.cos(u), math.sin(u)
+                    a = B_ * cu
+                    metric = math.sqrt((A_ * cu) ** 2 + (B_ * su) ** 2 * cf)
                 else:
-                    a, metric = float(semi_axes(u)[0]), 1.0
+                    t = u / L
+                    a = max(0.0, 4.83345 * (math.sqrt(max(0.0, 1.0 - (t / 2.08335) ** 2)) - 0.96) * L)
+                    metric = 1.0
                 du = min(min(s * a * rd, hmax) / metric, u_end - u)
                 ums.append(u + 0.5 * du)
                 dus.append(du)
@@ -217,7 +405,11 @@ def collocation(s=0.35, hmax=0.012, tip_cut=0.002, end_cut=0.02):
             pts.append(surface_point(um, ph, rear))
             wts.append(ln * du * dphi)
             nrm.append((n if rear else -n) / ln[:, None])       # u runs towards -x on the rear and +x on the front
-    return np.vstack(pts), np.concatenate(wts), np.vstack(nrm)
+    out = (np.vstack(pts), np.concatenate(wts), np.vstack(nrm))
+    if len(_COLLOC_CACHE) >= 8:
+        _COLLOC_CACHE.clear()
+    _COLLOC_CACHE[key] = out
+    return out
 
 
 def solve_class(k, y, cls, d, p, tail=None, s_col=0.35, ratio=2.5):
@@ -225,12 +417,11 @@ def solve_class(k, y, cls, d, p, tail=None, s_col=0.35, ratio=2.5):
     Least-squares MFS for one parity class and any number of waves (d, p), shapes (W, 3)
       Returns the coefficients (unknowns, W), the relative boundary residual of each wave, and the sizes
     """
-    # Boundary points, with at least ratio equations per free dipole unknown
     hmax = min(0.012, 2 * np.pi / k / 5)
+    m0 = _count_collocation(s_col, hmax)
+    if 2 * m0 < ratio * 3 * len(y):
+        s_col *= np.sqrt(2 * m0 / (ratio * 3 * len(y)))
     x, w, nrm = collocation(s_col, hmax)
-    if 2 * len(x) < ratio * 3 * len(y):
-        s_col *= np.sqrt(2 * len(x) / (ratio * 3 * len(y)))
-        x, w, nrm = collocation(s_col, hmax)
     T = tangent_basis(nrm)
     sw = np.sqrt(w / w.sum())
 
@@ -244,10 +435,13 @@ def solve_class(k, y, cls, d, p, tail=None, s_col=0.35, ratio=2.5):
     return c, res / np.maximum(np.linalg.norm(b, axis=0), 1e-300), A.shape
 
 
-def far(k, y, c, dirs, cls, tail=None, rfar=1.0e5):
-    """Far-field pattern F (E ~ F e^{ikr}/r) in the directions dirs, for the coefficients c of one class"""
-    A = matrix(rfar * dirs, y, k, None, cls, tail)
-    return (A @ c).reshape(len(dirs), 3, *c.shape[1:]) * rfar * np.exp(-1j * k * rfar)
+def far(k, y, c, dirs, cls, tail=None):
+    """Exact far-field pattern F (E ~ F e^{ikr}/r) in the directions dirs, for the coefficients c of one class"""
+    dirs = np.ascontiguousarray(dirs, dtype=float)
+    y_all, c_all = _expand_sources(y, c, cls, tail)
+    out = np.empty((len(dirs), 3, c_all.shape[2]), complex)
+    _far_midplane(dirs, y_all, c_all, midplane_comps(cls[1]), float(cls[0]), float(k), False, out)
+    return out[:, :, 0] if c.ndim == 1 else out
 
 
 def nose_on(k, n_mid, n_F, pts=None, s=0.7, s_col=0.35, hmax=np.inf):
@@ -259,7 +453,13 @@ def nose_on(k, n_mid, n_F, pts=None, s=0.7, s_col=0.35, hmax=np.inf):
     d, p = np.array([[-1.0, 0, 0]]), np.array([[0.0, 1, 0]])
     y, tail = source_rows(n_mid, n_F, s=s, hmax=hmax)
     c, _, shape = solve_class(k, y, (-1, 1), d, p, tail, s_col=s_col)
-    E = None if pts is None else (matrix(pts, y, k, cls=(-1, 1), tail=tail) @ c[:, 0]).reshape(-1, 3)
+    if pts is None:
+        E = None
+    else:
+        y_all, c_all = _expand_sources(y, c[:, 0], (-1, 1), tail)
+        E = np.empty((len(pts), 3), complex)
+        _eval_midplane(np.ascontiguousarray(pts, dtype=float), y_all, c_all[:, :, 0],
+                       midplane_comps(1), -1.0, float(k), E)
     return (y, tail), c[:, 0], E, shape
 
 
@@ -283,14 +483,17 @@ def rcs(freq, n_mid=6, n_F=3, step=0.5, s=0.5, s_col=0.3):
     y, tail = source_rows(n_mid, n_F, s=s, hmax=hmax)
     phi = np.radians(np.arange(0.0, 180.0 + 1e-9, step))
     d = -np.column_stack((np.cos(phi), np.sin(phi), 0 * phi))
+    back = np.ascontiguousarray(-d)
     out = {"phi_deg": np.degrees(phi)}
     p_hh = np.column_stack((-np.sin(phi), np.cos(phi), 0 * phi))     # electric field in the plane of the almond
     p_vv = np.tile([0.0, 0, 1], (len(phi), 1))                        # electric field along z
+    F_diag = np.empty((len(phi), 3, 1), complex)
     for pol, p, sz in (("HH", p_hh, 1), ("VV", p_vv, -1)):
         amp = 0
         for sy in (1, -1):
             c, _, _ = solve_class(k, y, (sy, sz), d, p, tail, s_col)
-            F = far(k, y, c, -d, (sy, sz), tail)                   # (waves, 3, waves): backscatter of wave n is F[n, :, n]
-            amp = amp + np.einsum("na,nan->n", p, F)
+            y_all, c_all = _expand_sources(y, c, (sy, sz), tail)
+            _far_midplane(back, y_all, c_all, midplane_comps(sz), float(sy), float(k), True, F_diag)
+            amp = amp + np.einsum("na,na->n", p, F_diag[:, :, 0])
         out["sigma_" + pol] = 4 * np.pi * np.abs(amp) ** 2
     return out

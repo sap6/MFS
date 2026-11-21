@@ -96,12 +96,15 @@ panels = (("k1o", "(a) $k = 2\\pi$, general wave"), ("k2", "(b) $k = 4\\pi$, two
 for ax, (case, title) in zip(axs, panels):
     res = np.load(data(f"cube_cases_{case}.npz"))
     mfs = res["mfs"]
+    m2 = mfs[mfs[:, 0] == 2]
     for pts, col, mk, ls, zo, label in (
-        (mfs[mfs[:, 0] == 2], BLUE, "o", "-", 4, "MFS (two depths per octave)"),
+        (m2, BLUE, "o", "-", 4, "MFS (two depths per octave)"),
         (mfs[mfs[:, 0] == 1], NAVY, "h", (0, (6, 1.5)), 3, "MFS (one depth per octave)"),
         (res["env"][res["env"][:, 6] < 2.5e-2], RUST, "X", (0, (3, 1)), 2, "Bempp, graded, with symmetry"),
     ):
         curve(ax, pts[:, 5], pts[:, 6], col, mk, ls, label, 4.8, 1.4, 0.6, zorder=zo)
+    ax.text(m2[0, 5] * 1.18, m2[0, 6] * 1.12, f"$J={int(m2[0, 1])}$", fontsize=7.0, color=BLUE)
+    ax.text(m2[-1, 5] * 1.18, m2[-1, 6] * 0.92, f"$J={int(m2[-1, 1])}$", fontsize=7.0, color=BLUE, va="center")
     ax.set_title(title, loc="left", fontsize=8.5)
     ax.set_xlabel("wall time [s]  (2 cores)")
     ax.xaxis.set_minor_formatter(plt.NullFormatter())

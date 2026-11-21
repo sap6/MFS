@@ -1,41 +1,69 @@
 """
 Graphical abstract for the Journal of Computational Physics:
-  (a) Source placement on the medial skeleton of a polyhedral edge, with the singular tail;
+  (a) Source & graded boundary placement on the medial skeleton of a polyhedral edge, with corner zoom;
   (b) Root-exponential convergence on convex polyhedra (cube and regular tetrahedron) vs inner-surface stall;
   (c) Monostatic radar cross-section of the NASA almond at 10.25 GHz (8.6 wavelengths) vs reference.
 
     python figures/graphical_abstract.py
 """
 import numpy as np
+from matplotlib.patches import ConnectionPatch, Rectangle
 from style import BLUE, BODY, GREEN, INK, MUTED, NAVY, ORANGE, PURPLE, RUST, curve, data, finish, plt, rel
 
 from mfs import cube, tetrahedron
 
-fig, axs = plt.subplots(1, 3, figsize=(8.1, 2.85), gridspec_kw=dict(width_ratios=[0.95, 1.18, 1.18]))
+fig, axs = plt.subplots(1, 3, figsize=(8.2, 2.95), gridspec_kw=dict(width_ratios=[1.02, 1.16, 1.16]))
 
-# (a) Skeleton wall and singular tail at an edge
+# (a) Skeleton wall, graded boundary collocation, and x16 corner zoom resolving lightning + tail
 ax = axs[0]
 H = cube.H
 layout = cube.Cube(5, classes=[])
 depths = layout.depths
 tail = depths[-1] * 0.5 ** np.arange(1, 7)
-ax.fill([0, H, H, 0], [0, 0, H, H], color=BODY, lw=0)
-ax.plot([0, H, H], [H, H, 0], color=INK, lw=1.25, zorder=3)
-ax.plot([0, H], [0, H], color=MUTED, lw=0.8, ls=(0, (4, 3)), zorder=2)
+nodes = np.unique(layout.x[layout.x[:, 0] < H, 0])
+ax.fill([0, H, H, 0], [0, 0, H, H], color=BODY, lw=0, zorder=0)
+ax.plot([0, H, H], [H, H, 0], color=INK, lw=1.25, zorder=2)
+ax.plot([0, H], [0, H], color=MUTED, lw=0.8, ls=(0, (4, 3)), zorder=1)
+ax.plot(nodes, np.full_like(nodes, H + 0.006), ".", color=INK, ms=2.1, zorder=3, label=r"graded $\Gamma$ nodes")
+ax.plot(np.full_like(nodes, H + 0.006), nodes, ".", color=INK, ms=2.1, zorder=3)
+
 c = np.sqrt(0.5)
-ax.plot(H - depths * c, H - depths * c, "o", color=BLUE, ms=4.0, mec="white", mew=0.45, zorder=4, label="free lines")
-ax.plot(H - tail * c, H - tail * c, "o", mfc="white", mec=ORANGE, ms=3.4, mew=0.85, zorder=5, label=r"tail ($r^e$)")
+ax.plot(H - depths * c, H - depths * c, "o", color=BLUE, ms=3.9, mec="white", mew=0.45, zorder=4, label="free lines")
+ax.plot(H - tail * c, H - tail * c, "o", mfc="white", mec=ORANGE, ms=3.2, mew=0.8, zorder=5, label=r"tail ($r^e$)")
 s = np.array([0.075, 0.225])
-ax.plot(s, np.full_like(s, H - 0.2), "s", color=GREEN, ms=3.6, mec="white", mew=0.4, zorder=3, label="base dipoles")
-ax.plot(np.full_like(s, H - 0.2), s, "s", color=GREEN, ms=3.6, mec="white", mew=0.4, zorder=3)
-ax.text(0.038, 0.080, r"skeleton $\mathcal{M}$", fontsize=7.8, color=MUTED, rotation=45, rotation_mode="anchor")
-ax.text(0.05, 0.42, "conductor", fontsize=7.8, color=MUTED)
-ax.text(0.49, 0.515, "edge", fontsize=7.8, color=INK, ha="right")
-ax.set(xlim=(0, 0.56), ylim=(0, 0.56), aspect="equal", xticks=[0, 0.25, 0.5], yticks=[0, 0.25, 0.5],
+ax.plot(s, np.full_like(s, H - 0.2), "s", color=GREEN, ms=3.5, mec="white", mew=0.4, zorder=3, label="base dipoles")
+ax.plot(np.full_like(s, H - 0.2), s, "s", color=GREEN, ms=3.5, mec="white", mew=0.4, zorder=3)
+
+zw = 0.032
+ax.add_patch(Rectangle((H - zw, H - zw), zw + 0.005, zw + 0.005, fill=False, edgecolor=RUST, lw=0.7, zorder=6))
+ins = ax.inset_axes([0.04, 0.45, 0.40, 0.40])
+ins.set_facecolor("white")
+ins.fill([H - zw, H, H, H - zw], [H - zw, H - zw, H, H], color="#f5f4f0", lw=0)
+ins.plot([H - zw, H, H], [H, H, H - zw], color=INK, lw=1.05, zorder=2)
+ins.plot([H - zw, H], [H - zw, H], color=MUTED, lw=0.65, ls=(0, (3, 2)), zorder=1)
+nd_z = nodes[nodes >= H - zw]
+ins.plot(nd_z, np.full_like(nd_z, H + 0.001), ".", color=INK, ms=2.3, zorder=3)
+ins.plot(np.full_like(nd_z, H + 0.001), nd_z, ".", color=INK, ms=2.3, zorder=3)
+d_z = depths[depths * c <= zw]
+t_z = tail[tail * c <= zw]
+ins.plot(H - d_z * c, H - d_z * c, "o", color=BLUE, ms=3.6, mec="white", mew=0.4, zorder=4)
+ins.plot(H - t_z * c, H - t_z * c, "o", mfc="white", mec=ORANGE, ms=3.0, mew=0.75, zorder=5)
+ins.set(xlim=(H - zw, H + 0.004), ylim=(H - zw, H + 0.004), xticks=[], yticks=[], aspect="equal")
+for sp in ins.spines.values():
+    sp.set_edgecolor(RUST)
+    sp.set_linewidth(0.65)
+ins.text(H - 0.93 * zw, H - 0.13 * zw, "zoom", fontsize=6.4, color=RUST, va="top")
+ax.add_patch(ConnectionPatch(xyA=(H - zw, H - 0.25 * zw), coordsA=ax.transData,
+                             xyB=(1.0, 0.72), coordsB=ins.transAxes, color=RUST, lw=0.5, ls=":"))
+
+ax.text(0.052, 0.088, r"skeleton $\mathcal{M}$", fontsize=7.4, color=MUTED, rotation=45, rotation_mode="anchor")
+ax.text(0.31, 0.07, "conductor", fontsize=7.4, color=MUTED)
+ax.text(0.503, 0.518, "edge", fontsize=7.6, color=INK)
+ax.set(xlim=(0, 0.565), ylim=(0, 0.565), aspect="equal", xticks=[0, 0.25, 0.5], yticks=[0, 0.25, 0.5],
        xlabel="$x$", ylabel="$y$")
 ax.set_title("1. Skeleton + singular tail", loc="left", fontsize=8.6, fontweight="bold")
-ax.legend(frameon=False, fontsize=7.3, loc="upper center", bbox_to_anchor=(0.5, -0.26), ncol=2,
-          handletextpad=0.3, columnspacing=0.7)
+ax.legend(frameon=False, fontsize=7.1, loc="upper center", bbox_to_anchor=(0.48, -0.28), ncol=2,
+          handletextpad=0.25, columnspacing=0.6)
 ax.grid(False)
 for sp in ("top", "right"):
     ax.spines[sp].set_visible(False)
@@ -64,8 +92,8 @@ curve(ax, np.sqrt(t_dense[:, 0]), t_dense[:, 1], NAVY, "D", "-.", "MFS, tetrahed
 curve(ax, np.sqrt(c_dense[:, 0]), c_dense[:, 1], BLUE, "o", "-", "MFS, cube", ms=4.3, lw=1.45, logx=False)
 ax.set(xlabel=r"$\sqrt{N_u}$ (whole-body unknowns)", ylabel="relative field error", ylim=(1e-5, 0.8))
 ax.set_title(r"2. Polyhedra ($k = 2\pi$): $\exp(-c\sqrt{N_u})$", loc="left", fontsize=8.6, fontweight="bold")
-ax.legend(frameon=False, fontsize=7.2, loc="upper center", bbox_to_anchor=(0.48, -0.26), ncol=2,
-          handlelength=1.6, handletextpad=0.35, columnspacing=0.7)
+ax.legend(frameon=False, fontsize=7.1, loc="upper center", bbox_to_anchor=(0.48, -0.28), ncol=2,
+          handlelength=1.6, handletextpad=0.35, columnspacing=0.65)
 
 # (c) NASA almond monostatic RCS at 10.25 GHz (8.6 wavelengths)
 ax = axs[2]
@@ -78,17 +106,17 @@ keep_v = np.isclose(np.round(d_vv[:, 2], 2) * 2, np.round(np.round(d_vv[:, 2], 2
 ref_vv = d_vv[keep_v, 3]
 
 ax.plot(phi, 10 * np.log10(ra["sigma_VV"]), "-", color=NAVY, lw=1.2, label="MFS VV (0.02 dB)", zorder=2)
-ax.plot(phi, ref_vv, ls=(0, (2.2, 1.6)), color=MUTED, lw=0.9, zorder=3)
+ax.plot(phi, ref_vv, ls=(0, (2.2, 1.6)), color=RUST, lw=0.9, label="Austin ref. VV", zorder=3)
 ax.plot(phi, 10 * np.log10(ra["sigma_HH"]), "-", color=BLUE, lw=1.25, label="MFS HH (0.14 dB)", zorder=4)
-ax.plot(phi, ref_hh, ls=(0, (2.2, 1.6)), color=ORANGE, lw=0.95, label="Austin ref. (398k)", zorder=5)
+ax.plot(phi, ref_hh, ls=(0, (2.2, 1.6)), color=ORANGE, lw=0.95, label="Austin ref. HH", zorder=5)
 ax.set(xlim=(0, 180), ylim=(-72, -16), xticks=[0, 60, 120, 180], xlabel="azimuth [deg]", ylabel="monostatic RCS [dBsm]")
 ax.set_title("3. NASA almond at 10.25 GHz", loc="left", fontsize=8.6, fontweight="bold")
-ax.legend(frameon=False, fontsize=7.2, loc="upper center", bbox_to_anchor=(0.48, -0.26), ncol=2,
-          handlelength=1.6, handletextpad=0.35, columnspacing=0.7)
+ax.legend(frameon=False, fontsize=7.1, loc="upper center", bbox_to_anchor=(0.48, -0.28), ncol=2,
+          handlelength=1.6, handletextpad=0.35, columnspacing=0.65)
 
 for ax in (axs[1], axs[2]):
     ax.grid(True, which="major", color="#e4e3df", lw=0.6)
     for sp in ("top", "right"):
         ax.spines[sp].set_visible(False)
-fig.subplots_adjust(left=0.06, right=0.99, top=0.89, bottom=0.28, wspace=0.34)
+fig.subplots_adjust(left=0.06, right=0.99, top=0.89, bottom=0.30, wspace=0.33)
 finish(fig, None, "fig_graphical_abstract", tight="tight")

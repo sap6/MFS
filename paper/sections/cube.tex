@@ -24,7 +24,7 @@ maps the segment to $[-1,1]$ and resolves every length scale from $d$ to $1$ nea
 \begin{figure}[htbp]
   \centering
   \includegraphics[width=\textwidth]{fig_cube_layout.pdf}
-  \caption{Source layout of the cube at level $J = 6$. (a) One quadrant of the cross-section through the middle of an edge: the lines, seen end on, sit on the bisector plane at the depths \eqref{eq:depths}; base points lie on an inner cube; boundary points on the two faces are graded towards the edge. (b) The depths on a logarithmic scale: free lines from $d_0$ down to $d_{\min}$, followed by the nine-line tail with fixed weights. (c) Physical coordinate $t(u)$ along a line ($|t|\le\tfrac12-d$ between the vertices at $t = \pm\tfrac12$), showing how uniform samples in $u$ cluster towards both ends as $d$ decreases.}
+  \caption{Source and boundary collocation layout of the cube at level $J = 6$. (a) One quadrant of the cross-section through the middle of an edge, with a $\times16$ corner zoom resolving the free lines ($\times 2^{-1/2}$), nine-line tail ($\times 1/2$), and four-node Gauss--Legendre boundary panels on $\Gamma$. (b) Matched logarithmic distance scale comparing the dyadically halving boundary panels on $\Gamma$ with the free and tail line depths on $\mathcal{M}$. (c) Stretched map $t(u)$ along an edge line ($|t|\le\tfrac12-d$), showing how uniform samples in $u$ project onto exponentially clustered nodes near both vertices $t = \pm\tfrac12$.}
   \label{fig:cubelayout}
 \end{figure}
 
@@ -47,7 +47,7 @@ To convert a sheet density $\rho^{e-1}$ into discrete line weights, note that th
 \begin{figure}[htbp]
   \centering
   \includegraphics[width=0.42\textwidth]{fig_wedge.pdf}
-  \caption{Cross-section normal to an edge of the cube. The exterior is the wedge $0<\phi<3\pi/2$, and $\psi$ is the angle from the exterior bisector. The field is continued into the conductor through each of the two faces (arrows), and the two continuations meet on the wall of the skeleton.}
+  \caption{Cross-section normal to an edge of the cube. Continuations across the graded faces $\phi = 0$ and $3\pi/2$ (arrows) meet on the skeleton wall $\psi = \pm\pi$, where geometric free ($\bullet$) and tail ($\circ$) lines discretise the jump currents across strips of width proportional to $\rho$.}
   \label{fig:wedge}
 \end{figure}
 
@@ -72,7 +72,7 @@ In the same way, the vertex dipoles continue along each body diagonal as a nine-
 \begin{figure}[htbp]
   \centering
   \includegraphics[width=0.68\textwidth]{fig_edge_residual.pdf}
-  \caption{Unit cube at $k = 2\pi$, $J = 6$: tangential residual on a face as a function of the distance to an edge (root mean square over five positions along the edge, away from the vertices), with and without the tail. The dotted lines mark the smallest free depth $d_{\min}$ and the end of the nine-line tail at $2^{-9}d_{\min}$.}
+  \caption{Unit cube at $k = 2\pi$, $J = 6$: tangential residual on a face against distance $\rho$ to an edge (root mean square over five positions along the edge, away from the vertices), with and without the tail; the markers along the top show the free depths ($2$ per octave down to $d_{\min}$) and the nine-line tail ($1$ per octave down to $2^{-9}d_{\min}$).}
   \label{fig:edgeresidual}
 \end{figure}
 

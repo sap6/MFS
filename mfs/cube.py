@@ -70,6 +70,11 @@ class Line:
         self.lam = np.log((2 * H - d) / d)
         r = 0.5 ** np.arange(1, 10) if tail else np.ones(1)      # depths relative to d
         self.pos = np.column_stack((H - d * r / np.sqrt(2), H - d * r / np.sqrt(2)))
+        self.mids = np.zeros((len(r), 3))
+        self.mids[:, self.b], self.mids[:, self.c] = self.pos[:, 0], self.pos[:, 1]
+        self.t_hat = np.zeros(3)
+        self.t_hat[ax] = 1.0
+        self.r_act = np.array([ri for ri in range(8) if REFL[ri, ax] > 0], np.int64)
         if tail:
             # Local frame (along the edge, along the bisector, normal to it) and weights r^e
             self.rot = np.zeros((3, 3))
@@ -119,11 +124,11 @@ class Cube:
       J = None gives the usual layout that fails: only the base grid, n_base × n_base per face
     """
     def __init__(self, J, k=2 * np.pi, q=2 ** -0.5, extra_modes=None, tails=True, classes=CLASSES, n_base=8):
-        self.k, self.classes = k, [tuple(c) for c in classes]
+        self.k, self.classes, self.tails = k, [tuple(c) for c in classes], bool(tails and J is not None)
         s = max(0.0, k * 2 * H / (2 * np.pi) - 1.0)              # wavelengths per side, minus one
         m = max(1, int(round(np.log(0.5) / np.log(q))))          # depths per octave (2 for q = 2^{-1/2}, 1 for q = 1/2)
         if J is None:
-            self.depths, tails, ex = np.zeros(0), False, 0.0
+            self.depths, ex = np.zeros(0), 0.0
         else:
             self.depths = 0.2 * q ** np.arange(m * J + 1)
             n0 = max(4, 2 * J - 4)
@@ -138,7 +143,7 @@ class Cube:
         self.pe, self.pm = np.concatenate((base, vertex)), vertex
         self.lines = [Line(ax, d, n0 + int(round(ex * 2 * (H - d))) + int(np.ceil(2 * np.log(2 * H / d))), kind)
                       for d in self.depths for ax in range(3) for kind in "em"]
-        if tails:                                                # the six lines at d_min (three axes, e and m) continue as tails
+        if self.tails:                                           # the six lines at d_min (three axes, e and m) continue as tails
             self.lines += [Line(ln.ax, ln.d, ln.n, ln.kind, tail=True) for ln in self.lines[-6:]]
             self.lines += [VertexTail(self.depths[-1], kind) for kind in "em"]
 
@@ -196,15 +201,16 @@ class Cube:
         # Lines, each electric line with its magnetic twin, and the vertex tails
         for i, ln in enumerate(self.lines):
             lo = 3 * self.slot0[1 + i]
-            if isinstance(ln, VertexTail):
-                for r, R in enumerate(REFL):
-                    B = ln.block(self.k, x * R, T * R)
-                    for j in range(len(classes)):
-                        A[j][:, cmap[j, lo]:cmap[j, lo] + 3] += sgn[j, r] * B
-            elif ln.kind == "e":                                 # the magnetic twin follows in the next 3 n columns
+            if isinstance(ln, Line) and ln.kind == "e":          # the magnetic twin follows in the next 3 n columns
                 w = None if ln.w is None else np.stack((ln.w, self.lines[i + 1].w))
-                lines.tree_add(x, T, REFL, ln.ax, ln.b, ln.c, ln.pos, ln.lam, ln.d, ln.n, self.k, H, A,
+                lines.line_add(x, T, REFL, ln.r_act, ln.t_hat, ln.mids, ln.lam, ln.d, ln.n, self.k, H, A,
                                cmap[:, lo:lo + 6 * ln.n], sgn, rot=ln.rot, w=w)
+        if self.tails:
+            vt_e, vt_m = self.lines[-2], self.lines[-1]
+            lo = 3 * self.slot0[-3]
+            lines.radial_tails_add(x, T, REFL, np.ascontiguousarray(vt_e.pts[None]),
+                                   np.ascontiguousarray(vt_e.w[None]), np.ascontiguousarray(vt_m.w[None]),
+                                   self.k, A, np.ascontiguousarray(cmap[:, lo]), np.ascontiguousarray(cmap[:, lo + 3]), sgn)
         return A
 
     def solve(self, d, p, only=None):
@@ -218,20 +224,81 @@ class Cube:
             r2, b2 = r2 + float(res) ** 2, b2 + np.linalg.norm(b) ** 2
         return coef, np.sqrt(r2 / b2), b2
 
-    def field(self, coef, pts, batch=1000):
-        """Scattered field at the points pts (P, 3), in batches"""
-        pts = np.asarray(pts, float)
-        if not len(pts):
-            return np.empty((0, 3), complex)
-        cl, out = list(coef), []
-        for i in range(0, len(pts), batch):
-            A = self.matrix(pts[i:i + batch], None, cl)
-            out.append(sum(A[j][:, :self.unknowns[c]] @ coef[c] for j, c in enumerate(cl)).reshape(-1, 3))
-        return np.concatenate(out)
+    def _unpack_points(self, cl, c_all):
+        ncls, ne, nm = len(cl), len(self.pe), len(self.pm)
+        n_vt = 9 if self.tails else 0
+        y_pt = np.vstack((self.pe, self.lines[-2].pts)) if n_vt else self.pe
+        alpha = np.zeros((ncls, ne + n_vt, 3), complex)
+        beta = np.zeros((ncls, ne + n_vt, 3), complex)
+        alpha[:, :ne] = c_all[:, :3 * ne].reshape(ncls, ne, 3)
+        if nm:
+            beta[:, ne - nm:ne] = c_all[:, 3 * ne:3 * (ne + nm)].reshape(ncls, nm, 3)
+        if n_vt:
+            vt_e, vt_m = self.lines[-2], self.lines[-1]
+            lo = 3 * self.slot0[-3]
+            alpha[:, ne:] = c_all[:, lo:lo + 3][:, None, :] * vt_e.w[None, :, None]
+            beta[:, ne:] = c_all[:, lo + 3:lo + 6][:, None, :] * vt_m.w[None, :, None]
+        return np.ascontiguousarray(y_pt), np.ascontiguousarray(alpha), np.ascontiguousarray(beta)
 
-    def far(self, coef, dirs, rfar=1.0e6):
-        """Far-field pattern F, with E ~ F e^{ikr}/r"""
-        return self.field(coef, rfar * dirs) * rfar * np.exp(-1j * self.k * rfar)
+    def field(self, coef, pts, batch=1000):
+        """Scattered field at the points pts (P, 3), evaluated directly from mode coefficients without forming A"""
+        pts = np.ascontiguousarray(pts, dtype=float)
+        if not len(pts) or not coef:
+            return np.zeros((len(pts), 3), complex)
+        cl = list(coef)
+        ncls = len(cl)
+        c_all = np.zeros((ncls, 3 * self.slot0[-1]), complex)
+        for j, c in enumerate(cl):
+            c_all[j, self.keep[c]] = coef[c]
+        sgn = np.array([[sign(c, R) for R in REFL] for c in cl])
+        y_pt, alpha, beta = self._unpack_points(cl, c_all)
+        out = np.zeros((ncls, len(pts), 3), complex)
+        lines.eval_points_field(pts, REFL, sgn, y_pt, alpha, beta, float(self.k), out)
+        for i, ln in enumerate(self.lines):
+            if isinstance(ln, Line) and ln.kind == "e":
+                lo = 3 * self.slot0[1 + i]
+                c_pair = c_all[:, lo:lo + 6 * ln.n].reshape(ncls, 2, 1, ln.n, 3)
+                w = None if ln.w is None else np.stack((ln.w, self.lines[i + 1].w))
+                lines.eval_line_field(pts, REFL, ln.r_act, sgn, ln.t_hat, ln.mids, ln.lam, ln.d, ln.n,
+                                      float(self.k), H, c_pair, out, rot=ln.rot, w=w)
+        return out.sum(axis=0)
+
+    def far(self, coef, dirs):
+        """Exact r -> infinity far-field pattern F, with E ~ F e^{ikr}/r"""
+        dirs = np.ascontiguousarray(dirs, dtype=float)
+        if not len(dirs) or not coef:
+            return np.zeros((len(dirs), 3), complex)
+        cl = list(coef)
+        ncls = len(cl)
+        c_all = np.zeros((ncls, 3 * self.slot0[-1]), complex)
+        for j, c in enumerate(cl):
+            c_all[j, self.keep[c]] = coef[c]
+        sgn = np.array([[sign(c, R) for R in REFL] for c in cl])
+        y_pt, alpha, beta = self._unpack_points(cl, c_all)
+        out = np.zeros((ncls, len(dirs), 3), complex)
+        lines.eval_far_dipoles(dirs, REFL, np.arange(8, dtype=np.int64), sgn, y_pt, alpha, beta, float(self.k), out)
+        by_ax = {0: ([], [], []), 1: ([], [], []), 2: ([], [], [])}
+        for i, ln in enumerate(self.lines):
+            if isinstance(ln, Line) and ln.kind == "e":
+                lo = 3 * self.slot0[1 + i]
+                c_pair = c_all[:, lo:lo + 6 * ln.n].reshape(ncls, 2, 1, ln.n, 3)
+                w = np.ones((2, 1, len(ln.mids), 3)) if ln.w is None else np.stack((ln.w, self.lines[i + 1].w))
+                rot = np.eye(3) if ln.rot is None else ln.rot
+                tq, W, off, *_ = lines.build_tree(ln.lam, ln.d, ln.n, H, self.k)
+                pm_n = int(off[1])
+                c_cart = 2.0 * np.einsum("ksic,lksmc,cq->lkimq", w, c_pair, rot)
+                M0 = np.einsum("pm,lkimq->lkpiq", W[:pm_n], c_cart).reshape(ncls, 2, -1, 3)
+                ys = (ln.mids[None, :, :] + tq[:pm_n, None, None] * ln.t_hat[None, None, :]).reshape(-1, 3)
+                by_ax[ln.ax][0].append(ys)
+                by_ax[ln.ax][1].append(M0[:, 0])
+                by_ax[ln.ax][2].append(M0[:, 1])
+        for ax, (yl, al, bl) in by_ax.items():
+            if yl:
+                r_act = np.array([ri for ri in range(8) if REFL[ri, ax] > 0], np.int64)
+                lines.eval_far_dipoles(dirs, REFL, r_act, sgn, np.ascontiguousarray(np.vstack(yl)),
+                                       np.ascontiguousarray(np.concatenate(al, axis=1)),
+                                       np.ascontiguousarray(np.concatenate(bl, axis=1)), float(self.k), out)
+        return out.sum(axis=0)
 
 
 def solve(J, d=(0, 0, -1.0), p=(0, 1.0, 0), pts=None, k=2 * np.pi, max_gb=None, **layout):
@@ -272,12 +339,8 @@ def solve(J, d=(0, 0, -1.0), p=(0, 1.0, 0), pts=None, k=2 * np.pi, max_gb=None, 
                 r2, b2 = r2 + res ** 2 * nb2, b2 + nb2
         cube.fac.clear()                                         # free the matrices and factors before evaluating the field
         if pts is not None and bsols:
-            for p0 in range(0, len(pts), 1000):
-                pb = pts[p0:p0 + 1000]
-                Ap = cube.matrix(np.vstack([pb @ Q for Q, _ in bsols]), None, cube.classes)
-                for m, (Q, coef) in enumerate(bsols):
-                    sl = slice(3 * m * len(pb), 3 * (m + 1) * len(pb))
-                    E[p0:p0 + 1000] += sum(Ap[s, sl, :cube.unknowns[c]] @ coef[c] for s, c in enumerate(cube.classes) if c in coef).reshape(-1, 3) @ Q.T
+            for Q, coef in bsols:
+                E += probe.field(coef, pts @ Q) @ Q.T
         sols.extend(bsols)
         info["unknowns"] += [cube.unknowns[c] for c in cube.classes]
         info["t_assemble"] += cube.t_assemble

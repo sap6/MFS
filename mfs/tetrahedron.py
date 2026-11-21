@@ -21,7 +21,6 @@ import os
 import time
 
 import numpy as np
-from numba import njit, prange
 
 from . import lines
 from .core import class_part, classes_of, cross_sections, factor, sign, sphere_rule, tangent_basis
@@ -40,160 +39,6 @@ NU, TAU = (0.32221, 1.09227), (0.907,)                               # corner ex
 RULE = sphere_rule(40, 80)
 
 
-@njit(parallel=True, fastmath=True, cache=True)
-def _line_kernel(x, T, refl, r_act, mid_ax, F, w, tq, W, off, tlo, thi, ltab, g, gw, lam, d, n, k, A, cmap, sgn):
-    """Fields of an electric and magnetic skeleton line (or 9-line tail) in local frame F = [t_hat, b_hat, n_hat]"""
-    M, npos, ns, nc = x.shape[0], w.shape[2], w.shape[1], T.shape[1]
-    tmul = 1 if T.shape[0] > 1 else 0
-    a_tet = 0.5 / np.sqrt(2.0)
-    r_vec = np.ones(npos)
-    if npos > 1:
-        for i in range(npos):
-            r_vec[i] = 0.5 ** (i + 1)
-    nch = min(16, max(1, M))
-    for ch in prange(nch):
-        accr, acci = np.empty((2, 2, ns, nc, 3, n)), np.empty((2, 2, ns, nc, 3, n))
-        S = np.empty((2, ns, nc, 3), np.complex128)
-        Ge, Gm = np.empty((nc, 3), np.complex128), np.empty((nc, 3), np.complex128)
-        Tm, xm, e, Wq = np.empty((nc, 3)), np.empty(3), np.empty(3), np.empty(n)
-        stack_l, stack_i = np.empty(88, np.int64), np.empty(88, np.int64)
-        for m in range((M * ch) // nch, (M * (ch + 1)) // nch):
-            accr[:] = 0.0
-            acci[:] = 0.0
-            for ia in range(2):
-                r = r_act[ia]
-                for j in range(3):
-                    xm[j] = x[m, j] * refl[r, j]
-                    for a in range(nc):
-                        Tm[a, j] = T[m * tmul, a, j] * refl[r, j]
-                dx0 = xm[0] - (a_tet if mid_ax == 0 else 0.0)
-                dx1 = xm[1] - (a_tet if mid_ax == 1 else 0.0)
-                dx2 = xm[2] - (a_tet if mid_ax == 2 else 0.0)
-                xt = F[0, 0] * dx0 + F[0, 1] * dx1 + F[0, 2] * dx2
-                xb = F[1, 0] * dx0 + F[1, 1] * dx1 + F[1, 2] * dx2
-                xn = F[2, 0] * dx0 + F[2, 1] * dx1 + F[2, 2] * dx2
-                rho2 = 1e300
-                for i in range(npos):
-                    di = d * r_vec[i]
-                    rho2 = min(rho2, (xb - di) ** 2 + xn ** 2)
-
-                sp, stack_l[0], stack_i[0] = 1, 0, 0
-                while sp > 0:
-                    sp -= 1
-                    lev, idx = stack_l[sp], stack_i[sp]
-                    wid = 2.0 / (1 << lev)
-                    p = (1 << lev) - 1 + idx if lev <= ltab else -1
-                    a0 = tlo[p] if p >= 0 else 0.5 * np.tanh(0.5 * lam * (-1.0 + wid * idx))
-                    b0 = thi[p] if p >= 0 else 0.5 * np.tanh(0.5 * lam * (-1.0 + wid * (idx + 1)))
-                    gap = max(a0 - xt, 0.0, xt - b0)
-                    if b0 - a0 > np.sqrt(rho2 + gap * gap) and lev < 40:
-                        stack_l[sp], stack_i[sp], stack_l[sp + 1], stack_i[sp + 1] = lev + 1, 2 * idx, lev + 1, 2 * idx + 1
-                        sp += 2
-                        continue
-                    for iq in range(off[p + 1] - off[p] if p >= 0 else g.shape[0]):
-                        if p >= 0:
-                            t = tq[off[p] + iq]
-                            for kk in range(n):
-                                Wq[kk] = W[off[p] + iq, kk]
-                        else:
-                            u = -1.0 + wid * (idx + 0.5) + 0.5 * wid * g[iq]
-                            ex = np.exp(lam * u)
-                            t = 0.5 * (ex - 1.0) / (ex + 1.0)
-                            Wq[0] = 0.5 * wid * gw[iq] * lam * ex / ((ex + 1.0) * (ex + 1.0)) / d
-                            if n > 1:
-                                Wq[1] = Wq[0] * u
-                            for kk in range(2, n):
-                                Wq[kk] = ((2 * kk - 1) * u * Wq[kk - 1] - (kk - 1) * Wq[kk - 2]) / kk
-                        S[:] = 0.0
-                        for i in range(npos):
-                            di = d * r_vec[i]
-                            for q in range(3):
-                                e[q] = xm[q] - ((a_tet if q == mid_ax else 0.0) + di * F[1, q] + t * F[0, q])
-                            rr = np.sqrt(e[0] * e[0] + e[1] * e[1] + e[2] * e[2])
-                            e /= rr
-                            lines.dipoles(Tm, e, k, rr, Ge, Gm)
-                            for a in range(nc):
-                                for cc in range(3):
-                                    le = Ge[a, 0] * F[cc, 0] + Ge[a, 1] * F[cc, 1] + Ge[a, 2] * F[cc, 2]
-                                    lm = Gm[a, 0] * F[cc, 0] + Gm[a, 1] * F[cc, 1] + Gm[a, 2] * F[cc, 2]
-                                    for s in range(ns):
-                                        S[0, s, a, cc] += w[0, s, i, cc] * le
-                                        S[1, s, a, cc] += w[1, s, i, cc] * lm
-                        for kind in range(2):
-                            for s in range(ns):
-                                for a in range(nc):
-                                    for cc in range(3):
-                                        sr, si = S[kind, s, a, cc].real, S[kind, s, a, cc].imag
-                                        for kk in range(n):
-                                            accr[ia, kind, s, a, cc, kk] += sr * Wq[kk]
-                                            acci[ia, kind, s, a, cc, kk] += si * Wq[kk]
-            for cl in range(sgn.shape[0]):
-                for kind in range(2):
-                    for s in range(ns):
-                        for kk in range(n):
-                            for cc in range(3):
-                                col = cmap[cl, ((kind * ns + s) * n + kk) * 3 + cc]
-                                if col >= 0:
-                                    for a in range(nc):
-                                        vr, vi = 0.0, 0.0
-                                        for ia in range(2):
-                                            r = r_act[ia]
-                                            vr += sgn[cl, r] * accr[ia, kind, s, a, cc, kk]
-                                            vi += sgn[cl, r] * acci[ia, kind, s, a, cc, kk]
-                                        A[cl, m * nc + a, col] += 2.0 * (vr + 1j * vi)
-
-
-@njit(parallel=True, fastmath=True, cache=True)
-def _corner_tails_add(x, T, refl, ray_pts, we, wm, k, A, col_e, col_m, sgn):
-    """Fields of the radial corner-tail rays (9 tied dipoles per ray, sharing electric/magnetic kernel calls)"""
-    M, nc = x.shape[0], T.shape[1]
-    ncls, nr = sgn.shape
-    R_cnt, nstep = ray_pts.shape[0], ray_pts.shape[1]
-    ne, nm = we.shape[0], wm.shape[0]
-    tmul = 1 if T.shape[0] > 1 else 0
-    for m in prange(M):
-        acce = np.empty((ncls, ne, nc, 3), np.complex128)
-        accm = np.empty((ncls, nm, nc, 3), np.complex128)
-        Ge, Gm = np.empty((nc, 3), np.complex128), np.empty((nc, 3), np.complex128)
-        Tm, e = np.empty((nc, 3)), np.empty(3)
-        for ir in range(R_cnt):
-            acce[:] = 0.0
-            accm[:] = 0.0
-            for r in range(nr):
-                for a in range(nc):
-                    for q in range(3):
-                        Tm[a, q] = T[m * tmul, a, q] * refl[r, q]
-                for t in range(nstep):
-                    for q in range(3):
-                        e[q] = x[m, q] * refl[r, q] - ray_pts[ir, t, q]
-                    rr = np.sqrt(e[0] * e[0] + e[1] * e[1] + e[2] * e[2])
-                    e /= rr
-                    lines.dipoles(Tm, e, k, rr, Ge, Gm)
-                    for s in range(ncls):
-                        sg = sgn[s, r]
-                        for ie in range(ne):
-                            wv = sg * we[ie, t]
-                            for a in range(nc):
-                                for cc in range(3):
-                                    acce[s, ie, a, cc] += wv * Ge[a, cc]
-                        for im in range(nm):
-                            wv = sg * wm[im, t]
-                            for a in range(nc):
-                                for cc in range(3):
-                                    accm[s, im, a, cc] += wv * Gm[a, cc]
-            for s in range(ncls):
-                be = col_e[s] + ir * ne * 3
-                for ie in range(ne):
-                    for a in range(nc):
-                        for cc in range(3):
-                            A[s, m * nc + a, be + ie * 3 + cc] += acce[s, ie, a, cc]
-                bm = col_m[s] + ir * nm * 3
-                for im in range(nm):
-                    for a in range(nc):
-                        for cc in range(3):
-                            A[s, m * nc + a, bm + im * 3 + cc] += accm[s, im, a, cc]
-
-
 class Line:
     """Dipole density on the edge bisector through +a e_ax at depth d (or 9-line wedge tail with tail=True)"""
     def __init__(self, ax, d, n, kind, tail=False):
@@ -202,11 +47,15 @@ class Line:
         t_hat[(ax + 1) % 3] = t_hat[(ax + 2) % 3] = 1.0 / np.sqrt(2.0)
         b_hat = np.zeros(3)
         b_hat[ax] = -1.0
+        self.t_hat = t_hat
         self.F = np.ascontiguousarray(np.vstack((t_hat, b_hat, np.cross(t_hat, b_hat))))
         self.r_act = np.array([r for r in range(4) if REFL[r, (ax + 1) % 3] > 0], np.int64)
         self.lam = np.log((1.0 - 1.5 * d) / (1.5 * d))          # |t| <= 1/2 - 1.5 d stays inside the skeleton wall (1.5 > sqrt(2))
+        r = 0.5 ** np.arange(1, 10) if tail else np.ones(1)
+        mid0 = np.zeros(3)
+        mid0[ax] = A_TET
+        self.mids = np.ascontiguousarray(mid0[None, :] + (d * r)[:, None] * b_hat[None, :])
         if tail:
-            r = 0.5 ** np.arange(1, 10)
             e = np.array(TAIL_E[kind] + (2.0,))
             self.w = r[None, :, None] ** e[None, None, :]
             self.w[:, -1, :] /= 1.0 - 0.5 ** e
@@ -250,11 +99,11 @@ class Tetrahedron:
       J=None : plain inner-tetrahedron layout (n_base barycentric order per face) that stalls
     """
     def __init__(self, J, k=2 * np.pi, q=2 ** -0.5, extra_modes=None, tails=True, classes=CLASSES, n_base=12):
-        self.k, self.classes, self.tails = k, [tuple(c) for c in classes], tails
+        self.k, self.classes, self.tails = k, [tuple(c) for c in classes], bool(tails and J is not None)
         s = max(0.0, k / (2 * np.pi) - 1.0)
         m = max(1, int(round(np.log(0.5) / np.log(q))))
         if J is None:
-            self.depths, self.tails, ex = np.zeros(0), False, 0.0
+            self.depths, ex = np.zeros(0), 0.0
         else:
             self.depths = 0.1 * q ** np.arange(m * J + 1)
             n0 = max(4, 2 * J - 4)
@@ -328,14 +177,13 @@ class Tetrahedron:
             if ln.kind == "e":
                 lo = 3 * self.slot0[1 + i]
                 w = np.ascontiguousarray(np.stack((ln.w, self.lines[i + 1].w)))
-                tq, W, off, tlo, thi, ltab, g, gw = lines.build_tree(ln.lam, ln.d, ln.n, H, self.k)
-                _line_kernel(x, T, REFL, ln.r_act, ln.ax, ln.F, w, tq, W, off, tlo, thi, ltab, g, gw,
-                             ln.lam, ln.d, ln.n, self.k, A, np.ascontiguousarray(cmap[:, lo:lo + 6 * ln.n]), sgn)
+                lines.line_add(x, T, REFL, ln.r_act, ln.t_hat, ln.mids, ln.lam, ln.d, ln.n, self.k, H, A,
+                               cmap[:, lo:lo + 6 * ln.n], sgn, rot=ln.F, w=w)
         if self.tails:
             lo = 3 * self.slot0[-2]
             ne_cols = len(self.ray_pts) * len(self.we) * 3
-            _corner_tails_add(x, T, REFL, self.ray_pts, self.we, self.wm, self.k, A,
-                              np.ascontiguousarray(cmap[:, lo]), np.ascontiguousarray(cmap[:, lo + ne_cols]), sgn)
+            lines.radial_tails_add(x, T, REFL, self.ray_pts, self.we, self.wm, self.k, A,
+                                   np.ascontiguousarray(cmap[:, lo]), np.ascontiguousarray(cmap[:, lo + ne_cols]), sgn)
         return A
 
     def solve(self, d, p, only=None):
@@ -348,18 +196,81 @@ class Tetrahedron:
             r2, b2 = r2 + float(res) ** 2, b2 + np.linalg.norm(b) ** 2
         return coef, np.sqrt(r2 / b2), b2
 
-    def field(self, coef, pts, batch=1000):
-        pts = np.asarray(pts, float)
-        if not len(pts):
-            return np.empty((0, 3), complex)
-        cl, out = list(coef), []
-        for i in range(0, len(pts), batch):
-            A = self.matrix(pts[i:i + batch], None, cl)
-            out.append(sum(A[j][:, :self.unknowns[c]] @ coef[c] for j, c in enumerate(cl)).reshape(-1, 3))
-        return np.concatenate(out)
+    def _unpack_points(self, cl, c_all):
+        ncls, ne, nm = len(cl), len(self.pe), len(self.pm)
+        n_ray = self.ray_pts.shape[0] * self.ray_pts.shape[1] if self.tails else 0
+        y_pt = np.vstack((self.pe, self.ray_pts.reshape(-1, 3))) if n_ray else self.pe
+        alpha = np.zeros((ncls, ne + n_ray, 3), complex)
+        beta = np.zeros((ncls, ne + n_ray, 3), complex)
+        alpha[:, :ne] = c_all[:, :3 * ne].reshape(ncls, ne, 3)
+        if nm:
+            beta[:, ne - nm:ne] = c_all[:, 3 * ne:3 * (ne + nm)].reshape(ncls, nm, 3)
+        if n_ray:
+            R_cnt, ne_exp, nm_exp = self.ray_pts.shape[0], len(self.we), len(self.wm)
+            lo = 3 * self.slot0[-2]
+            ne_cols, nm_cols = R_cnt * ne_exp * 3, R_cnt * nm_exp * 3
+            ce_ray = c_all[:, lo:lo + ne_cols].reshape(ncls, R_cnt, ne_exp, 3)
+            cm_ray = c_all[:, lo + ne_cols:lo + ne_cols + nm_cols].reshape(ncls, R_cnt, nm_exp, 3)
+            alpha[:, ne:] = np.einsum("lrec,et->lrtc", ce_ray, self.we).reshape(ncls, n_ray, 3)
+            beta[:, ne:] = np.einsum("lrmc,mt->lrtc", cm_ray, self.wm).reshape(ncls, n_ray, 3)
+        return np.ascontiguousarray(y_pt), np.ascontiguousarray(alpha), np.ascontiguousarray(beta)
 
-    def far(self, coef, dirs, rfar=1.0e6):
-        return self.field(coef, rfar * dirs) * rfar * np.exp(-1j * self.k * rfar)
+    def field(self, coef, pts, batch=1000):
+        pts = np.ascontiguousarray(pts, dtype=float)
+        if not len(pts) or not coef:
+            return np.zeros((len(pts), 3), complex)
+        cl = list(coef)
+        ncls = len(cl)
+        c_all = np.zeros((ncls, 3 * self.slot0[-1]), complex)
+        for j, c in enumerate(cl):
+            c_all[j, self.keep[c]] = coef[c]
+        sgn = np.array([[sign(c, R) for R in REFL] for c in cl])
+        y_pt, alpha, beta = self._unpack_points(cl, c_all)
+        out = np.zeros((ncls, len(pts), 3), complex)
+        lines.eval_points_field(pts, REFL, sgn, y_pt, alpha, beta, float(self.k), out)
+        for i, ln in enumerate(self.lines):
+            if ln.kind == "e":
+                lo = 3 * self.slot0[1 + i]
+                c_pair = c_all[:, lo:lo + 6 * ln.n].reshape(ncls, 2, 1, ln.n, 3)
+                w = np.stack((ln.w, self.lines[i + 1].w))
+                lines.eval_line_field(pts, REFL, ln.r_act, sgn, ln.t_hat, ln.mids, ln.lam, ln.d, ln.n,
+                                      float(self.k), H, c_pair, out, rot=ln.F, w=w)
+        return out.sum(axis=0)
+
+    def far(self, coef, dirs):
+        dirs = np.ascontiguousarray(dirs, dtype=float)
+        if not len(dirs) or not coef:
+            return np.zeros((len(dirs), 3), complex)
+        cl = list(coef)
+        ncls = len(cl)
+        c_all = np.zeros((ncls, 3 * self.slot0[-1]), complex)
+        for j, c in enumerate(cl):
+            c_all[j, self.keep[c]] = coef[c]
+        sgn = np.array([[sign(c, R) for R in REFL] for c in cl])
+        y_pt, alpha, beta = self._unpack_points(cl, c_all)
+        out = np.zeros((ncls, len(dirs), 3), complex)
+        lines.eval_far_dipoles(dirs, REFL, np.arange(4, dtype=np.int64), sgn, y_pt, alpha, beta, float(self.k), out)
+        by_ax = {0: ([], [], []), 1: ([], [], []), 2: ([], [], [])}
+        for i, ln in enumerate(self.lines):
+            if ln.kind == "e":
+                lo = 3 * self.slot0[1 + i]
+                c_pair = c_all[:, lo:lo + 6 * ln.n].reshape(ncls, 2, 1, ln.n, 3)
+                w = np.stack((ln.w, self.lines[i + 1].w))
+                tq, W, off, *_ = lines.build_tree(ln.lam, ln.d, ln.n, H, self.k)
+                pm_n = int(off[1])
+                c_cart = 2.0 * np.einsum("ksic,lksmc,cq->lkimq", w, c_pair, ln.F)
+                M0 = np.einsum("pm,lkimq->lkpiq", W[:pm_n], c_cart).reshape(ncls, 2, -1, 3)
+                ys = (ln.mids[None, :, :] + tq[:pm_n, None, None] * ln.t_hat[None, None, :]).reshape(-1, 3)
+                by_ax[ln.ax][0].append(ys)
+                by_ax[ln.ax][1].append(M0[:, 0])
+                by_ax[ln.ax][2].append(M0[:, 1])
+        for ax, (yl, al, bl) in by_ax.items():
+            if yl:
+                r_act = np.array([ri for ri in range(4) if REFL[ri, (ax + 1) % 3] > 0], np.int64)
+                lines.eval_far_dipoles(dirs, REFL, r_act, sgn, np.ascontiguousarray(np.vstack(yl)),
+                                       np.ascontiguousarray(np.concatenate(al, axis=1)),
+                                       np.ascontiguousarray(np.concatenate(bl, axis=1)), float(self.k), out)
+        return out.sum(axis=0)
 
 
 def solve(J, d=(0, 0, -1.0), p=(0, 1.0, 0), pts=None, k=2 * np.pi, max_gb=None, **layout):
@@ -394,12 +305,8 @@ def solve(J, d=(0, 0, -1.0), p=(0, 1.0, 0), pts=None, k=2 * np.pi, max_gb=None, 
                 r2, b2 = r2 + res ** 2 * nb2, b2 + nb2
         tet.fac.clear()
         if pts is not None and bsols:
-            for p0 in range(0, len(pts), 1000):
-                pb = pts[p0:p0 + 1000]
-                Ap = tet.matrix(np.vstack([pb @ Q for Q, _ in bsols]), None, tet.classes)
-                for m, (Q, coef) in enumerate(bsols):
-                    sl = slice(3 * m * len(pb), 3 * (m + 1) * len(pb))
-                    E[p0:p0 + 1000] += sum(Ap[s, sl, :tet.unknowns[c]] @ coef[c] for s, c in enumerate(tet.classes) if c in coef).reshape(-1, 3) @ Q.T
+            for Q, coef in bsols:
+                E += probe.field(coef, pts @ Q) @ Q.T
         sols.extend(bsols)
         info["unknowns"] += [tet.unknowns[c] for c in tet.classes]
         info["t_assemble"] += tet.t_assemble

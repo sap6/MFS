@@ -5,6 +5,7 @@ least-squares solver and the far field.
 """
 import numpy as np
 import scipy.linalg as sla
+from numba import njit, prange
 from scipy.linalg import blas, lapack
 
 
@@ -62,6 +63,64 @@ def magnetic(x, y, k):
     return f[..., None, None] * np.cross(np.eye(3), e[..., None, :])   # the matrix of β → e × β
 
 
+@njit(parallel=True, fastmath=True, cache=True)
+def electric_block(x, T, y, k, out):
+    """out[m * nc + a, 3 * n + c] = T[m, a] · G(x[m], y[n]) e_c, assembled columnwise into F-ordered out"""
+    M, nc, N = x.shape[0], T.shape[1], y.shape[0]
+    tmul = 1 if T.shape[0] > 1 else 0
+    inv_k = 1.0 / k
+    for n in prange(N):
+        yn0, yn1, yn2 = y[n, 0], y[n, 1], y[n, 2]
+        c0 = 3 * n
+        for m in range(M):
+            dx0 = x[m, 0] - yn0
+            dx1 = x[m, 1] - yn1
+            dx2 = x[m, 2] - yn2
+            r2 = dx0 * dx0 + dx1 * dx1 + dx2 * dx2
+            inv_r = 1.0 / np.sqrt(r2)
+            kr = k * (r2 * inv_r)
+            ik = inv_r * inv_k
+            ik2 = ik * ik
+            ph = (np.cos(kr) + 1j * np.sin(kr)) * inv_r
+            fI = (1.0 + 1j * ik - ik2) * ph
+            fR = (1.0 + 3j * ik - 3.0 * ik2) * ph * (inv_r * inv_r)
+            mt = m * tmul
+            row = m * nc
+            for a in range(nc):
+                t0, t1, t2 = T[mt, a, 0], T[mt, a, 1], T[mt, a, 2]
+                td = fR * (t0 * dx0 + t1 * dx1 + t2 * dx2)
+                out[row + a, c0] = fI * t0 - td * dx0
+                out[row + a, c0 + 1] = fI * t1 - td * dx1
+                out[row + a, c0 + 2] = fI * t2 - td * dx2
+
+
+@njit(parallel=True, fastmath=True, cache=True)
+def _field_kernel(pts, y, alpha, k, out):
+    P, N = pts.shape[0], y.shape[0]
+    inv_k = 1.0 / k
+    for i in prange(P):
+        px0, px1, px2 = pts[i, 0], pts[i, 1], pts[i, 2]
+        s0, s1, s2 = 0.0j, 0.0j, 0.0j
+        for j in range(N):
+            dx0 = px0 - y[j, 0]
+            dx1 = px1 - y[j, 1]
+            dx2 = px2 - y[j, 2]
+            r2 = dx0 * dx0 + dx1 * dx1 + dx2 * dx2
+            inv_r = 1.0 / np.sqrt(r2)
+            kr = k * (r2 * inv_r)
+            ik = inv_r * inv_k
+            ik2 = ik * ik
+            ph = (np.cos(kr) + 1j * np.sin(kr)) * inv_r
+            fI = (1.0 + 1j * ik - ik2) * ph
+            fR = (1.0 + 3j * ik - 3.0 * ik2) * ph * (inv_r * inv_r)
+            a0, a1, a2 = alpha[j, 0], alpha[j, 1], alpha[j, 2]
+            da = fR * (dx0 * a0 + dx1 * a1 + dx2 * a2)
+            s0 += fI * a0 - da * dx0
+            s1 += fI * a1 - da * dx1
+            s2 += fI * a2 - da * dx2
+        out[i, 0], out[i, 1], out[i, 2] = s0, s1, s2
+
+
 def fibonacci(n):
     """
     Evenly distribute n points on the unit sphere (Fibonacci lattice)
@@ -88,22 +147,18 @@ def tangent_basis(n):
 
 def field(pts, y, alpha, k, batch=400):
     """
-    E_N(x) = Σ_j G(x, y_j) α_j, evaluated in batches without forming the 4-tensor G
+    E_N(x) = Σ_j G(x, y_j) α_j, evaluated without forming the 4-tensor G
       pts  : evaluation points, shape (P, 3)
       y    : source points, shape (N, 3)
       alpha: coefficients, shape (N, 3)
       Returns an array of shape (P, 3)
     """
+    pts = np.ascontiguousarray(pts, dtype=float)
     out = np.empty((len(pts), 3), complex)
-    ya = np.sum(y * alpha, axis=1)
-    for i in range(0, len(pts), batch):
-        xb = pts[i:i + batch]
-        r = np.linalg.norm(xb[:, None] - y[None], axis=2)
-        kr = k * r
-        g = np.exp(1j * kr) / r
-        fI = (1 + 1j / kr - 1 / kr ** 2) * g
-        w = (1 + 3j / kr - 3 / kr ** 2) * (g / r ** 2) * (xb @ alpha.T - ya)   # f_R ((x - y_j) · α_j) / r²
-        out[i:i + batch] = fI @ alpha - xb * w.sum(axis=1)[:, None] + w @ y    # Σ_j (f_I α_j - w_ij (x - y_j))
+    if len(pts) == 0 or len(y) == 0:
+        out[:] = 0.0
+        return out
+    _field_kernel(pts, np.ascontiguousarray(y, dtype=float), np.ascontiguousarray(alpha, dtype=complex), float(k), out)
     return out
 
 
@@ -184,16 +239,28 @@ class CSNE:
         if dR.max() > max_cond * 1e-3 * dR.min():             # the diagonal of R underestimates cond(A) by up to 1e3
             raise np.linalg.LinAlgError("too ill-conditioned for the semi-normal equations")
 
+    def _fwd(self, c):
+        if self.A.flags.f_contiguous:
+            return blas.zgemv(1.0, self.A, c) if c.ndim == 1 else blas.zgemm(1.0, self.A, c)
+        return self.A @ c
+
     def _normal(self, r):
-        rhs = np.conj(self.A.T @ np.conj(r))                   # A^H r, without copying A
+        if self.A.flags.f_contiguous:
+            rhs = blas.zgemv(1.0, self.A, r, trans=2) if r.ndim == 1 else blas.zgemm(1.0, self.A, r, trans_a=2)
+        else:
+            rhs = np.conj(self.A.T @ np.conj(r))               # A^H r, without copying A
         s = self.scale if rhs.ndim == 1 else self.scale[:, None]
         return sla.cho_solve(self.R, rhs / s, check_finite=False) / s
 
     def solve(self, b, residual=False):
         c = self._normal(b)
         for _ in range(2):
-            c = c + self._normal(b - self.A @ c)
-        return (c, np.linalg.norm(b - self.A @ c, axis=0)) if residual else c
+            r = b - self._fwd(c)
+            c = c + self._normal(r)
+        if not residual:
+            return c
+        r = b - self._fwd(c)
+        return c, np.linalg.norm(r, axis=0)
 
 
 def factor(A, overwrite=False):

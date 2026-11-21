@@ -9,9 +9,10 @@ n_phi small problems, one for each Fourier mode about the axis, for any
 incident wave (as for acoustic scattering in Liu and Barnett 2016).
 """
 import numpy as np
+from scipy.fft import fft, ifft
 from scipy.linalg import lstsq
 
-from .core import cross_sections, dyadic, field, plane_wave, rel, sphere_rule
+from .core import cross_sections, electric_block, field, plane_wave, rel, sphere_rule
 
 
 def circle(n, centre, radius):
@@ -95,13 +96,15 @@ def solve(torus, k, rhs, ns, nphi, a_s, rings=2):
     sw = np.sqrt(w)
 
     # Blocks of one source per ring (at angle 0) against all boundary points
-    y0 = np.column_stack((rho, 0 * rho, z))
-    G = dyadic(x.reshape(-1, 3), y0, k).reshape(nc, nphi, ns, 3, 3)
-    B = np.einsum("ipca,ipjab->ipcjb", T, G) * sw[:, None, None, None, None]
+    y0 = np.ascontiguousarray(np.column_stack((rho, 0 * rho, z)))
+    Tw = np.ascontiguousarray((T * sw[:, None, None, None]).reshape(nc * nphi, 2, 3))
+    B0 = np.empty((2 * nc * nphi, 3 * ns), complex, order="F")
+    electric_block(np.ascontiguousarray(x.reshape(-1, 3)), Tw, y0, float(k), B0)
+    B = B0.reshape(nc, nphi, 2, ns, 3)
     b = np.einsum("ipca,ipa->ipc", T, rhs(x.reshape(-1, 3)).reshape(nc, nphi, 3)) * sw[:, None, None]
 
     # Fourier transform over the rotation, then one least-squares problem per excited mode
-    Bh, bh = np.fft.fft(B, axis=1), np.fft.fft(b, axis=1)
+    Bh, bh = fft(B, axis=1, workers=2), fft(b, axis=1, workers=2)
     size = np.linalg.norm(bh, axis=(0, 2))
     ah = np.zeros((nphi, ns, 3), complex)
     for m in np.nonzero(size > 1e-12 * size.max())[0]:
@@ -109,7 +112,7 @@ def solve(torus, k, rhs, ns, nphi, a_s, rings=2):
 
     # Back to the dipoles: alpha_q = (1/nphi) Σ_m ah_m e^{2πi mq/nphi}, from cylindrical to Cartesian components
     y, ph = ring_points(rho, z, nphi)
-    alpha = np.einsum("qjc,qca->jqa", np.fft.ifft(ah, axis=0), frame(ph))
+    alpha = np.einsum("qjc,qca->jqa", ifft(ah, axis=0, workers=2), frame(ph))
     return Solution(y.reshape(-1, 3), alpha.reshape(-1, 3), k, torus.R, torus.a)
 
 
