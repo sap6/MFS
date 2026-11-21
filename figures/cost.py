@@ -23,11 +23,12 @@ from mfs import almond, core, mie, sphere, torus
 K = 2 * np.pi
 
 
-def alternate(mfs_jobs, bem_jobs):
-    """Run MFS and Bempp jobs twice in alternating passes, keeping the minimum wall time of each job"""
-    tm, tb = [[] for _ in mfs_jobs], [[] for _ in bem_jobs]
+def alternate(mfs_jobs, bem_jobs, reps=2, prev_m=None, prev_b=None):
+    """Run MFS and Bempp jobs in alternating passes, keeping the minimum wall time of each job"""
+    tm = [[float(t)] for t in prev_m] if prev_m is not None else [[] for _ in mfs_jobs]
+    tb = [[float(t)] for t in prev_b] if prev_b is not None else [[] for _ in bem_jobs]
     om, ob = [None] * len(mfs_jobs), [None] * len(bem_jobs)
-    for rep in range(2):
+    for rep in range(reps):
         for i, fn in enumerate(mfs_jobs):
             gc.collect()
             t0 = time.time()
@@ -38,17 +39,20 @@ def alternate(mfs_jobs, bem_jobs):
             t0 = time.time()
             ob[i] = fn()
             tb[i].append(time.time() - t0)
-        print(f"completed alternating pass {rep + 1}/2", flush=True)
+        print(f"completed alternating pass {rep + 1}/{reps}", flush=True)
     return [(o, min(t)) for o, t in zip(om, tm)], [(o, min(t)) for o, t in zip(ob, tb)]
 
 
-if "--run" in sys.argv:
+if any(fl in sys.argv for fl in ("--run", "--pass1", "--pass2")):
+    reps = 2 if "--run" in sys.argv else 1
+    use_prev = "--pass2" in sys.argv
     shape = sys.argv[-1]
     if shape not in ("sphere", "torus", "almond"):
-        sys.exit("usage: python figures/cost.py --run sphere|torus|almond")
+        sys.exit("usage: python figures/cost.py [--run|--pass1|--pass2] sphere|torus|almond")
     from mfs import bem                         # before bempp: it lets the OpenCL driver see all of the memory
     bempp = bem.bempp
     d, p = core.wave()
+    prev = dict(np.load(data(f"cost_{shape}.npz"))) if use_prev else {}
     if shape == "sphere":
         # 400 points on the sphere of radius 2, against the Mie series
         pts = 2.0 * core.fibonacci(400)
@@ -58,7 +62,9 @@ if "--run" in sys.argv:
         Ns = (50, 100, 150, 200, 300, 400, 600, 800, 1200)
         grids = [bempp.shapes.sphere(h=h) for h in (0.2, 0.14, 0.1, 0.07, 0.056)]
         m_res, b_res = alternate([(lambda N=N: mfs(N)) for N in Ns],
-                                 [(lambda g=g: bem.efie(g, K, d, p, pts)) for g in grids])
+                                 [(lambda g=g: bem.efie(g, K, d, p, pts)) for g in grids],
+                                 reps=reps, prev_m=prev["mfs"][:, 1] if use_prev else None,
+                                 prev_b=prev["bem"][:, 1] if use_prev else None)
         rows = [(3 * N, t, rel(E, exact)) for N, (E, t) in zip(Ns, m_res)]
         bems = [(N, t, rel(E, exact)) for (E, N), t in b_res]
         np.savez(data("cost_sphere.npz"), mfs=np.array(rows), bem=np.array(bems))
@@ -74,7 +80,9 @@ if "--run" in sys.argv:
         m_specs = ((6, 20), (8, 28), (12, 40), (16, 52), (20, 64), (24, 80), (28, 96), (36, 128), (44, 160))
         b_specs = (12, 20, 28, 40, 56, 80, 112, 160, 224)
         m_res, b_res = alternate([(lambda s=s: run(*s)) for s in m_specs],
-                                 [(lambda n=n: bem.torus(n, K, d, p, pts)) for n in b_specs])
+                                 [(lambda n=n: bem.torus(n, K, d, p, pts)) for n in b_specs],
+                                 reps=reps, prev_m=prev["mfs"][:, 1] if use_prev else None,
+                                 prev_b=prev["bem"][:, 1] if use_prev else None)
         for (ns, nphi), ((sol, E), t) in zip(m_specs, m_res):               # the checks below are not timed
             checks = (torus.residual(sol, d, p), torus.optical(sol, d, p)[1], np.linalg.norm(sol.alpha))
             rows.append((3 * ns * nphi, t, rel(E, Eref), *checks))
@@ -91,7 +99,9 @@ if "--run" in sys.argv:
         m_specs = ((3, 0), (4, 1), (5, 2), (6, 3), (8, 5))
         b_specs = ((28, 28), (40, 36), (60, 56), (84, 76), (100, 92))
         m_res, b_res = alternate([(lambda s=s: almond.nose_on(k, s[0], s[1], pts)) for s in m_specs],
-                                 [(lambda s=s: bem.almond(s[0], s[1], k, da, pa, pts)) for s in b_specs])
+                                 [(lambda s=s: bem.almond(s[0], s[1], k, da, pa, pts)) for s in b_specs],
+                                 reps=reps, prev_m=prev["mfs"][:, 2] if use_prev else None,
+                                 prev_b=prev["bem"][:, 1] if use_prev else None)
         for i, ((src, c, E, shape_), t) in enumerate(m_res):
             ext, sca = almond.optical(k, src, c)                            # the check is not timed, as for Bempp
             rows.append((len(src[0]), shape_[1], t, abs(ext - sca) / sca))
@@ -100,6 +110,7 @@ if "--run" in sys.argv:
             brows.append((N, t))
             out[f"bem_E{i}"] = E
         np.savez(data("cost_almond.npz"), mfs=np.array(rows), bem=np.array(brows), **out)
+    sys.exit(0)
 
 # The figure
 fig, axs = plt.subplots(2, 2, figsize=(6.5, 4.8))
