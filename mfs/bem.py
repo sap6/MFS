@@ -6,8 +6,8 @@ Nédélec test functions, dense LU. Needs `pip install -e ".[bempp]"`.
 For a fair comparison Bempp gets the symmetry that the MFS uses. The mesh is one piece of the
 surface and its images; a symmetry acts on the RWG functions as a signed permutation, so only
 the rows of one test function per orbit are assembled: an eighth of the matrix for the cube, a
-quarter for the almond, 1/G for the torus (rotation by one of G cells). The result is the
-Galerkin solution of the full mesh, to rounding.
+quarter for the regular tetrahedron and almond, 1/G for the torus (rotation by one of G cells).
+The result is the Galerkin solution of the full mesh, to rounding.
 """
 import itertools
 import os

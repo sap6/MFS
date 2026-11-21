@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "mfs-maxwell"
 version = "1.0.0"
-description = "The method of fundamental solutions for Maxwell's equations: scattering by a sphere, a torus, a cube and the NASA almond"
+description = "The method of fundamental solutions for Maxwell's equations: scattering by a sphere, a torus, a cube, a regular tetrahedron and the NASA almond"
 readme = "README.md"
 license = {text = "MIT"}
 authors = [{name = "Saptarshi Bandyopadhyay"}, {name = "Timo Betcke"}]

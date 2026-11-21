@@ -3,7 +3,7 @@
 
 \subsection{The scattering problem}
 
-We consider the computation of the electromagnetic field in the unbounded region exterior to a perfect electric conductor (PEC). Here, the conductor occupies a bounded domain $\Omega\subset\mathbb{R}^3$ with surface $\Gamma$, and we work in the frequency domain with time dependence $\rme^{-\rmi\omega t}$ and wavenumber $k$. The incident field is the plane wave
+We consider the computation of the electromagnetic field in the unbounded region exterior to a perfect electric conductor (PEC). Here, the conductor occupies a bounded domain $\Omega\subset\mathbb{R}^3$ with surface $\Gamma$, and we work in the frequency domain with angular frequency $\omega$ (time dependence $\rme^{-\rmi\omega t}$) and wavenumber $k$. The incident field is the plane wave
 \begin{equation}
   \Einc(\bx) = \bp\,\rme^{\rmi k\,\bd\cdot\bx},
   \label{eq:planewave}
@@ -22,7 +22,7 @@ for every tangent vector $\bt$. Equivalently, the currents induced on the surfac
 
 \subsection{The fundamental solution}
 
-Let $\Phi(r) = \rme^{\rmi kr}/(4\pi r)$ with $r = \|\bx-\by\|$ be the outgoing fundamental solution of the scalar Helmholtz equation $(\Delta + k^2)\Phi = -\delta(\bx-\by)$. To lift this scalar solution to a divergence-free vector solution of \eqref{eq:maxwell} away from $\by$, we follow \cite{osipov2017} and apply $I + k^{-2}\nabla\nabla$, since $\nabla\times(\nabla\nabla\Phi\,\balpha) = 0$ and $\Delta\Phi = -k^2\Phi$ for $\bx\ne\by$. Here, $I$ is the $3\times3$ identity matrix and $\nabla\nabla\Phi$ is the Hessian matrix of second partial derivatives of $\Phi$. Writing $\rhat = (\bx-\by)/r$ so that $\rhat\rhat^{\top}$ projects onto the radial direction, we obtain
+Let $\Phi(r) = \rme^{\rmi kr}/(4\pi r)$ with source--target distance $r = \|\bx-\by\|$ be the outgoing fundamental solution of the scalar Helmholtz equation $(\Delta + k^2)\Phi = -\delta(\bx-\by)$. To lift this scalar solution to a divergence-free vector solution of \eqref{eq:maxwell} away from $\by$, we follow \cite{osipov2017} and apply $I + k^{-2}\nabla\nabla$, since $\nabla\times(\nabla\nabla\Phi\,\balpha) = 0$ and $\Delta\Phi = -k^2\Phi$ for $\bx\ne\by$. Here, $I$ is the $3\times3$ identity matrix and $\nabla\nabla\Phi$ is the Hessian matrix of second partial derivatives of $\Phi$. Writing $\rhat = (\bx-\by)/r$ so that $\rhat\rhat^{\top}$ projects onto the radial direction, we obtain
 \begin{equation}
 \begin{split}
   \bG(\bx,\by) &= \Bigl(I + \frac{1}{k^2}\nabla\nabla\Bigr)\Phi(r)\\
@@ -57,12 +57,12 @@ A well-known difficulty of the MFS is that the matrix $A$ can become severely il
 \subsection{Measuring the error}
 \label{sec:errors}
 
-For the sphere, the Mie series \cite{mie1908,bohren1998} gives the exact field; for the other four shapes no closed-form solution exists, so we compare against a stated reference field. Across all five shapes, we measure accuracy on an enclosing sphere by the relative error
+For the sphere, the Mie series \cite{mie1908,bohren1998} gives the exact field; for the other four shapes no closed-form solution exists, so we compare against a stated reference field. Across all five shapes, we measure accuracy at points $\mathbf{z}_l$ on an enclosing sphere by the relative error
 \begin{equation}
   \varepsilon = \Bigl(\sum\nolimits_{l}|\bE_N(\mathbf{z}_l)-\bE(\mathbf{z}_l)|^2\Bigr)^{1/2}\Big/\Bigl(\sum\nolimits_{l}|\bE(\mathbf{z}_l)|^2\Bigr)^{1/2},
   \label{eq:fielderror}
 \end{equation}
-using $400$ points at radius $2$ for the unit sphere, unit cube and regular tetrahedron ($1500$ points at radius $1.5$ in \autoref{fig:sphere}), $200$ points at radius $2.5$ for the torus, and $400$ points at radius $0.3$\,m for the almond. On the polyhedra and the almond, the boundary residual is the square root of \eqref{eq:leastsquares} relative to its value for $\Einc$ alone; on the sphere and torus, it is the root-mean-square tangential residual at $1500$ surface points.
+using $400$ points at radius $2$ for the unit sphere, unit cube and regular tetrahedron ($1500$ points at radius $1.5$ in \autoref{fig:sphere}), $200$ points at radius $2.5$ for the torus, and $400$ points at radius $0.3$\,m for the almond. On the polyhedra and the almond, the boundary residual is the square root of \eqref{eq:leastsquares} relative to its value for $\Einc$ alone; on the sphere and torus, it is the relative root-mean-square tangential residual at $1500$ surface points.
 
 We also check the optical theorem and an independent solver. Because a perfect conductor absorbs no energy, the power removed from the incident wave, governed by the forward amplitude $\bF(\bd)$, equals the total power scattered over the unit sphere $S^2$. With $\bar\bp$ denoting the complex conjugate of $\bp$, the extinction and scattering cross-sections
 \begin{equation}

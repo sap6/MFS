@@ -1,5 +1,5 @@
 """
-Figure 11: the unit sphere at k = 2π, error of the scattered field against the
+Figure 12: the unit sphere at k = 2π, error of the scattered field against the
 Mie series as a function of the distance from the surface, for the MFS and Bempp.
 
     python figures/nearfield.py          # the figure, from data/sphere_nearfield.npz

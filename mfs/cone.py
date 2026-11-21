@@ -1,6 +1,6 @@
 """
 Exponents of the field at a conical point (Appendix A of the paper): the tip
-of the almond (an elliptic cone) and the vertex of the cube.
+of the almond (an elliptic cone) and the vertices of the cube and regular tetrahedron.
 
 Near the tip of a perfectly conducting cone the field is a sum of terms
   electric type: E = ∇(r^nu Y),   E ~ r^(nu - 1)

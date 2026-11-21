@@ -76,7 +76,7 @@ def test_cube_rotation():
 
 
 def test_almond_against_paper():
-    # Section 6.3: layout 3:0 at 1.19 GHz, nose-on (with tip tail = 815 unknowns), reproduces stored field
+    # Section 6.2: layout 3:0 at 1.19 GHz, nose-on (with tip tail = 815 unknowns), reproduces stored field
     d = np.load(os.path.join(DATA, "cost_almond.npz"))
     k = 2 * np.pi * 1.19e9 / almond.C0
     src, c, E, shape = almond.nose_on(k, 3, 0, 0.3 * core.fibonacci(400))

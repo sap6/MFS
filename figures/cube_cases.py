@@ -2,7 +2,7 @@
 Figure 7 and Table 5: the unit cube, error against wall time on two cores for the MFS
 (the layout of the paper, two depths per octave, and one depth per octave) and for Bempp
 with the same symmetry, in four cases: the standard wave at one wavelength
-(k1, panel (d) of Figure 10), a general wave (k1o), and the standard wave at two
+(k1, panel (d) of Figure 11), a general wave (k1o), and the standard wave at two
 and three wavelengths (k2, k3). Errors are differences from the MFS reference
 of each case.
 
@@ -90,7 +90,7 @@ if "--scan" in sys.argv or "--run" in sys.argv:
         env = np.array([r for r in bem if (r[5], r[6]) in set(map(tuple, best))])
         np.savez(data(f"cube_cases_{case}.npz"), mfs=mfs, bem=bem, env=env[np.argsort(env[:, 5])])
 
-# The figure: three panels (the standard wave is panel (d) of Figure 10)
+# The figure: three panels (the standard wave is panel (d) of Figure 11)
 fig, axs = plt.subplots(1, 3, figsize=(6.6, 2.9), sharex=True, sharey=True)
 panels = (("k1o", "(a) $k = 2\\pi$, general wave"), ("k2", "(b) $k = 4\\pi$, two wavelengths"), ("k3", "(c) $k = 6\\pi$, three wavelengths"))
 for ax, (case, title) in zip(axs, panels):

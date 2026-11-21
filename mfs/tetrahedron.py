@@ -13,7 +13,7 @@ joining the edges to the origin:
   * singular tails: nine sub-lines below d_min weighted by the wedge exponents gamma = pi / Phi
     (Phi = 2 pi - arccos(1/3), irrational), and radial nine-point tails on the central ray and
     three skeleton-wall rays per edge at each vertex, weighted by the spherical corner exponents
-    nu = (0.32221, 1.09227) and tau = 0.907 (Section 6.2 and Appendix A).
+    nu = (0.32221, 1.09227) and tau = 0.907 (Section 5.6 and Appendix A).
 
 The three half-turns about the coordinate axes form D_2 (four parity classes, each solved on one
 equilateral face), and the one-third turn about (1, 1, 1) leaves at most two matrices to factorise.
@@ -34,7 +34,7 @@ REFL = np.array(CLASSES, float)                                      # proper 18
 VERTS = A_TET * REFL                                                 # v_0 = (a, a, a) and its three images on F_0
 FACE0 = np.array([VERTS[1], VERTS[3], VERTS[2]])                     # fundamental face, outward normal -(1, 1, 1)/sqrt(3)
 PHI = 2 * np.pi - np.arccos(1.0 / 3.0)                               # exterior wedge angle (289.47 degrees)
-GAMMA = np.pi / PHI                                                  # wedge exponent pi / Phi = 0.621825
+GAMMA = np.pi / PHI                                                  # wedge exponent pi / Phi = 0.621823
 TAIL_E = {"e": (GAMMA, GAMMA + 1.0), "m": (2 * GAMMA, 2 * GAMMA + 1.0)}
 NU, TAU = (0.32221, 1.09227), (0.907,)                               # corner exponents from spherical MPS (mfs.cone)
 RULE = sphere_rule(40, 80)

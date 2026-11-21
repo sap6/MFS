@@ -4,7 +4,7 @@ against √N_u, N_u the number of unknowns of the whole cube. The errors are
 differences from the finest layout, J = 12.
 
     python figures/cube_convergence.py          # the figure, from data/
-    python figures/cube_convergence.py --run    # solve again (about 8 minutes; Bempp: 3 to 4 minutes more)
+    python figures/cube_convergence.py --run    # solve again (about 12 minutes; Bempp: 8 minutes more)
 """
 import gc
 import sys

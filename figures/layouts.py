@@ -54,7 +54,7 @@ def cube_layout(J=6, fname="fig_cube_layout"):
     ax.plot(s, np.full_like(s, H - 0.2), "s", color=GREEN, ms=3.5, mec="white", mew=0.4, zorder=3, label="base dipoles")
     ax.plot(np.full_like(s, H - 0.2), s, "s", color=GREEN, ms=3.5, mec="white", mew=0.4, zorder=3)
 
-    # Zoom box around (0.5, 0.5) + x15 inset placed in upper-left conductor region away from diagonal & base grid
+    # Zoom box around (0.5, 0.5) + x16 inset placed in upper-left conductor region away from diagonal & base grid
     zw = 0.024
     ax.add_patch(Rectangle((H - zw, H - zw), zw + 0.004, zw + 0.004, fill=False, edgecolor=RUST, lw=0.75, zorder=6))
     ins = ax.inset_axes([0.03, 0.46, 0.38, 0.38])

@@ -1,5 +1,5 @@
 """
-Figure 10 and Table 4: error of the scattered field against wall time on two
+Figure 11 and Table 4: error of the scattered field against wall time on two
 cores, for the MFS and for Bempp: (a) the unit sphere, against the Mie series;
 (b) the torus and (c) the almond, against the finest MFS run; (d) the cube
 (data of cube_convergence.py and cube_cases.py k1). Both codes use the same
@@ -7,7 +7,7 @@ symmetry: none on the sphere, the rotation on the torus, the two mirror planes
 on the almond, and the mirrors and the rotation on the cube.
 
     python figures/cost.py                  # the figure, from data/
-    python figures/cost.py --run SHAPE      # time both codes again: sphere, torus or almond (needs bempp-cl)
+    python figures/cost.py --run SHAPE      # time both codes again: sphere, torus, almond or almond35 (needs bempp-cl)
 
 Run alone on the machine: times include assembly, solution and the field at the test points.
 """

@@ -1,5 +1,5 @@
 """
-Figure 9 and Table 3: monostatic radar cross-section of the NASA almond against
+Figure 10 and Table 3: monostatic radar cross-section of the NASA almond against
 the azimuth (0 = nose-on), HH and VV, at 3.5, 5.125, 7 and 10.25 GHz: the MFS
 (layout 6:3), and the measurements and reference simulation of the Austin RCS
 Benchmark Suite (Kelley et al. 2020, problem III-A; data in data/austin_almond).

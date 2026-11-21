@@ -1,7 +1,7 @@
 """
 Mie series: the exact field scattered by a perfectly conducting sphere of
 radius a, for the incident wave p e^{ik d·x} (time dependence e^{-iωt}).
-Notation of Bohren and Huffman (1983), Chapter 4. The series is summed for a
+Notation of Bohren and Huffman (1998), Chapter 4. The series is summed for a
 wave along +z polarised along x, and the result is rotated to (d, p).
 """
 import numpy as np

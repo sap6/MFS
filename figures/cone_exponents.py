@@ -1,7 +1,7 @@
 """
 Table A.1 and the vertex exponents of Appendix A: the exponents of the field at the
 tip of the almond (an elliptic cone with half-angles 34.09 and 12.71 degrees), by the
-parities of the potential under y → -y and z → -z, and at a vertex of the cube.
+parities of the potential under y → -y and z → -z, and at vertices of the cube and regular tetrahedron.
 Computed directly (about five minutes); the paper's values are in the comments.
 
     python figures/cone_exponents.py
