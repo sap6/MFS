@@ -125,14 +125,6 @@ D.~Kong, J.~Shen, Lightning algorithm for inhomogeneous modified {H}elmholtz
 \newblock \href {https://doi.org/10.48550/arXiv.2610.26540}
   {\path{doi:10.48550/arXiv.2610.26540}}.
 
-\bibitem{tabatadze2025}
-V.~Tabatadze, K.~{\.I}{\c{s}}can, K.~Kara{\c{c}}uha, On electromagnetic
-  scattering from perfectly conducting parallel square plates and their
-  resonance characteristics using method of auxiliary sources, J. Electromagn.
-  Waves Appl. 39 (2025) 952--971.
-\newblock \href {https://doi.org/10.1080/09205071.2025.2490919}
-  {\path{doi:10.1080/09205071.2025.2490919}}.
-
 \bibitem{young2005}
 D.~L. Young, J.~W. Ruan, Method of fundamental solutions for scattering
   problems of electromagnetic waves, CMES Comput. Model. Eng. Sci. 7~(2) (2005)
@@ -144,6 +136,14 @@ L.~Ye, S.~Hu, G.~Xu, T.~Yan, A meshless regularized method of fundamental
   electric conductor targets, Eng. Anal. Bound. Elem. 155 (2023) 401--406.
 \newblock \href {https://doi.org/10.1016/j.enganabound.2023.05.050}
   {\path{doi:10.1016/j.enganabound.2023.05.050}}.
+
+\bibitem{tabatadze2025}
+V.~Tabatadze, K.~{\.I}{\c{s}}can, K.~Kara{\c{c}}uha, On electromagnetic
+  scattering from perfectly conducting parallel square plates and their
+  resonance characteristics using method of auxiliary sources, J. Electromagn.
+  Waves Appl. 39 (2025) 952--971.
+\newblock \href {https://doi.org/10.1080/09205071.2025.2490919}
+  {\path{doi:10.1080/09205071.2025.2490919}}.
 
 \bibitem{woo1993}
 A.~C. Woo, H.~T.~G. Wang, M.~J. Schuh, M.~L. Sanders, {EM} programmer's

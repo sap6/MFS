@@ -175,5 +175,7 @@ print("no tails:", {J: f"{x:.2e}" for J, x in tnt.items()}, "tails reduce J = 8 
 tpl = {int(r[0]): (sum(_tet.Tetrahedron(None, classes=[], n_base=int(r[0])).unknowns.values()), rel(tc[f"plain_E{int(r[0])}"], tref))
        for r in tc["plain"]}
 print("plain layout (N_u, err):", {nb: (nu, f"{e_:.2e}") for nb, (nu, e_) in tpl.items()})
-print("Bempp graded (n, N_u, t, err):", [(int(r[0]), int(r[1]), round(float(r[2]), 1), f"{r[3]:.2e}") for r in tc["bem"]])
+print("Bempp graded (n, q, N_u, t, err):",
+      [(int(r[0]), f"{int(r[1])}/{int(r[1])+2}", int(r[2]), round(float(r[3]), 1), f"{r[4]:.2e}") for r in tc["bem"]])
+print("Bempp time envelope:", [(round(t, 1), f"{e:.2e}") for t, e in envelope([(float(r[3]), float(r[4])) for r in tc["bem"]])])
 

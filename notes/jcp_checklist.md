@@ -20,7 +20,7 @@ guide.
 | Graphical abstract (encouraged, optional) | `figures/fig_graphical_abstract.pdf` / `.png` (`figures/graphical_abstract.py`) | done |
 | Cover letter | `notes/cover_letter_jcp.md` | done (fill `[Submission Date]`) |
 | Reference style: numbered (elsarticle-num) | elsarticle-num | done |
-| Length | no page limit known; 28 pages in the journal `3p,times` layout (49 preprint pages), in line with the JCP papers we cite | fine |
+| Length | no page limit known; 24 pages in the journal `3p,times` layout (39 preprint pages), concise and accessible | fine |
 
 The JCP home page also says the journal "strongly encourages authors to
 make available all software or data that would allow published results to
