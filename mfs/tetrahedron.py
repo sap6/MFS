@@ -325,7 +325,7 @@ def solve(J, d=(0, 0, -1.0), p=(0, 1.0, 0), pts=None, k=2 * np.pi, max_gb=None, 
             ram = min(ram, int(cg) / 2 ** 30) if cg.isdigit() else ram
         except OSError:
             pass
-        max_gb = min(6.0, 0.55 * ram)
+        max_gb = min(6.0, 0.60 * ram)
     d, p = np.asarray(d, float), np.asarray(p, float)
     pts = None if pts is None else np.asarray(pts, float)
     t0 = time.time()
