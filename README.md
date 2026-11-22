@@ -38,7 +38,7 @@ badge at the top of each notebook, or below.
 |---|---|---|
 | [1. The sphere](notebooks/1_sphere.ipynb) [![Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/sap6/MFS/blob/main/notebooks/1_sphere.ipynb) | five-line MFS solve against the Mie series, $\exp(-c\sqrt{N})$ convergence and $R_s$ conditioning, near-surface field | under a minute |
 | [2. The torus](notebooks/2_torus.ipynb) [![Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/sap6/MFS/blob/main/notebooks/2_torus.ipynb) | azimuthal Fourier decoupling (axial vs oblique waves), optical theorem, focal-ring bound on the source torus | under a minute |
-| [3. The cube & tetrahedron](notebooks/3_cube.ipynb) [![Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/sap6/MFS/blob/main/notebooks/3_cube.ipynb) | why inner copies stall, skeleton layout, edge residual with/without tails, oblique wave, and regular tetrahedron | about five minutes |
+| [3. The cube & tetrahedron](notebooks/3_cube.ipynb) [![Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/sap6/MFS/blob/main/notebooks/3_cube.ipynb) | why inner copies stall, skeleton layout, edge residual with/without tails, oblique wave, and regular tetrahedron | about four minutes |
 | [4. The NASA almond](notebooks/4_almond.ipynb) [![Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/sap6/MFS/blob/main/notebooks/4_almond.ipynb) | mid-plane focal-curve layout and tip tail, nose-on convergence, 3.5 GHz monostatic RCS against the Austin benchmark | about three minutes |
 
 ## Install
@@ -90,9 +90,9 @@ involve Bempp need `pip install -e ".[bempp]"`.
 | Figures 3 and 9: source layouts | [`figures/layouts.py`](figures/layouts.py) | (a drawing) |
 | Figure 4: the wedge at an edge | [`figures/wedge.py`](figures/wedge.py) | (a sketch) |
 | Figure 5: the residual near an edge | [`figures/edge_residual.py`](figures/edge_residual.py) | 1 minute |
-| Figure 6, Table 2: convergence on the cube | [`figures/cube_convergence.py`](figures/cube_convergence.py) | 12 minutes, Bempp 8 more |
-| Figure 7, Table 5: other waves and larger cubes | [`figures/cube_cases.py`](figures/cube_cases.py) | 45 to 90 minutes per case (`--run CASE`: `k1`, `k1o`, `k2`, `k3`; `--scan CASE`: 2 hours) |
-| Figure 8: the regular tetrahedron | [`figures/tetrahedron.py`](figures/tetrahedron.py) | 15 minutes |
+| Figure 6, Table 2: convergence on the cube | [`figures/cube_convergence.py`](figures/cube_convergence.py) | 8 minutes, Bempp 8 more |
+| Figure 7, Table 5: other waves and larger cubes | [`figures/cube_cases.py`](figures/cube_cases.py) | 30 to 65 minutes per case (`--run CASE`: `k1`, `k1o`, `k2`, `k3`; `--scan CASE`: 2 hours) |
+| Figure 8: the regular tetrahedron | [`figures/tetrahedron.py`](figures/tetrahedron.py) | 12 minutes |
 | Figure 10, Table 3: almond radar cross-section | [`figures/almond_rcs.py`](figures/almond_rcs.py) | 12 minutes |
 | Figure 11, Table 4: comparison with Bempp | [`figures/cost.py`](figures/cost.py) | 2 to 10 minutes per shape (`--run SHAPE`: `sphere`, `torus`, `almond`, `almond35`) |
 | Figure 12: the field near the surface | [`figures/nearfield.py`](figures/nearfield.py) | 2 minutes |

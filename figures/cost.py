@@ -156,7 +156,7 @@ keep = u["ndof"] > 1000
 curve(ax, u["t"][keep], [rel(E, ref) for E in u["E"][keep]], ORANGE, "D", "-.", "Bempp, quasi-uniform")
 env = np.load(data("cube_cases_k1.npz"))["env"]
 curve(ax, env[:, 5], env[:, 6], RUST, "X", (0, (3, 1)), "Bempp, graded (lower envelope)")
-ax.text(env[-1, 5] * 1.04, env[-1, 6] * 1.35, "8 GB\nlimit", fontsize=6.4, color=RUST, ha="right", va="bottom", linespacing=0.95)
+ax.text(env[-1, 5] * 1.04, env[-1, 6] * 1.80, "8 GB\nlimit", fontsize=6.4, color=RUST, ha="right", va="bottom", linespacing=0.95)
 ax.set_title(r"(d) unit cube, $k = 2\pi$, standard wave", loc="left", fontsize=8.5)
 ax.set_ylim(5e-8, 3e-2)
 ax.set_xticks([1, 2, 5, 10, 50, 200, 500])

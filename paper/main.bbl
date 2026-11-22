@@ -280,6 +280,12 @@ D.~Khavinson, E.~Lundberg, A tale of ellipsoids in potential theory, Notices
 \newblock \href {https://doi.org/10.1090/noti1082}
   {\path{doi:10.1090/noti1082}}.
 
+\bibitem{trefethen2014}
+L.~N. Trefethen, J.~A.~C. Weideman, The exponentially convergent trapezoidal
+  rule, SIAM Rev. 56~(3) (2014) 385--458.
+\newblock \href {https://doi.org/10.1137/130932132}
+  {\path{doi:10.1137/130932132}}.
+
 \bibitem{burbano2026}
 J.~Burbano-Gallegos, C.~P{\'e}rez-Arancibia, C.~Turc, Maxwell {\`a} la
   {H}elmholtz: Electromagnetic scattering by {3D} perfect electric conductors

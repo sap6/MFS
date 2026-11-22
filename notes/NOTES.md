@@ -1,6 +1,6 @@
 # Project notes
 
-Last updated: 2026-11-21 (20-hour JCP campaign: fair MFS kernel/evaluation speedups across all 5 shapes, monotonic `m = 1` + `2.2e-4` Bempp confirmation on regular tetrahedron, full 2-pass alternating re-timing on 2-core Intel Xeon @ 2.3 GHz, redesigned super-clear source/boundary placement figures, exact `r -> inf` far fields, sphere TE resonance & referee audit, 24 journal pages; see `notes/HANDOFF.md`). The research scripts named in the items are in
+Last updated: 2026-11-22 (8-hour polyhedral MFS speed & accuracy campaign + Austin `9.936 in` exact RCS + competitor study: `2.3x` faster projection-centered L2-tiled `lines.py` kernels, `mv = max(2, m)` vertex-ray spacing fix taking cube `1dep` to `7.12e-5` in `14.1 s` and tetrahedron `1dep` to `1.45e-3` in `4.40 s`, universal `20%` anisotropic boundary panels `graded_uv`, root-moment far-target batching, class-by-class `CSNE`, Trefethen--Weideman strip-analyticity floor `exp(-2*pi*theta_e/|ln q|)`, full 2-pass alternating polyhedral re-timing where MFS strictly beats symmetric graded Bempp at every wall time on the tetrahedron and reaches `10^-3` in `0.83x`, `0.51x`, `0.43x` of Bempp's time at `k = 2*pi, 4*pi, 6*pi` on the cube, 17 passing `pytest` tests, 24 journal pages; see `notes/HANDOFF.md`). The research scripts named in the items are in
 `validation/` at commit 9f5a721. Companion files: `DERIVATIONS.md` (proofs and exponent tables),
 `LITERATURE.md` (T6), `PAPER_OUTLINE.md` (T7). Problem throughout:
 exterior scattering of a plane wave by a perfectly conducting (PEC) body,
@@ -8,7 +8,7 @@ tangential E_sc = -tangential E_inc on the surface, least-squares collocation.
 
 ## Start here
 
-- **21 Nov: read `notes/HANDOFF.md` first** (authoritative state: 16 passing `pytest` tests with `MFS_TEST_BEMPP=1`, all 5 shapes re-timed across 2 alternating passes on the 2-core Intel Xeon @ 2.3 GHz / 8 GB VM, exact `r -> inf` far fields in `Cube.far`, `Tetrahedron.far` and `almond.far_field`, redesigned 13 figures, `paper/main_3p.pdf` at 24 journal pages and `paper/main.pdf` at 40 preprint pages with zero LaTeX/BibTeX warnings or bad boxes).
+- **22 Nov: read `notes/HANDOFF.md` first** (authoritative state: 17 passing `pytest` tests with `MFS_TEST_BEMPP=1`, all 5 shapes re-timed across 2 alternating passes on the 2-core Intel Xeon @ 2.3 GHz / 8 GB VM, exact `r -> inf` far fields and root-moment exterior batching, redesigned 13 figures, `paper/main_3p.pdf` at 24 journal pages and `paper/main.pdf` at 40 preprint pages with zero LaTeX/BibTeX warnings or bad boxes).
 - **Since 18 Nov the repository has a new layout** (see the "part three"
   block below and `../CLAUDE.md`): `mfs/`, `figures/`, `data/`, `notebooks/`,
   `tests/`, `paper/`, `thesis/`, `notes/`. Script names in the items below

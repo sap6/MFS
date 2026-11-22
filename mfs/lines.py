@@ -235,7 +235,7 @@ def _line_kernel_single(x, T, refl, r_act, t_hat, mid0, rot, tq, W, off, tlo, th
                     p = (1 << lev) - 1 + idx if lev <= ltab else -1
                     a0 = tlo[p] if p >= 0 else H * np.tanh(0.5 * lam * (-1.0 + wid * idx))
                     b0 = thi[p] if p >= 0 else H * np.tanh(0.5 * lam * (-1.0 + wid * (idx + 1)))
-                    gap = max(a0 - xt, 0.0, xt - b0)
+                    gap = max(a0 - pt, 0.0, pt - b0)
                     if b0 - a0 > np.sqrt(rho2 + gap * gap) and lev < LHARD:
                         stack_l[sp], stack_i[sp], stack_l[sp + 1], stack_i[sp + 1] = lev + 1, 2 * idx, lev + 1, 2 * idx + 1
                         sp += 2
@@ -420,7 +420,7 @@ def _line_kernel_multi(x, T, refl, r_act, t_hat, mids, w, rot, tq, W, off, tlo, 
                         p = (1 << lev) - 1 + idx if lev <= ltab else -1
                         a0 = tlo[p] if p >= 0 else H * np.tanh(0.5 * lam * (-1.0 + wid * idx))
                         b0 = thi[p] if p >= 0 else H * np.tanh(0.5 * lam * (-1.0 + wid * (idx + 1)))
-                        gap = max(a0 - xt, 0.0, xt - b0)
+                        gap = max(a0 - pt, 0.0, pt - b0)
                         if b0 - a0 > np.sqrt(min_rho2 + gap * gap) and lev < LHARD:
                             stack_l[sp], stack_i[sp], stack_l[sp + 1], stack_i[sp + 1] = lev + 1, 2 * idx, lev + 1, 2 * idx + 1
                             sp += 2
@@ -821,16 +821,17 @@ def _eval_line_field_kernel(pts, refl, r_act, sgn, t_hat, mids, tq, W, off, tlo,
                 r = r_act[ia]
                 rx0, rx1, rx2 = refl[r, 0], refl[r, 1], refl[r, 2]
                 xm0, xm1, xm2 = pts[m, 0] * rx0, pts[m, 1] * rx1, pts[m, 2] * rx2
-                xt = xm0 * th0 + xm1 * th1 + xm2 * th2
+                pt0 = (xm0 - mids[0, 0]) * th0 + (xm1 - mids[0, 1]) * th1 + (xm2 - mids[0, 2]) * th2
                 rho2 = 1e300
                 for i in range(npos):
                     px0 = xm0 - mids[i, 0]
                     px1 = xm1 - mids[i, 1]
                     px2 = xm2 - mids[i, 2]
                     px[i, 0], px[i, 1], px[i, 2] = px0, px1, px2
-                    p0 = px0 - xt * th0
-                    p1 = px1 - xt * th1
-                    p2 = px2 - xt * th2
+                    pt_i = px0 * th0 + px1 * th1 + px2 * th2
+                    p0 = px0 - pt_i * th0
+                    p1 = px1 - pt_i * th1
+                    p2 = px2 - pt_i * th2
                     d2 = p0 * p0 + p1 * p1 + p2 * p2
                     if d2 < rho2:
                         rho2 = d2
@@ -843,7 +844,7 @@ def _eval_line_field_kernel(pts, refl, r_act, sgn, t_hat, mids, tq, W, off, tlo,
                     p = (1 << lev) - 1 + idx if lev <= ltab else -1
                     a0 = tlo[p] if p >= 0 else H * np.tanh(0.5 * lam * (-1.0 + wid * idx))
                     b0 = thi[p] if p >= 0 else H * np.tanh(0.5 * lam * (-1.0 + wid * (idx + 1)))
-                    gap = max(a0 - xt, 0.0, xt - b0)
+                    gap = max(a0 - pt0, 0.0, pt0 - b0)
                     if b0 - a0 > np.sqrt(rho2 + gap * gap) and lev < LHARD:
                         stack_l[sp], stack_i[sp], stack_l[sp + 1], stack_i[sp + 1] = lev + 1, 2 * idx, lev + 1, 2 * idx + 1
                         sp += 2

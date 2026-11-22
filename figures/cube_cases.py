@@ -108,7 +108,7 @@ for ax, (case, title) in zip(axs, panels):
         curve(ax, pts[:, 5], pts[:, 6], col, mk, ls, label, 4.8, 1.4, 0.6, zorder=zo)
     ax.text(m2[0, 5] * 1.18, m2[0, 6] * 1.12, f"$J={int(m2[0, 1])}$", fontsize=7.0, color=BLUE)
     ax.text(m2[-1, 5] * 1.18, m2[-1, 6] * 0.92, f"$J={int(m2[-1, 1])}$", fontsize=7.0, color=BLUE, va="center")
-    ax.text(bem_env[-1, 5] * 1.05, bem_env[-1, 6] * 1.32, "8 GB\nlimit", fontsize=6.2, color=RUST, ha="right", va="bottom", linespacing=0.95)
+    ax.text(bem_env[-1, 5] * 1.05, bem_env[-1, 6] * 1.80, "8 GB\nlimit", fontsize=6.2, color=RUST, ha="right", va="bottom", linespacing=0.95)
     ax.set_title(title, loc="left", fontsize=8.5)
     ax.set_xlabel("wall time [s]  (2 cores)")
     ax.xaxis.set_minor_formatter(plt.NullFormatter())

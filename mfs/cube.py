@@ -379,7 +379,7 @@ def solve(J, d=(0, 0, -1.0), p=(0, 1.0, 0), pts=None, k=2 * np.pi, max_gb=None, 
     """
     One plane wave at level J, using the mirror planes and the rotation about the body diagonal
       pts: points where the scattered field is wanted
-      max_gb: if the class matrices would exceed this, they are built in groups (default: half of RAM)
+      max_gb: if a class matrix would exceed this, classes are factorised one at a time (default: 60% of RAM, at most 6 GB)
       Returns the field at pts, the wall time, and a dictionary of checks
       (unknowns, boundary residual, extinction cross-section, optical-theorem mismatch)
     """

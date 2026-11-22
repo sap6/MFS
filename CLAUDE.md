@@ -5,7 +5,7 @@ Maxwell's Equations" into a JCP paper (authors: the repo owner and their
 supervisor Timo). Code lives here; the manuscript lives in `sap6/mfs-paper`
 (synced with Overleaf).
 
-**Read `notes/HANDOFF.md` (21 November) and then `notes/NOTES.md` before doing anything.** It holds what works, what
+**Read `notes/HANDOFF.md` (22 November) and then `notes/NOTES.md` before doing anything.** It holds what works, what
 failed, the current best parameters and the task list. Do not re-derive or
 re-test anything recorded there.
 
@@ -30,7 +30,9 @@ scratch folder or `notes/`, not in the package; the package stays short.
 4. Pipe long output through `tail`; never print full matrices or logs.
 5. Before ending: add one line per experiment to the log in `notes/NOTES.md`
    (what was run, the number, the conclusion), update the task list, commit
-   and push.
+   and push (include `[skip ci]` on intermediate pushes to avoid exhausting
+   private-repo GitHub Actions minutes, after running `pytest` + `figures/*.py`
+   locally).
 6. Report failures and stalls as plainly as successes. Every accuracy claim
    needs a reference (Mie, Bempp, or a known-solution check) and a number.
 7. Do not write or rewrite manuscript prose unless asked. The author writes;
@@ -46,7 +48,8 @@ above for as long as the paper is being finished.
   this week." "You can always keep improving and polishing the
   paper/code/results/etc. or simplifying things that are too complex."
   Work through the work list at the top of `notes/NOTES.md`, keep it current,
-  commit and push often. **On Antigravity:** never use bash `while pgrep ... sleep`
+  commit locally often, and avoid unnecessary CI runs on intermediate pushes.
+  **On Antigravity:** never use bash `while pgrep ... sleep`
   polling loops (which stall turns); use reactive background `run_command`
   notifications, delegate multi-file audits/PDF checks to subagents so context
   stays small, and use `/goal` or `/teamwork` for multi-turn autonomous runs.
@@ -86,7 +89,7 @@ above for as long as the paper is being finished.
 
 ```
 pip install -e ".[test,bempp]"         # the package, pytest, and Bempp with its fast (OpenCL) backend
-python -m pytest tests                 # 20 s warm; MFS_TEST_BEMPP=1 also checks Bempp with symmetry (16 tests)
+python -m pytest tests                 # 20 s warm; MFS_TEST_BEMPP=1 also checks Bempp with symmetry (17 tests)
 for f in figures/*.py; do case "$f" in *style.py|*cone_exponents.py) ;; *) python "$f";; esac; done   # every figure and table from data/
 apt-get install -y --no-install-recommends texlive-latex-base texlive-latex-recommended texlive-latex-extra texlive-fonts-recommended texlive-science latexmk cm-super   # only to build paper/main.pdf
 ```

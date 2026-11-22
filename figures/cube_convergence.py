@@ -93,7 +93,7 @@ t1_xy = (np.sqrt(curves["tail"][-1, 0]), curves["tail"][-1, 1])
 b1_xy = (np.sqrt(curves["graded"][-1, 0]), curves["graded"][-1, 1])
 ax.text(d0_xy[0] + 2.5, d0_xy[1] * 1.18, "$J=4$", fontsize=7.5, color=BLUE)
 ax.text(d1_xy[0] + 3.5, d1_xy[1] * 1.25, "$J=11$", fontsize=7.5, color=BLUE)
-ax.text(t1_xy[0] - 2.0, t1_xy[1] * 1.45, "$J=9$", fontsize=7.4, color=NAVY, ha="right")
+ax.text(t1_xy[0], t1_xy[1] * 0.65, "$J=9$", fontsize=7.4, color=NAVY, ha="center", va="top")
 ax.text(b1_xy[0] + 2.5, b1_xy[1] * 1.12, "8 GB limit", fontsize=7.2, color=RUST, va="bottom")
 
 ax.set(xlabel=r"$\sqrt{N_u}$,  $N_u$ = unknowns of the whole cube", ylabel="relative error of the scattered field")

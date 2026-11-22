@@ -208,7 +208,7 @@ ax_wall.add_patch(Polygon([[-0.5, 0.0], [0.5, 0.0], [0.0, h_wall]], closed=True,
 b_in = (1.0 - 0.56) * h_wall
 ax_wall.add_patch(Polygon([[-0.28, b_in], [0.28, b_in], [0.0, h_wall]], closed=True, facecolor="#e3ece8", edgecolor=GREEN,
                           lw=0.65, ls="--", zorder=1))
-ax_wall.text(-0.028, 0.245, "inner base", fontsize=6.5, color=GREEN, ha="center", va="center")
+ax_wall.text(-0.015, 0.205, "inner base", fontsize=6.0, color=GREEN, ha="center", va="center")
 
 # Free lightning edge lines d_j = 0.14 * (2^{-1/2})^j with stretched t(u) nodes clustering towards corners
 d_vis = 0.14 * (2.0 ** -0.5) ** np.arange(0, 8)
@@ -308,7 +308,7 @@ ax_conv.text(np.sqrt(d_c[0, 0]) + 2.5, d_c[0, 1] * 1.12, f"$J={int(d_c[0, 3])}$"
 ax_conv.text(np.sqrt(d_c[-1, 0]) - 2.0, d_c[-1, 1] * 0.58, f"$J={int(d_c[-1, 3])}$", fontsize=6.8, color=BLUE, ha="right")
 ax_conv.text(np.sqrt(b_c[-1, 0]) + 1.5, b_c[-1, 1] * 1.18, "8 GB\nlimit", fontsize=6.2, color=RUST, va="bottom", linespacing=0.95)
 ax_conv.set(xlabel=r"$\sqrt{N_u}$ (whole-body unknowns)", ylabel="relative error of the scattered field",
-            xlim=(14, 152), ylim=(4e-5, 1.0))
+            xlim=(8, 152), ylim=(4e-5, 1.0))
 ax_conv.set_title(r"(c) error against $\sqrt{N_u}$", loc="left", fontsize=8.4)
 
 # Panel (d): error against wall time [s]
@@ -322,8 +322,8 @@ curve(ax_time, bem_time_env[:, 0], bem_time_env[:, 1], RUST, "X", (0, (3, 1)), m
 ax_time.text(d_c[0, 2] * 1.15, d_c[0, 1] * 1.10, f"$J={int(d_c[0, 3])}$", fontsize=6.8, color=BLUE)
 ax_time.text(d_c[-1, 2] * 0.88, d_c[-1, 1] * 0.58, f"$J={int(d_c[-1, 3])}$", fontsize=6.8, color=BLUE, ha="right")
 ax_time.text(bem_time_env[-1, 0] * 1.02, bem_time_env[-1, 1] * 1.25, "8 GB\nlimit", fontsize=6.2, color=RUST, ha="right", va="bottom", linespacing=0.95)
-ax_time.set(xlabel="wall time [s]  (2 cores)", xlim=(1.6, 390), ylim=(4e-5, 1.0))
-ax_time.set_xticks([2, 5, 10, 20, 50, 100, 250])
+ax_time.set(xlabel="wall time [s]  (2 cores)", xlim=(0.75, 390), ylim=(4e-5, 1.0))
+ax_time.set_xticks([1, 2, 5, 10, 20, 50, 100, 250])
 ax_time.xaxis.set_major_formatter(plt.FuncFormatter(lambda v, pos: f"{v:g}"))
 ax_time.xaxis.set_minor_formatter(plt.NullFormatter())
 ax_time.set_title("(d) error against wall time", loc="left", fontsize=8.4)
