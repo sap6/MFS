@@ -23,12 +23,12 @@ PTS = 2.0 * core.fibonacci(400)
 VERTS = tetrahedron.SCALENE_VERTS
 
 
-def warmup(need_bem=True):
-    tetrahedron.solve_scalene(2, D, P, PTS[:10], K, q=0.5)
-    if need_bem:
-        for reg, sing in ((4, 6), (6, 8)):
-            bem.bempp.GLOBAL_PARAMETERS.quadrature.regular, bem.bempp.GLOBAL_PARAMETERS.quadrature.singular = reg, sing
-            bem.efie(bem.scalene_tetrahedron_grid(VERTS, 4, 1.8), K, D, P, PTS[:10])
+def warmup(need_mfs=True, b_quads=()):
+    if need_mfs:
+        tetrahedron.solve_scalene(2, D, P, PTS[:10], K, q=0.5)
+    for reg, sing in dict.fromkeys(b_quads):
+        bem.bempp.GLOBAL_PARAMETERS.quadrature.regular, bem.bempp.GLOBAL_PARAMETERS.quadrature.singular = reg, sing
+        bem.efie(bem.scalene_tetrahedron_grid(VERTS, 4, 1.8), K, D, P, PTS[:10])
 
 
 def bem_one(n, g, reg, sing, ref):
@@ -45,7 +45,7 @@ def load_state():
 
 
 def run_ref():
-    warmup(need_bem=False)
+    warmup(need_mfs=True)
     gc.collect()
     E, t, info = tetrahedron.solve_scalene(7, D, P, PTS, K, q=2 ** -0.5)
     rss_mb = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024.0
@@ -73,8 +73,8 @@ def run_chunk(cid):
         "d2": ([], [(40, 6, 8)]),
     }
     m_jobs, b_jobs = chunks[cid]
-    warmup(need_bem=bool(b_jobs))
-    reps = 1 if cid in ("d1", "d2") else 2
+    warmup(need_mfs=bool(m_jobs), b_quads=[(reg, sing) for _, reg, sing in b_jobs])
+    reps = 1 if cid in ("b1", "b2", "c1", "d1", "d2") else 2
     tm = {k: [] for k in m_jobs}
     tb = {k: [] for k in b_jobs}
     rm, rb = {}, {}
