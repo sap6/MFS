@@ -25,7 +25,7 @@ import numpy as np
 
 from . import lines
 from .core import class_part, classes_of, cross_sections, factor, sign, sphere_rule, tangent_basis
-from .cube import ROT, graded_nodes, orbits
+from .cube import ROT, graded_nodes, graded_uv, orbits
 
 H = 0.5                                                              # half edge length
 A_TET = 0.5 / np.sqrt(2.0)                                           # vertex coordinate for unit edge length
@@ -64,7 +64,7 @@ class Line:
             self.w = np.ones((1, 1, 3))
 
     def keep(self, cls):
-        """Columns kept by parity class cls under the half-turn REFL[1 + ax] that maps the edge to itself"""
+        """Columns kept by parity class cls under the half-turn REFL[1 + self.ax] that maps the edge to itself"""
         chi = sign(cls, REFL[1 + self.ax])
         par = (-1.0) ** np.arange(self.n)[:, None]
         kept = chi * par * np.array([[-1.0, 1.0, -1.0]]) > 0
@@ -73,12 +73,15 @@ class Line:
         return kept
 
 
-def face_kites(sc, w):
-    """Three kites covering F_0, graded towards all three edges and vertices (sc -> 0.5 is xi -> 0)"""
+def face_kites(su, w_or_sv, w2=None):
+    """Three kites covering F_0, graded towards all three edges and vertices (su, sv -> 0.5 is U, V -> 0)"""
     c0 = FACE0.mean(axis=0)
-    xi = 1.0 - 2.0 * sc
-    U, V = [g.ravel() for g in np.meshgrid(xi, xi, indexing="ij")]
-    W2 = 4.0 * np.outer(w, w).ravel()
+    if w2 is None:
+        xi = 1.0 - 2.0 * su
+        U, V = [g.ravel() for g in np.meshgrid(xi, xi, indexing="ij")]
+        W2 = 4.0 * np.outer(w_or_sv, w_or_sv).ravel()
+    else:
+        U, V, W2 = 1.0 - 2.0 * su, 1.0 - 2.0 * w_or_sv, 4.0 * w2
     pts, wts = [], []
     for i in range(3):
         A, M1, M2 = FACE0[i], 0.5 * (FACE0[i] + FACE0[(i + 1) % 3]), 0.5 * (FACE0[i] + FACE0[(i + 2) % 3])
@@ -104,9 +107,11 @@ class Tetrahedron:
         s = max(0.0, k / (2 * np.pi) - 1.0)
         m = max(1, int(round(np.log(0.5) / np.log(q))))
         if J is None:
-            self.depths, ex = np.zeros(0), 0.0
+            self.depths, depths_v, ex = np.zeros(0), np.zeros(0), 0.0
         else:
             self.depths = 0.14 * q ** np.arange(m * J + 1)
+            qv, mv = min(q, 2 ** -0.5), max(2, m)                # vertex ray uses at least two dipoles per octave
+            depths_v = 0.14 * qv ** np.arange(mv * J + 1)
             n0 = max(4, 2 * J - 4)
             ex = 2 * s * (s + 1) if extra_modes is None else extra_modes
 
@@ -114,7 +119,7 @@ class Tetrahedron:
         bary = np.array([(i + 1, j + 1, n_base - i - j) for i in range(n_base) for j in range(n_base - i)], float) / (n_base + 2)
         base = 0.56 * (bary @ FACE0)
         v_hat = np.ones(3) / np.sqrt(3.0)
-        vertex = VERTS[0] - self.depths[:, None] * v_hat[None, :]
+        vertex = VERTS[0] - depths_v[:, None] * v_hat[None, :]
         self.pe, self.pm = np.concatenate((base, vertex)), vertex
         self.lines = [Line(ax, d, n0 + int(round(ex * (1.0 - 3.0 * d))) + int(np.ceil(2 * np.log(1.0 / d))), kind)
                       for d in self.depths for ax in range(3) for kind in "em"]
@@ -145,13 +150,14 @@ class Tetrahedron:
                                        ([np.ones((n_ray_slots, 3), bool)] if n_ray_slots else [])).ravel() for c in CLASSES}
         self.unknowns = {c: int(kp.sum()) for c, kp in self.keep.items()}
 
-        # Graded boundary points on F_0 (|dx/d(sc)| = 1 along each half-edge, so H/4 matches the cube);
-        # since nu_1 = 0.32221 < 1/2, weighting by dist · r_v^{1 - 2 nu_1} keeps |E|^2 bounded at vertices too
-        ng = max(4, 2 + max(m, 1 + int(np.ceil(0.5 * s))))
+        # Anisotropic graded kites on F_0; since nu_1 = 0.32221 < 1/2, weighting by
+        # dist · r_v^{1 - 2 nu_1} keeps |E|^2 integrable at both edges and vertices
+        ng = 2 + max(m, 1 + int(np.ceil(0.5 * s)))
         d_min = self.depths[-1] if len(self.depths) else 0.14
         levels = max(2, int(np.ceil(np.log2(2 * H / d_min))))
-        sc, w = graded_nodes(levels, ng, min(H / 4, np.pi / (2 * k)))
-        self.x, W, dist = face_kites(sc, w)
+        n_max = max((ln.n for ln in self.lines), default=0)
+        su, sv, wuv = graded_uv(levels, ng, n_max, min(H / 4, np.pi / (2 * k)))
+        self.x, W, dist = face_kites(su, sv, wuv)
         self.T = tangent_basis(np.tile(-v_hat, (len(self.x), 1)))
         rv = np.min([np.linalg.norm(self.x - v, axis=1) for v in FACE0], axis=0)
         self.rw = np.sqrt(W * dist * (rv ** (1.0 - 2.0 * NU[0])))
@@ -231,13 +237,46 @@ class Tetrahedron:
         y_pt, alpha, beta = self._unpack_points(cl, c_all)
         out = np.zeros((ncls, len(pts), 3), complex)
         lines.eval_points_field(pts, REFL, sgn, y_pt, alpha, beta, float(self.k), out)
-        for i, ln in enumerate(self.lines):
-            if ln.kind == "e":
+        line_entries = [(i, ln) for i, ln in enumerate(self.lines) if ln.kind == "e"]
+        if not line_entries:
+            return out.sum(axis=0)
+
+        far_mask = np.linalg.norm(pts, axis=1) >= A_TET * np.sqrt(3.0) + 2.0 * H + 1e-9
+        if np.any(far_mask):
+            pts_f = np.ascontiguousarray(pts[far_mask])
+            out_f = np.zeros((ncls, len(pts_f), 3), complex)
+            by_ax = {0: ([], [], []), 1: ([], [], []), 2: ([], [], [])}
+            for i, ln in line_entries:
                 lo = 3 * self.slot0[1 + i]
                 c_pair = c_all[:, lo:lo + 6 * ln.n].reshape(ncls, 2, 1, ln.n, 3)
                 w = np.stack((ln.w, self.lines[i + 1].w))
-                lines.eval_line_field(pts, REFL, ln.r_act, sgn, ln.t_hat, ln.mids, ln.lam, ln.d, ln.n,
-                                      float(self.k), H, c_pair, out, rot=ln.F, w=w)
+                tq, W, off, *_ = lines.build_tree(ln.lam, ln.d, ln.n, H, self.k)
+                pm_n = int(off[1])
+                c_cart = 2.0 * np.einsum("ksic,lksmc,cq->lkimq", w, c_pair, ln.F)
+                M0 = np.einsum("pm,lkimq->lkpiq", W[:pm_n], c_cart).reshape(ncls, 2, -1, 3)
+                ys = (ln.mids[None, :, :] + tq[:pm_n, None, None] * ln.t_hat[None, None, :]).reshape(-1, 3)
+                by_ax[ln.ax][0].append(ys)
+                by_ax[ln.ax][1].append(M0[:, 0])
+                by_ax[ln.ax][2].append(M0[:, 1])
+            for ax, (yl, al, bl) in by_ax.items():
+                if yl:
+                    r_act = np.array([ri for ri in range(4) if REFL[ri, (ax + 1) % 3] > 0], np.int64)
+                    lines.eval_points_field(pts_f, np.ascontiguousarray(REFL[r_act]), np.ascontiguousarray(sgn[:, r_act]),
+                                            np.ascontiguousarray(np.vstack(yl)),
+                                            np.ascontiguousarray(np.concatenate(al, axis=1)),
+                                            np.ascontiguousarray(np.concatenate(bl, axis=1)), float(self.k), out_f)
+            out[:, far_mask] += out_f
+
+        if np.any(~far_mask):
+            pts_n = np.ascontiguousarray(pts[~far_mask])
+            out_n = np.zeros((ncls, len(pts_n), 3), complex)
+            for i, ln in line_entries:
+                lo = 3 * self.slot0[1 + i]
+                c_pair = c_all[:, lo:lo + 6 * ln.n].reshape(ncls, 2, 1, ln.n, 3)
+                w = np.stack((ln.w, self.lines[i + 1].w))
+                lines.eval_line_field(pts_n, REFL, ln.r_act, sgn, ln.t_hat, ln.mids, ln.lam, ln.d, ln.n,
+                                      float(self.k), H, c_pair, out_n, rot=ln.F, w=w)
+            out[:, ~far_mask] += out_n
         return out.sum(axis=0)
 
     def far(self, coef, dirs):
@@ -295,26 +334,32 @@ def solve(J, d=(0, 0, -1.0), p=(0, 1.0, 0), pts=None, k=2 * np.pi, max_gb=None, 
     r2, b2, info = 0.0, 0.0, dict(unknowns=[], t_assemble=0.0, t_factor=0.0)
     probe = Tetrahedron(J, k, classes=[], **layout)
     nmax = max(probe.unknowns.values())
-    g = max(1, int(max_gb * 2 ** 30 / (16.0 * (probe.rows * nmax + nmax ** 2))))
+    rw2 = np.repeat(probe.rw, 2)
+    Tw = probe.T * probe.rw[:, None, None]
+    g = max(1, int((max_gb * 2 ** 30 - 16.0 * nmax ** 2) / (16.0 * probe.rows * nmax)))
     for i in range(0, len(todo), g):
-        tet = Tetrahedron(J, k, classes=todo[i:i + g], **layout)
-        bsols = []
-        for j in range(3):
-            only = [c for c in tet.classes if j in orbit[c]]
-            if only:
+        batch_cls = todo[i:i + g]
+        ta0 = time.time()
+        A = probe.matrix(probe.x, Tw, batch_cls)
+        info["t_assemble"] += time.time() - ta0
+        by_rot = {j: {} for j in range(3)}
+        tf0 = time.time()
+        for ic, c in enumerate(batch_cls):
+            fac_c = factor(A[ic, :, :probe.unknowns[c]], overwrite=True)
+            for j in orbit[c]:
                 Q = np.linalg.matrix_power(ROT, j)
-                coef, res, nb2 = tet.solve(Q.T @ d, Q.T @ p, only)
-                bsols.append((Q, coef))
-                r2, b2 = r2 + res ** 2 * nb2, b2 + nb2
-        tet.fac.clear()
+                b = -np.einsum("mab,mb->ma", probe.T, class_part(probe.x, k, Q.T @ d, Q.T @ p, REFL, c)).reshape(-1) * rw2
+                by_rot[j][c], res = fac_c.solve(b, residual=True)
+                r2, b2 = r2 + float(res) ** 2, b2 + float(np.linalg.norm(b) ** 2)
+            del fac_c
+        info["t_factor"] += time.time() - tf0
+        del A
+        bsols = [(np.linalg.matrix_power(ROT, j), coef) for j, coef in by_rot.items() if coef]
         if pts is not None and bsols:
             for Q, coef in bsols:
                 E += probe.field(coef, pts @ Q) @ Q.T
         sols.extend(bsols)
-        info["unknowns"] += [tet.unknowns[c] for c in tet.classes]
-        info["t_assemble"] += tet.t_assemble
-        info["t_factor"] += tet.t_factor
-        del tet
+        info["unknowns"] += [probe.unknowns[c] for c in batch_cls]
     t = time.time() - t0
 
     far = lambda dirs: sum(probe.far(coef, dirs @ Q) @ Q.T for Q, coef in sols)

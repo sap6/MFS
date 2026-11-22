@@ -59,6 +59,48 @@ def graded_nodes(levels, ng, hmax=H / 4):
     return (0.5 * (a + b) + 0.5 * (b - a) * g).ravel(), (0.5 * (b - a) * w).ravel()
 
 
+def graded_uv(levels, ng, n_max=0, hmax=H / 4):
+    """
+    Anisotropic Gauss-Legendre rule on (0, H)²: panels halve towards u = H and v = H,
+    with ng × ng nodes near the corner (|p - q| <= 1) and ng across the nearer edge times
+    fewer nodes along it away from the corner, keeping at least n_max tangential nodes
+    """
+    dist = np.concatenate(([0.0], H * 0.5 ** np.arange(levels, -1, -1)))
+    brk = [0.0]
+    for a, b in zip(dist[:-1], dist[1:]):
+        n = int(np.ceil((b - a) / hmax))
+        brk.extend(a + (b - a) * np.arange(1, n + 1) / n)
+    ends = H - np.array(brk)[::-1]
+    a, b = ends[:-1], ends[1:]
+    P = len(a)
+    ng_mid = max(3, ng - 1)
+    ng_far = max(2, ng - 1)
+    if 2 * ng + 2 * ng_mid + max(0, P - 4) * ng_far < n_max:
+        ng_far = max(ng_far, 3)
+    rules = {n: np.polynomial.legendre.leggauss(n) for n in {ng, ng_mid, ng_far}}
+    us, vs, ws = [], [], []
+    for p in range(P):
+        for q in range(P):
+            d = abs(p - q)
+            if d <= 1:
+                nu, nv = ng, ng
+            elif q > p:
+                nu, nv = (ng_mid if d <= 3 else ng_far), ng
+            else:
+                nu, nv = ng, (ng_mid if d <= 3 else ng_far)
+            gu, wu = rules[nu]
+            gv, wv = rules[nv]
+            up = 0.5 * (a[p] + b[p]) + 0.5 * (b[p] - a[p]) * gu
+            vq = 0.5 * (a[q] + b[q]) + 0.5 * (b[q] - a[q]) * gv
+            wp = 0.5 * (b[p] - a[p]) * wu
+            wq = 0.5 * (b[q] - a[q]) * wv
+            U, V = np.meshgrid(up, vq, indexing="ij")
+            us.append(U.ravel())
+            vs.append(V.ravel())
+            ws.append(np.outer(wp, wq).ravel())
+    return np.concatenate(us), np.concatenate(vs), np.concatenate(ws)
+
+
 class Line:
     """
     Dipole density on a line parallel to the axis ax at depth d below the edge
@@ -128,9 +170,11 @@ class Cube:
         s = max(0.0, k * 2 * H / (2 * np.pi) - 1.0)              # wavelengths per side, minus one
         m = max(1, int(round(np.log(0.5) / np.log(q))))          # depths per octave (2 for q = 2^{-1/2}, 1 for q = 1/2)
         if J is None:
-            self.depths, ex = np.zeros(0), 0.0
+            self.depths, depths_v, ex = np.zeros(0), np.zeros(0), 0.0
         else:
             self.depths = 0.2 * q ** np.arange(m * J + 1)
+            qv, mv = min(q, 2 ** -0.5), max(2, m)                # vertex ray uses at least two dipoles per octave
+            depths_v = 0.2 * qv ** np.arange(mv * J + 1)
             n0 = max(4, 2 * J - 4)
             ex = 2 * s * (s + 1) if extra_modes is None else extra_modes
 
@@ -139,7 +183,7 @@ class Cube:
         g0 = g0[g0 > 0]
         U, V = [g.ravel() for g in np.meshgrid(g0, g0, indexing="ij")]
         base = np.concatenate([np.insert(np.column_stack((U, V)), ax, 0.3, axis=1) for ax in range(3)])
-        vertex = H - self.depths[:, None] / np.sqrt(3) * np.ones((1, 3))
+        vertex = H - depths_v[:, None] / np.sqrt(3) * np.ones((1, 3))
         self.pe, self.pm = np.concatenate((base, vertex)), vertex
         self.lines = [Line(ax, d, n0 + int(round(ex * 2 * (H - d))) + int(np.ceil(2 * np.log(2 * H / d))), kind)
                       for d in self.depths for ax in range(3) for kind in "em"]
@@ -155,14 +199,13 @@ class Cube:
             for c in CLASSES}
         self.unknowns = {c: int(kp.sum()) for c, kp in self.keep.items()}
 
-        # Boundary points in the octant: graded tensor grids, ng nodes per panel, panels halving
-        # towards the edges from min(H/4, λ/4) down to d_min; rows weighted by sqrt(area · dist)
+        # Boundary points in the octant: anisotropic graded Gauss panels halving towards the edges
+        # from min(H/4, λ/4) down to d_min; rows weighted by sqrt(area · dist)
         ng = 2 + max(m, 1 + int(np.ceil(0.5 * s)))
         d_min = self.depths[-1] if len(self.depths) else 0.2
         levels = max(2, int(np.ceil(np.log2(H / d_min))))
-        sc, w = graded_nodes(levels, ng, min(H / 4, np.pi / (2 * k)))
-        U, V = [g.ravel() for g in np.meshgrid(sc, sc, indexing="ij")]
-        W = np.outer(w, w).ravel()
+        n_max = max((ln.n for ln in self.lines if isinstance(ln, Line)), default=0)
+        U, V, W = graded_uv(levels, ng, n_max, min(H / 4, np.pi / (2 * k)))
         self.x = np.concatenate([np.insert(np.column_stack((U, V)), ax, H, axis=1) for ax in range(3)])
         self.T = np.repeat([np.delete(np.eye(3), ax, axis=0) for ax in range(3)], len(W), axis=0)
         dist = H - np.sort(np.abs(self.x), axis=1)[:, 1]        # distance to the nearest edge
@@ -254,13 +297,48 @@ class Cube:
         y_pt, alpha, beta = self._unpack_points(cl, c_all)
         out = np.zeros((ncls, len(pts), 3), complex)
         lines.eval_points_field(pts, REFL, sgn, y_pt, alpha, beta, float(self.k), out)
-        for i, ln in enumerate(self.lines):
-            if isinstance(ln, Line) and ln.kind == "e":
+        line_entries = [(i, ln) for i, ln in enumerate(self.lines) if isinstance(ln, Line) and ln.kind == "e"]
+        if not line_entries:
+            return out.sum(axis=0)
+
+        # Beyond H sqrt(3) + 2 H, the root panel is accepted for every line and mirror image
+        far_mask = np.linalg.norm(pts, axis=1) >= H * np.sqrt(3.0) + 2.0 * H + 1e-9
+        if np.any(far_mask):
+            pts_f = np.ascontiguousarray(pts[far_mask])
+            out_f = np.zeros((ncls, len(pts_f), 3), complex)
+            by_ax = {0: ([], [], []), 1: ([], [], []), 2: ([], [], [])}
+            for i, ln in line_entries:
+                lo = 3 * self.slot0[1 + i]
+                c_pair = c_all[:, lo:lo + 6 * ln.n].reshape(ncls, 2, 1, ln.n, 3)
+                w = np.ones((2, 1, len(ln.mids), 3)) if ln.w is None else np.stack((ln.w, self.lines[i + 1].w))
+                rot = np.eye(3) if ln.rot is None else ln.rot
+                tq, W, off, *_ = lines.build_tree(ln.lam, ln.d, ln.n, H, self.k)
+                pm_n = int(off[1])
+                c_cart = 2.0 * np.einsum("ksic,lksmc,cq->lkimq", w, c_pair, rot)
+                M0 = np.einsum("pm,lkimq->lkpiq", W[:pm_n], c_cart).reshape(ncls, 2, -1, 3)
+                ys = (ln.mids[None, :, :] + tq[:pm_n, None, None] * ln.t_hat[None, None, :]).reshape(-1, 3)
+                by_ax[ln.ax][0].append(ys)
+                by_ax[ln.ax][1].append(M0[:, 0])
+                by_ax[ln.ax][2].append(M0[:, 1])
+            for ax, (yl, al, bl) in by_ax.items():
+                if yl:
+                    r_act = np.array([ri for ri in range(8) if REFL[ri, ax] > 0], np.int64)
+                    lines.eval_points_field(pts_f, np.ascontiguousarray(REFL[r_act]), np.ascontiguousarray(sgn[:, r_act]),
+                                            np.ascontiguousarray(np.vstack(yl)),
+                                            np.ascontiguousarray(np.concatenate(al, axis=1)),
+                                            np.ascontiguousarray(np.concatenate(bl, axis=1)), float(self.k), out_f)
+            out[:, far_mask] += out_f
+
+        if np.any(~far_mask):
+            pts_n = np.ascontiguousarray(pts[~far_mask])
+            out_n = np.zeros((ncls, len(pts_n), 3), complex)
+            for i, ln in line_entries:
                 lo = 3 * self.slot0[1 + i]
                 c_pair = c_all[:, lo:lo + 6 * ln.n].reshape(ncls, 2, 1, ln.n, 3)
                 w = None if ln.w is None else np.stack((ln.w, self.lines[i + 1].w))
-                lines.eval_line_field(pts, REFL, ln.r_act, sgn, ln.t_hat, ln.mids, ln.lam, ln.d, ln.n,
-                                      float(self.k), H, c_pair, out, rot=ln.rot, w=w)
+                lines.eval_line_field(pts_n, REFL, ln.r_act, sgn, ln.t_hat, ln.mids, ln.lam, ln.d, ln.n,
+                                      float(self.k), H, c_pair, out_n, rot=ln.rot, w=w)
+            out[:, ~far_mask] += out_n
         return out.sum(axis=0)
 
     def far(self, coef, dirs):
@@ -326,26 +404,32 @@ def solve(J, d=(0, 0, -1.0), p=(0, 1.0, 0), pts=None, k=2 * np.pi, max_gb=None, 
     r2, b2, info = 0.0, 0.0, dict(unknowns=[], t_assemble=0.0, t_factor=0.0)
     probe = Cube(J, k, classes=[], **layout)
     nmax = max(probe.unknowns.values())
-    g = max(1, int(max_gb * 2 ** 30 / (16.0 * (probe.rows * nmax + nmax ** 2))))   # classes per batch (A and R)
+    rw2 = np.repeat(probe.rw, 2)
+    Tw = probe.T * probe.rw[:, None, None]
+    g = max(1, int((max_gb * 2 ** 30 - 16.0 * nmax ** 2) / (16.0 * probe.rows * nmax)))
     for i in range(0, len(todo), g):
-        cube = Cube(J, k, classes=todo[i:i + g], **layout)
-        bsols = []
-        for j in range(3):                                       # the wave turned back by j thirds of a turn
-            only = [c for c in cube.classes if j in orbit[c]]
-            if only:
+        batch_cls = todo[i:i + g]
+        ta0 = time.time()
+        A = probe.matrix(probe.x, Tw, batch_cls)
+        info["t_assemble"] += time.time() - ta0
+        by_rot = {j: {} for j in range(3)}
+        tf0 = time.time()
+        for ic, c in enumerate(batch_cls):                       # factorise and solve one class at a time (one R in RAM)
+            fac_c = factor(A[ic, :, :probe.unknowns[c]], overwrite=True)
+            for j in orbit[c]:
                 Q = np.linalg.matrix_power(ROT, j)
-                coef, res, nb2 = cube.solve(Q.T @ d, Q.T @ p, only)
-                bsols.append((Q, coef))
-                r2, b2 = r2 + res ** 2 * nb2, b2 + nb2
-        cube.fac.clear()                                         # free the matrices and factors before evaluating the field
+                b = -np.einsum("mab,mb->ma", probe.T, class_part(probe.x, k, Q.T @ d, Q.T @ p, REFL, c)).reshape(-1) * rw2
+                by_rot[j][c], res = fac_c.solve(b, residual=True)
+                r2, b2 = r2 + float(res) ** 2, b2 + float(np.linalg.norm(b) ** 2)
+            del fac_c
+        info["t_factor"] += time.time() - tf0
+        del A
+        bsols = [(np.linalg.matrix_power(ROT, j), coef) for j, coef in by_rot.items() if coef]
         if pts is not None and bsols:
             for Q, coef in bsols:
                 E += probe.field(coef, pts @ Q) @ Q.T
         sols.extend(bsols)
-        info["unknowns"] += [cube.unknowns[c] for c in cube.classes]
-        info["t_assemble"] += cube.t_assemble
-        info["t_factor"] += cube.t_factor
-        del cube                                                 # free the matrices and factors before the next batch
+        info["unknowns"] += [probe.unknowns[c] for c in batch_cls]
     t = time.time() - t0
 
     # Checks, not timed: boundary residual and the optical theorem

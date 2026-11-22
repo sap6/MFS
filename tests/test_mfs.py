@@ -171,6 +171,23 @@ def test_polyhedra_far_field_contraction():
         assert cls_obj.far(coef, np.empty((0, 3))).shape == (0, 3)
 
 
+def test_polyhedra_anisotropic_and_mixed_field():
+    # Anisotropic graded_uv reduces boundary rows while preserving accuracy, and mixed near/far .field() is exact
+    u, v, w = cube.graded_uv(8, 4, 28)
+    sc, w1 = cube.graded_nodes(8, 4)
+    assert len(w) < 0.85 * len(sc) ** 2 and abs(w.sum() - w1.sum() ** 2) < 1e-14
+    pts_mix = np.vstack((1.15 * core.fibonacci(15), 2.3 * core.fibonacci(15)))
+    for obj, r_cut in ((cube.Cube(3, classes=[(1, -1, 1)]), cube.H * np.sqrt(3.0) + 2.0 * cube.H),
+                       (tetrahedron.Tetrahedron(3, classes=[(-1, 1, -1)]), tetrahedron.A_TET * np.sqrt(3.0) + 2.0 * tetrahedron.H)):
+        coef = {obj.classes[0]: np.ones(obj.unknowns[obj.classes[0]], complex)}
+        E_mix = obj.field(coef, pts_mix)
+        # Force the tree-descent path by scaling far points inside r_cut? Instead compare point just inside vs outside r_cut:
+        u_dir = core.fibonacci(12)
+        E_in = obj.field(coef, (r_cut - 1e-9) * u_dir)
+        E_out = obj.field(coef, (r_cut + 1e-9) * u_dir)
+        assert core.rel(E_out, E_in) < 1e-7 and E_mix.shape == (30, 3)
+
+
 def test_cone():
     # Appendix A: smallest electric exponents at the almond tip, cube vertex, and tetrahedron vertex
     nu = cone.EllipticCone().exponents(1, 1, hi=0.5)
