@@ -189,13 +189,25 @@ def test_polyhedra_anisotropic_and_mixed_field():
 
 
 def test_cone():
-    # Appendix A: smallest electric exponents at the almond tip, cube vertex, and tetrahedron vertex
+    # Appendix A: smallest electric exponents at the almond tip, cube vertex, regular and scalene tetrahedron vertices
     nu = cone.EllipticCone().exponents(1, 1, hi=0.5)
     assert abs(nu[0] - 0.29959) < 1e-5
     nu_cube = cone.CubeVertex(n=10).exponents()
     assert abs(nu_cube[0] - 0.45417) < 2e-4
     nu_tet = cone.CubeVertex(n=10, V=cone.TET_EDGES).exponents()
     assert abs(nu_tet[0] - 0.32221) < 2e-4
+    Vv = cone.unit([tetrahedron.SCALENE_VERTS[j] - tetrahedron.SCALENE_VERTS[0] for j in (1, 2, 3)])
+    nu_sc = cone.CubeVertex(n=10, ni=120, V=Vv).exponents(hi=1.3)
+    assert abs(nu_sc[0] - tetrahedron.SCALENE_EXP[0][0][0]) < 2e-4
+
+
+def test_scalene_tetrahedron():
+    # Section 5.6: zero-symmetry scalene convex tetrahedron converges across levels with decreasing optical mismatch
+    pts = 2.0 * core.fibonacci(50)
+    E2, _, i2 = tetrahedron.solve_scalene(2, DW, PW, pts=pts, q=0.5)
+    E3, _, i3 = tetrahedron.solve_scalene(3, DW, PW, pts=pts, q=0.5)
+    E4, _, i4 = tetrahedron.solve_scalene(4, DW, PW, pts=pts, q=0.5)
+    assert core.rel(E3, E4) < 0.4 * core.rel(E2, E4) and i4["optical"] < 0.4 * i2["optical"]
 
 
 @pytest.mark.skipif(not os.environ.get("MFS_TEST_BEMPP"), reason="set MFS_TEST_BEMPP=1 to test the Bempp comparison")

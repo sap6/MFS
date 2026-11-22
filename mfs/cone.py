@@ -124,8 +124,7 @@ class CubeVertex:
     def __init__(self, n=20, sigma=3.0, dmax=None, ni=200, seed=0, V=None):
         V = -np.eye(3) if V is None else unit(np.asarray(V, float))
         C = unit(V.sum(axis=0))
-        th0 = float(np.arccos(np.clip(V[0] @ V[1], -1, 1)))
-        dmax = 0.7 * float(np.arccos(V[0] @ C) / np.arccos(1 / np.sqrt(3))) if dmax is None else dmax
+        dmax = 0.7 * float(np.min(np.arccos(np.clip(V @ C, -1, 1))) / np.arccos(1 / np.sqrt(3))) if dmax is None else dmax
         self.poles, self.tans = [], []
         for v in V:
             t = unit(C - (C @ v) * v)
@@ -138,39 +137,45 @@ class CubeVertex:
 
         # Boundary: the three great-circle sides, Gauss panels graded towards the corners
         g, w = np.polynomial.legendre.leggauss(4)
-        edges = np.concatenate(([0.0], (0.5 * th0) * 0.6 ** np.arange(18, -1, -1)))
+        edges = np.concatenate(([0.0], 0.5 * 0.6 ** np.arange(18, -1, -1)))
         a, b = edges[:-1, None], edges[1:, None]
-        th, wt = (0.5 * (a + b) + 0.5 * (b - a) * g).ravel(), (0.5 * (b - a) * w).ravel()
-        th, wt = np.concatenate((th, th0 - th[::-1])), np.concatenate((wt, wt[::-1]))
-        xb, nb = [], []
+        u01, w01 = (0.5 * (a + b) + 0.5 * (b - a) * g).ravel(), (0.5 * (b - a) * w).ravel()
+        u01, w01 = np.concatenate((u01, 1.0 - u01[::-1])), np.concatenate((w01, w01[::-1]))
+        xb, nb, wb = [], [], []
         for i in range(3):
             u0, u1 = V[i], V[(i + 1) % 3]
-            xb.append((np.outer(np.sin(th0 - th), u0) + np.outer(np.sin(th), u1)) / np.sin(th0))
+            thi = float(np.arccos(np.clip(u0 @ u1, -1, 1)))
+            th = thi * u01
+            xb.append((np.outer(np.sin(thi - th), u0) + np.outer(np.sin(th), u1)) / np.sin(thi))
             nf = unit(np.cross(u0, u1))
             nf = -nf if nf @ V[(i + 2) % 3] < 0 else nf
             nb.append(np.tile(nf, (len(th), 1)))
+            wb.append(thi * w01)
         fnorms = np.array([nb[0][0], nb[1][0], nb[2][0]])
-        self.xb, self.nb, self.wb = np.concatenate(xb), np.concatenate(nb), np.tile(wt, 3)
+        self.xb, self.nb, self.wb = np.concatenate(xb), np.concatenate(nb), np.concatenate(wb)
         self.rho = np.min(np.arccos(np.clip(self.xb @ V.T, -1, 1)), axis=1)   # distance to the nearest corner
+        self.poles = np.array(self.poles)
+        self.t0 = np.array([tt[0] for tt in self.tans])
+        self.t1 = np.array([tt[1] for tt in self.tans])
         pts = unit(np.random.default_rng(seed).normal(size=(12 * ni, 3)))
         self.xi = pts[~np.all(pts @ fnorms.T > 0, axis=1)][:ni]
 
     def columns(self, nu, x, normal=None):
-        out = []
-        for s, tt in zip(self.poles, self.tans):
-            c = np.clip(-(x @ s), -1 + 1e-15, 1 - 1e-15)
-            if normal is None:
-                out += [P(nu, c)] + [-dP(nu, c) * (x @ t) for t in tt]
-            else:
-                ns = normal @ s
-                out += [-dP(nu, c) * ns] + [d2P(nu, c) * ns * (x @ t) - dP(nu, c) * (normal @ t) for t in tt]
-        return np.column_stack(out)
+        c = np.clip(-(x @ self.poles.T), -1 + 1e-15, 1 - 1e-15)
+        p, dp = P(nu, c), dP(nu, c)
+        if normal is None:
+            cols = (p, -dp * (x @ self.t0.T), -dp * (x @ self.t1.T))
+        else:
+            ns, d2p = normal @ self.poles.T, d2P(nu, c)
+            cols = (-dp * ns, d2p * ns * (x @ self.t0.T) - dp * (normal @ self.t0.T),
+                    d2p * ns * (x @ self.t1.T) - dp * (normal @ self.t1.T))
+        return np.stack(cols, axis=2).reshape(len(x), -1)
 
-    def exponents(self, neumann=False):
-        """Exponents nu (Dirichlet) or tau (neumann=True) of the vertex, below 2.6"""
+    def exponents(self, neumann=False, hi=2.6):
+        """Exponents nu (Dirichlet) or tau (neumann=True) of the vertex, below hi"""
         def sigma(nu):
             # Neumann rows are weighted by sqrt(distance) towards the corners, as on the polyhedron faces
             wb = np.sqrt(self.wb * (self.rho if neumann else 1.0))
             B = self.columns(nu, self.xb, self.nb if neumann else None) * wb[:, None]
             return smallest_sigma(B, self.columns(nu, self.xi) / np.sqrt(len(self.xi)))
-        return minima(sigma, 0.06, 2.6, 0.025)
+        return minima(sigma, 0.06, hi, 0.025)

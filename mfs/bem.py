@@ -470,6 +470,36 @@ def tetrahedron(n, g, k, d, p, pts):
     return sum(sym.field(J, pts @ turns[j]) @ turns[j].T for j, J in Js.items()), sym.N
 
 
+def scalene_tetrahedron_grid(verts, n, g):
+    """Watertight three-kite edge-graded mesh of an arbitrary tetrahedron verts (4, 3), no symmetry"""
+    verts = np.asarray(verts, float)
+    m = int(n) // 2
+    xi = (np.arange(m + 1) / m) ** g
+    U, V = [x.ravel() for x in np.meshgrid(xi, xi, indexing="ij")]
+    idx = lambda i, j: i * (m + 1) + j
+    t0 = [(idx(i, j), idx(i + 1, j), idx(i + 1, j + 1)) for i in range(m) for j in range(m)] + \
+         [(idx(i, j), idx(i + 1, j + 1), idx(i, j + 1)) for i in range(m) for j in range(m)]
+    v_cen = verts.mean(axis=0)
+    key, v_out, e_out = {}, [], []
+    for f in range(4):
+        fv = verts[[j for j in range(4) if j != f]]
+        c0 = fv.mean(axis=0)
+        n_out = np.cross(fv[1] - fv[0], fv[2] - fv[0])
+        n_out = -n_out if n_out @ (fv[0] - v_cen) < 0 else n_out
+        for q in range(3):
+            A, M1, M2 = fv[q], 0.5 * (fv[q] + fv[(q + 1) % 3]), 0.5 * (fv[q] + fv[(q + 2) % 3])
+            kv = ((1 - U) * (1 - V))[:, None] * A + ((1 - U) * V)[:, None] * M1 + (U * (1 - V))[:, None] * M2 + (U * V)[:, None] * c0
+            loc = []
+            for pt, kk in zip(kv, map(tuple, (np.round(kv, 12) + 0.0).tolist())):
+                if kk not in key:
+                    key[kk] = len(v_out)
+                    v_out.append(pt)
+                loc.append(key[kk])
+            tk = np.array(loc)[np.array(t0)]
+            e_out.append(tk[:, [0, 2, 1]] if np.dot(np.cross(kv[t0[0][1]] - kv[t0[0][0]], kv[t0[0][2]] - kv[t0[0][0]]), n_out) < 0 else tk)
+    return bempp.Grid(np.array(v_out).T, np.vstack(e_out).T.astype(np.uint32))
+
+
 def torus_grid(R, a, n):
     """Structured mesh of the torus: n cells around the tube, round(n R / a) around the axis"""
     m = int(round(n * R / a))

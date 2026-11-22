@@ -18,13 +18,16 @@ joining the edges to the origin:
 The three half-turns about the coordinate axes form D_2 (four parity classes, each solved on one
 equilateral face), and the one-third turn about (1, 1, 1) leaves at most two matrices to factorise.
 """
+import itertools
 import os
 import time
 
 import numpy as np
+import scipy.linalg as sla
+from scipy.linalg import blas
 
-from . import lines
-from .core import class_part, classes_of, cross_sections, factor, sign, sphere_rule, tangent_basis
+from . import cone, lines
+from .core import class_part, classes_of, cross_sections, factor, plane_wave, sign, sphere_rule, tangent_basis
 from .cube import ROT, graded_nodes, graded_uv, orbits
 
 H = 0.5                                                              # half edge length
@@ -357,4 +360,291 @@ def solve(J, d=(0, 0, -1.0), p=(0, 1.0, 0), pts=None, k=2 * np.pi, max_gb=None, 
     info["residual"] = float(np.sqrt(r2 / b2))
     info["optical"] = abs(info["ext"] - info["sca"]) / info["sca"]
     info["rows"] = probe.rows
+    return E, t, info
+
+
+# Zero-symmetry convex tetrahedron (six distinct dihedral angles, four distinct corner cones)
+
+SCALENE_VERTS = np.array([
+    [0.42, 0.35, 0.30], [0.36, -0.40, -0.31], [-0.44, 0.31, -0.36], [-0.34, -0.26, 0.37],
+])
+SCALENE_EXP = [                                                      # 5-digit spherical MPS exponents for SCALENE_VERTS
+    ((0.31823, 1.08018), (0.92206,)), ((0.31917, 1.08018), (0.92247,)),
+    ((0.30948, 1.07668), (0.92297,)), ((0.34176, 1.12037), (0.90798,)),
+]
+_REFL1, _RACT1, _SGN1, _CONE_CACHE = np.ones((1, 3)), np.zeros(1, np.int64), np.ones((1, 1)), {}
+
+
+def _tri_kites(fverts, su, sv, wuv, nu1s):
+    """Three graded kites on an arbitrary triangle fverts (3, 3) with local corner exponents nu1s"""
+    c0, U, V, W2 = fverts.mean(axis=0), 1.0 - 2.0 * su, 1.0 - 2.0 * sv, 4.0 * wuv
+    pts, wts, rfac = [], [], []
+    for i in range(3):
+        A, M1, M2 = fverts[i], 0.5 * (fverts[i] + fverts[(i + 1) % 3]), 0.5 * (fverts[i] + fverts[(i + 2) % 3])
+        pk = ((1 - U) * (1 - V))[:, None] * A + ((1 - U) * V)[:, None] * M1 + (U * (1 - V))[:, None] * M2 + (U * V)[:, None] * c0
+        du = -(1 - V)[:, None] * A - V[:, None] * M1 + (1 - V)[:, None] * M2 + V[:, None] * c0
+        dv = -(1 - U)[:, None] * A + (1 - U)[:, None] * M1 - U[:, None] * M2 + U[:, None] * c0
+        pts.append(pk)
+        wts.append(np.linalg.norm(np.cross(du, dv), axis=1) * W2)
+        rfac.append(np.linalg.norm(pk - A, axis=1) ** (1.0 - 2.0 * nu1s[i]))
+    pts = np.vstack(pts)
+    dists = [np.linalg.norm(pts - (fverts[i] + np.clip(((pts - fverts[i]) @ (fverts[(i + 1) % 3] - fverts[i]))
+             / float(np.sum((fverts[(i + 1) % 3] - fverts[i]) ** 2)), 0.0, 1.0)[:, None]
+             * (fverts[(i + 1) % 3] - fverts[i])), axis=1) for i in range(3)]
+    return pts, np.concatenate(wts), np.min(dists, axis=0), np.concatenate(rfac)
+
+
+class ScaleneTetrahedron:
+    """
+    Zero-symmetry MFS on an arbitrary convex tetrahedron verts (4, 3): the six edge-bisector planes
+    meet at the insphere centre c_in, forming six flat triangular walls with distinct wedge exponents
+    gamma_e = pi / Phi_e and four trihedral corners with distinct spherical MPS exponents (nu_v, tau_v).
+    """
+    def __init__(self, J, k=2 * np.pi, q=2 ** -0.5, tails=True, verts=SCALENE_VERTS, n_base=12):
+        self.k, self.tails, self.verts = float(k), bool(tails and J is not None), np.asarray(verts, float)
+        V = self.verts
+        fnorms, areas = [], []
+        for f in range(4):
+            oth = [V[j] for j in range(4) if j != f]
+            cr = np.cross(oth[1] - oth[0], oth[2] - oth[0])
+            nf = cr / np.linalg.norm(cr)
+            fnorms.append(-nf if nf @ (V[f] - oth[0]) > 0 else nf)
+            areas.append(0.5 * np.linalg.norm(cr))
+        self.fnorms, areas = np.array(fnorms), np.array(areas)
+        self.c_in = (areas[:, None] * V).sum(axis=0) / areas.sum()
+        self.r_in = float((V[1] - self.c_in) @ self.fnorms[0])
+        d0 = 0.68 * self.r_in
+
+        edges_info = []
+        for a, b in itertools.combinations(range(4), 2):
+            fc, fd = [f for f in range(4) if f not in (a, b)]
+            L = float(np.linalg.norm(V[b] - V[a]))
+            t_hat = (V[b] - V[a]) / L
+            b_hat = cone.unit(-(self.fnorms[fc] + self.fnorms[fd]))
+            gamma = np.pi / (2 * np.pi - float(np.arccos(np.clip(-self.fnorms[fc] @ self.fnorms[fd], -1.0, 1.0))))
+            D_e = float((self.c_in - V[a]) @ b_hat)
+            tan_a, tan_b = D_e / float((self.c_in - V[a]) @ t_hat), D_e / float((V[b] - self.c_in) @ t_hat)
+            F = np.ascontiguousarray(np.vstack((t_hat, b_hat, np.cross(t_hat, b_hat))))
+            edges_info.append((a, b, L, 0.5 * (V[a] + V[b]), t_hat, b_hat, F, gamma, D_e, tan_a, tan_b))
+
+        L_mean = float(np.mean([e[2] for e in edges_info]))
+        s = max(0.0, k * L_mean / (2 * np.pi) - 1.0)
+        m = max(1, int(round(np.log(0.5) / np.log(q))))
+        if J is None:
+            self.depths, depths_v, ex = np.zeros(0), np.zeros(0), 0.0
+        else:
+            self.depths = d0 * q ** np.arange(m * J + 1)
+            mv = max(2, m)
+            depths_v = d0 * 2.0 ** (-np.arange(mv * J + 1) / mv)
+            n0, ex = max(4, 2 * J - 4), 2 * s * (s + 1)
+
+        bary = np.array([(i + 1, j + 1, n_base - i - j) for i in range(n_base) for j in range(n_base - i)], float) / (n_base + 2)
+        base = np.vstack([self.c_in + 0.56 * (bary @ V[[j for j in range(4) if j != f]] - self.c_in) for f in range(4)])
+        u_verts = [cone.unit(V[v] - self.c_in) for v in range(4)]
+        v_pts = np.vstack([V[v][None, :] - depths_v[:, None] * u_verts[v][None, :] for v in range(4)]) if len(depths_v) else np.zeros((0, 3))
+        self.pe, self.pm = np.vstack((base, v_pts)), v_pts
+
+        self.lines = []
+        for d in self.depths:
+            for a, b, L, mid0, t_hat, b_hat, F, gamma, D_e, tan_a, tan_b in edges_info:
+                al = 0.53 * d / D_e
+                lam = np.log((1.0 - al) / al)
+                n = n0 + int(round(ex * L * (1.0 - 2.0 * al))) + int(np.ceil(2 * np.log(L / d)))
+                mids = np.ascontiguousarray((mid0 + (d / D_e) * (self.c_in - mid0))[None, :])
+                self.lines.append((0.5 * L, t_hat, mids, lam, d, n, F, np.ones((2, 1, 1, 3)), False))
+        if self.tails:
+            d_min, r_st = self.depths[-1], 0.5 ** np.arange(1, 10)
+            for (a, b, L, mid0, t_hat, b_hat, F, gamma, D_e, tan_a, tan_b), ln_last in zip(edges_info, self.lines[-6:]):
+                n, lam = ln_last[5], ln_last[3]
+                q_e = ln_last[2][0] - d_min * b_hat                  # shift purely along b_hat so Meixner modes stay unsheared
+                mids = np.ascontiguousarray(q_e[None, :] + (d_min * r_st)[:, None] * b_hat[None, :])
+                w_pair = np.zeros((2, 1, 9, 3))
+                for ki, (e0, e1) in enumerate(((gamma, gamma + 1.0), (2 * gamma, 2 * gamma + 1.0))):
+                    ev = np.array([e0, e1, 2.0])
+                    wv = r_st[:, None] ** ev[None, :]
+                    wv[-1] /= 1.0 - 0.5 ** ev
+                    w_pair[ki, 0] = wv
+                self.lines.append((0.5 * L, t_hat, mids, lam, d_min, n, F, np.ascontiguousarray(w_pair), True))
+
+        if np.allclose(V, SCALENE_VERTS, atol=1e-12):
+            self.v_exp = SCALENE_EXP
+        else:
+            self.v_exp = []
+            for v in range(4):
+                Vv = cone.unit([V[j] - V[v] for j in range(4) if j != v])
+                key = tuple(np.round(Vv.ravel(), 8))
+                if key not in _CONE_CACHE:
+                    cv = cone.CubeVertex(n=12, ni=150, V=Vv)
+                    _CONE_CACHE[key] = (tuple(cv.exponents(False, hi=1.35)[:2]), (cv.exponents(True, hi=1.1)[0],))
+                self.v_exp.append(_CONE_CACHE[key])
+
+        self.v_tails, n_vt_cols = [], 0
+        if self.tails:
+            r_st = 0.5 ** np.arange(1, 10)
+            for v in range(4):
+                nu_v, tau_v = self.v_exp[v]
+                ray_dirs = [u_verts[v]]
+                for a, b, L, mid0, t_hat, b_hat, F, gamma, D_e, tan_a, tan_b in edges_info:
+                    if v in (a, b):
+                        t_out, tan_ev = (-t_hat, tan_a) if v == a else (t_hat, tan_b)
+                        for fr in (0.8, 0.4, 0.2):
+                            ray_dirs.append(cone.unit(t_out - (fr * tan_ev) * b_hat))
+                ee, em = np.array(nu_v) + 2.0, np.array(tau_v) + 2.0
+                we = r_st[None, :] ** ee[:, None]; we[:, -1] /= 1.0 - 0.5 ** ee
+                wm = r_st[None, :] ** em[:, None]; wm[:, -1] /= 1.0 - 0.5 ** em
+                rpts = np.ascontiguousarray([V[v][None, :] - (1.2 * self.depths[-1] * r_st)[:, None] * rd[None, :] for rd in ray_dirs])
+                nc_e, nc_m = len(ray_dirs) * len(ee) * 3, len(ray_dirs) * len(em) * 3
+                self.v_tails.append((rpts, np.ascontiguousarray(we), np.ascontiguousarray(wm), nc_e, nc_m))
+                n_vt_cols += nc_e + nc_m
+
+        col = 3 * (len(self.pe) + len(self.pm))
+        self.line_cmaps = []
+        for H_e, t_hat, mids, lam, d, n, F, w_pair, is_tail in self.lines:
+            cm = np.full((1, 6 * n), -1, np.int64)
+            for kind in range(2):
+                for kk in range(n):
+                    for cc in range(2 if is_tail else 3):
+                        cm[0, (kind * n + kk) * 3 + cc] = col
+                        col += 1
+            self.line_cmaps.append(cm)
+        self.vt_col0 = col
+        self.n_unknowns = col + n_vt_cols
+
+        ng = 3 + int(np.ceil(0.5 * s))
+        d_min = self.depths[-1] if len(self.depths) else d0
+        levels = max(2, int(np.ceil(np.log2(L_mean / d_min))))
+        su, sv, wuv = graded_uv(levels, ng, 0, min(0.125, np.pi / (2 * k * L_mean)))
+        xs, Ts, rws = [], [], []
+        for f in range(4):
+            idx_v = [j for j in range(4) if j != f]
+            xf, wf, df, rf = _tri_kites(V[idx_v], su, sv, wuv, [self.v_exp[j][0][0] for j in idx_v])
+            xs.append(xf)
+            Ts.append(tangent_basis(np.tile(self.fnorms[f], (len(xf), 1))))
+            rws.append(np.sqrt(wf * df * rf))
+        self.x, self.T, self.rw = np.ascontiguousarray(np.vstack(xs)), np.ascontiguousarray(np.vstack(Ts)), np.concatenate(rws)
+        self.rows = 2 * len(self.x)
+
+    def _assemble_into(self, x_sub, Tw_sub, A_buf):
+        A_buf[:] = 0.0
+        lines.points_add(x_sub, Tw_sub, _REFL1, self.pe, self.pm, self.k, A_buf, np.zeros(1, np.int64), _SGN1)
+        for (H_e, t_hat, mids, lam, dp, n, F, w_pair, is_tail), cm in zip(self.lines, self.line_cmaps):
+            lines.line_add(x_sub, Tw_sub, _REFL1, _RACT1, t_hat, mids, lam, dp, n, self.k, H_e, A_buf, cm, _SGN1,
+                           rot=F, w=w_pair if is_tail else None)
+        c_vt = self.vt_col0
+        for rpts, we, wm, nc_e, nc_m in self.v_tails:
+            lines.radial_tails_add(x_sub, Tw_sub, _REFL1, rpts, we, wm, self.k, A_buf,
+                                   np.array([c_vt], np.int64), np.array([c_vt + nc_e], np.int64), _SGN1)
+            c_vt += nc_e + nc_m
+
+    def _unpack(self, coef):
+        ne, nm = len(self.pe), len(self.pm)
+        y_list, a_list = [self.pe], [coef[:3 * ne].reshape(1, ne, 3)]
+        b_pt = np.zeros((1, ne, 3), complex)
+        if nm:
+            b_pt[0, ne - nm:] = coef[3 * ne:3 * (ne + nm)].reshape(nm, 3)
+        b_list = [b_pt]
+        c_vt = self.vt_col0
+        for rpts, we, wm, nc_e, nc_m in self.v_tails:
+            R_cnt, nstep = rpts.shape[0], rpts.shape[1]
+            y_list.append(rpts.reshape(-1, 3))
+            ce = coef[c_vt:c_vt + nc_e].reshape(1, R_cnt, len(we), 3)
+            cm = coef[c_vt + nc_e:c_vt + nc_e + nc_m].reshape(1, R_cnt, len(wm), 3)
+            a_list.append(np.einsum("lrec,et->lrtc", ce, we).reshape(1, R_cnt * nstep, 3))
+            b_list.append(np.einsum("lrmc,mt->lrtc", cm, wm).reshape(1, R_cnt * nstep, 3))
+            c_vt += nc_e + nc_m
+        return np.ascontiguousarray(np.vstack(y_list)), np.ascontiguousarray(np.concatenate(a_list, axis=1)), np.ascontiguousarray(np.concatenate(b_list, axis=1))
+
+    def field(self, coef, pts):
+        pts = np.ascontiguousarray(pts, dtype=float)
+        if not len(pts):
+            return np.zeros((0, 3), complex)
+        y_pt, al, bt = self._unpack(coef)
+        out = np.zeros((1, len(pts), 3), complex)
+        lines.eval_points_field(pts, _REFL1, _SGN1, y_pt, al, bt, self.k, out)
+        for (H_e, t_hat, mids, lam, dp, n, F, w_pair, is_tail), cm in zip(self.lines, self.line_cmaps):
+            c_pair = np.zeros((1, 6 * n), complex)
+            act = cm[0] >= 0
+            c_pair[0, act] = coef[cm[0, act]]
+            lines.eval_line_field(pts, _REFL1, _RACT1, _SGN1, t_hat, mids, lam, dp, n, self.k, H_e,
+                                  c_pair.reshape(1, 2, 1, n, 3), out, rot=F, w=w_pair if is_tail else None)
+        return out[0]
+
+    def far(self, coef, dirs):
+        dirs = np.ascontiguousarray(dirs, dtype=float)
+        if not len(dirs):
+            return np.zeros((0, 3), complex)
+        y_pt, al, bt = self._unpack(coef)
+        out = np.zeros((1, len(dirs), 3), complex)
+        lines.eval_far_dipoles(dirs, _REFL1, _RACT1, _SGN1, y_pt, al, bt, self.k, out)
+        ys_l, al_l, bt_l = [], [], []
+        for (H_e, t_hat, mids, lam, dp, n, F, w_pair, _), cm in zip(self.lines, self.line_cmaps):
+            c_pair = np.zeros((1, 6 * n), complex)
+            act = cm[0] >= 0
+            c_pair[0, act] = coef[cm[0, act]]
+            tq, W, off, *_ = lines.build_tree(lam, dp, n, H_e, self.k)
+            pm_n = int(off[1])
+            c_cart = 2.0 * np.einsum("ksic,lksmc,cq->lkimq", w_pair, c_pair.reshape(1, 2, 1, n, 3), F)
+            M0 = np.einsum("pm,lkimq->lkpiq", W[:pm_n], c_cart).reshape(1, 2, -1, 3)
+            ys_l.append((mids[None, :, :] + tq[:pm_n, None, None] * t_hat[None, None, :]).reshape(-1, 3))
+            al_l.append(M0[:, 0])
+            bt_l.append(M0[:, 1])
+        if ys_l:
+            lines.eval_far_dipoles(dirs, _REFL1, _RACT1, _SGN1, np.ascontiguousarray(np.vstack(ys_l)),
+                                   np.ascontiguousarray(np.concatenate(al_l, axis=1)),
+                                   np.ascontiguousarray(np.concatenate(bt_l, axis=1)), self.k, out)
+        return out[0]
+
+
+def solve_scalene(J, d=(0, 0, -1.0), p=(0, 1.0, 0), pts=None, k=2 * np.pi, verts=SCALENE_VERTS, **layout):
+    """One plane wave on a zero-symmetry convex tetrahedron (chunking A^H A face-by-face above 1.2 GB)"""
+    d, p = np.asarray(d, float), np.asarray(p, float)
+    pts = None if pts is None else np.asarray(pts, float)
+    t0 = time.time()
+    probe = ScaleneTetrahedron(J, k, verts=verts, **layout)
+    M_tot, N = len(probe.x), probe.n_unknowns
+    Tw = np.ascontiguousarray(probe.T * probe.rw[:, None, None])
+    b = -np.einsum("mab,mb->ma", probe.T, plane_wave(probe.x, k, d, p)).reshape(-1) * np.repeat(probe.rw, 2)
+    b2 = float(np.linalg.norm(b) ** 2)
+
+    if 16.0 * probe.rows * N <= 1.2 * 2 ** 30:
+        ta0 = time.time()
+        A = np.moveaxis(np.zeros((probe.rows, N, 1), complex, order="F"), 2, 0)
+        probe._assemble_into(probe.x, Tw, A)
+        t_asm, tf0 = time.time() - ta0, time.time()
+        fac = factor(A[0], overwrite=True)
+        coef, res = fac.solve(b, residual=True)
+        t_fac = time.time() - tf0
+        r_norm = float(res)
+        del A, fac
+    else:
+        G = np.zeros((N, N), np.complex128, order="F")
+        rhs = np.zeros(N, np.complex128)
+        splits = np.linspace(0, M_tot, 5, dtype=int)
+        A_buf = np.moveaxis(np.zeros((2 * int(np.max(np.diff(splits))), N, 1), np.complex128, order="F"), 2, 0)
+        ta0, tf_acc = time.time(), 0.0
+        for ic in range(4):
+            m0, m1 = splits[ic], splits[ic + 1]
+            sr = 2 * (m1 - m0)
+            A_sub = A_buf[:, :sr, :] if sr == A_buf.shape[1] else np.moveaxis(np.zeros((sr, N, 1), np.complex128, order="F"), 2, 0)
+            probe._assemble_into(np.ascontiguousarray(probe.x[m0:m1]), np.ascontiguousarray(Tw[m0:m1]), A_sub)
+            tf1 = time.time()
+            blas.zherk(1.0, A_sub[0], beta=1.0, c=G, trans=2, lower=0, overwrite_c=1)
+            rhs += blas.zgemv(1.0, A_sub[0], b[2 * m0:2 * m1], trans=2)
+            tf_acc += time.time() - tf1
+        del A_buf
+        t_asm, tf2 = (time.time() - ta0) - tf_acc, time.time()
+        scale = np.sqrt(np.real(np.diag(G)))
+        G /= scale[:, None]
+        G /= scale[None, :]
+        R = sla.cho_factor(G, overwrite_a=True, check_finite=False)
+        coef = sla.cho_solve(R, rhs / scale, check_finite=False) / scale
+        r_norm = float(np.sqrt(max(0.0, b2 - float(np.real(np.vdot(coef, rhs))))))
+        del R, G
+        t_fac = tf_acc + (time.time() - tf2)
+
+    E = None if pts is None else probe.field(coef, pts)
+    t = time.time() - t0
+    ext, sca = cross_sections(lambda dirs: probe.far(coef, dirs), k, d, p, RULE)
+    info = dict(unknowns=[N], rows=probe.rows, t_assemble=t_asm, t_factor=t_fac,
+                residual=r_norm / np.sqrt(b2), ext=ext, sca=sca, optical=abs(ext - sca) / sca)
     return E, t, info
