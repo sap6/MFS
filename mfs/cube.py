@@ -568,89 +568,102 @@ def solve(J, d=(0, 0, -1.0), p=(0, 1.0, 0), pts=None, k=2 * np.pi, max_gb=None, 
     orbit = orbits(classes_of(k, d, p, REFL))
     todo = list(orbit)
     probe = Cube(J, k, classes=[], **layout)
-    oh = probe._oh_tables(todo)
-    M1, tri_idx, cls_idx, tri_cls, g2loc, p1 = oh["M1"], oh["tri_idx"], oh["cls_idx"], oh["tri_cls"], oh["g2loc"], oh["p1"]
-    col_yz, sgn_yz = oh["col_yz"], oh["sgn_yz"]
-
-    ta0 = time.time()
-    A_tri = probe.matrix(probe.x[tri_idx], (probe.T[:M1] * probe.rw[:M1, None, None])[tri_idx], tri_cls)
-    t_assemble = time.time() - ta0
-
-    tf0 = time.time()
+    oh_all = probe._oh_tables(todo)
+    M1, tri_idx, g2loc_all, p1 = oh_all["M1"], oh_all["tri_idx"], oh_all["g2loc"], oh_all["p1"]
+    col_yz, sgn_yz = oh_all["col_yz"], oh_all["sgn_yz"]
     rw2 = np.repeat(probe.rw, 2)
-    r_pair, r_fp, row_p = oh["r_pair"], oh["r_fp"], oh["row_p"]
+    r_pair, r_fp, row_p = oh_all["r_pair"], oh_all["r_fp"], oh_all["row_p"]
     r_fm = np.empty(0, np.int64)
     s2, w3 = np.sqrt(0.5), np.exp(2j * np.pi / 3.0)
     nmax = max(probe.unknowns[c] for c in todo)
-    Bq_buf = np.empty((2 * M1, (nmax + 2) // 3 + 2), np.complex128, order="F")
-    Z2_buf_p = np.empty((len(r_pair) + len(r_fp), (nmax + 1) // 2 + 16), np.complex128, order="F")
-    Z2_buf_m = np.empty((len(r_pair), (nmax + 1) // 2 + 16), np.complex128, order="F")
+    lim_bytes = (1.0 if max_gb is None else 0.4 * max_gb) * 2 ** 30
+    step = len(todo) if 16.0 * 2 * len(tri_idx) * nmax * len(oh_all["tri_cls"]) <= lim_bytes else 1
 
-    coef_all, r2, b2 = {}, 0.0, 0.0
-    for c in todo:
-        js = orbit[c]
-        Qs = [np.linalg.matrix_power(ROT, j) for j in js]
-        E_inc = class_part(probe.x, k, np.array([Q.T @ d for Q in Qs]), np.array([Q.T @ p for Q in Qs]), REFL, c)
-        B = -np.einsum("mab,mwb->maw", probe.T, E_inc).reshape(-1, len(js)) * rw2[:, None]
-        b2 += float(np.linalg.norm(B) ** 2)
-        kp = np.nonzero(probe.keep[c])[0]
-        if len(set(c)) == 1:
-            pc = g2loc[c][p1[kp]]
-            c0 = np.nonzero(np.vstack((np.arange(len(kp)), pc, pc[pc])).min(axis=0) == np.arange(len(kp)))[0]
-            c1, c2 = pc[c0], pc[pc[c0]]
-            lc_yz, sg_yz = g2loc[c][col_yz[kp]], sgn_yz[kp]
-            Bf = B.reshape(3, 2 * M1, len(js))
-            C_out = np.zeros((len(kp), len(js)), complex)
-            Bq_mat = Bq_buf[:, :len(c0)]
-            for q_ord in range(3):
-                lines.build_c3_tri(A_tri, cls_idx[c], tri_idx, oh["hi_pts"], oh["hi_tri"],
-                                   lc_yz, sg_yz, c0, c1, c2, complex(w3 ** q_ord), complex(w3 ** (2 * q_ord)), Bq_mat)
-                fac_q = factor(Bq_mat, overwrite=False)
-                Bq = (Bf[0] + (w3 ** (-q_ord)) * Bf[1] + (w3 ** (-2 * q_ord)) * Bf[2]) / 3.0
-                Yq, rq = fac_q.solve(Bq, residual=True)
-                C_out[c0] += Yq
-                C_out[c1] += (w3 ** q_ord) * Yq
-                C_out[c2] += (w3 ** (2 * q_ord)) * Yq
-                r2 += 3.0 * float(np.sum(np.asarray(rq) ** 2))
-                del fac_q
-        else:
-            c1_cls = (c[1], c[2], c[0])
-            c1_yz = (c1_cls[0], c1_cls[2], c1_cls[1])
-            kp_b = oh["p1_inv"][kp]
-            lc_b, lc_byz, sg_byz = g2loc[c1_cls][kp_b], g2loc[c1_yz][col_yz[kp_b]], sgn_yz[kp_b]
-            cp, cs = g2loc[c][col_yz[kp]], sgn_yz[kp]
-            ic = np.arange(len(kp))
-            c_pair = np.nonzero(ic < cp)[0]
-            c_fp, c_fm = np.nonzero((ic == cp) & (cs > 0))[0], np.nonzero((ic == cp) & (cs < 0))[0]
-            Ap = Z2_buf_p[:, :len(c_pair) + len(c_fp)]
-            Am = Z2_buf_m[:, :len(c_pair) + len(c_fm)]
-            lines.build_z2_tri(A_tri, cls_idx[c], cls_idx[c1_cls], cls_idx[c1_yz], oh["m_row_tri"], oh["m_row_ab"],
-                               lc_b, lc_byz, sg_byz, r_pair, r_fp, c_pair, cp, cs, c_fp, +1.0, Ap)
-            lines.build_z2_tri(A_tri, cls_idx[c], cls_idx[c1_cls], cls_idx[c1_yz], oh["m_row_tri"], oh["m_row_ab"],
-                               lc_b, lc_byz, sg_byz, r_pair, r_fm, c_pair, cp, cs, c_fm, -1.0, Am)
-            fp, fm = factor(Ap, overwrite=False), factor(Am, overwrite=False)
-            Bp = np.vstack((s2 * (B[r_pair] + B[row_p[r_pair]]), B[r_fp]))
-            Bm = s2 * (B[r_pair] - B[row_p[r_pair]])
-            Yp, rp = fp.solve(Bp, residual=True)
-            Ym, rm = fm.solve(Bm, residual=True)
-            np_c = len(c_pair)
-            C_out = np.zeros((len(kp), len(js)), complex)
-            C_out[c_pair] = s2 * (Yp[:np_c] + Ym[:np_c])
-            C_out[cp[c_pair]] = s2 * cs[c_pair, None] * (Yp[:np_c] - Ym[:np_c])
-            C_out[c_fp], C_out[c_fm] = Yp[np_c:], Ym[np_c:]
-            r2 += float(np.sum(np.asarray(rp) ** 2) + np.sum(np.asarray(rm) ** 2))
-            del fp, fm
+    coef_all, r2, b2, t_assemble, t_factor = {}, 0.0, 0.0, 0.0, 0.0
+    for bi in range(0, len(todo), step):
+        batch = todo[bi:bi + step]
+        tri_cls = []
+        for c in batch:
+            for s in range(3):
+                cs = c[s:] + c[:s]
+                if cs not in tri_cls:
+                    tri_cls.append(cs)
+        cls_idx = {c: i for i, c in enumerate(tri_cls)}
+        ta0 = time.time()
+        A_tri = probe.matrix(probe.x[tri_idx], (probe.T[:M1] * probe.rw[:M1, None, None])[tri_idx], tri_cls)
+        t_assemble += time.time() - ta0
 
-        for idx_j, j in enumerate(js):
-            if j == 0:
-                coef_all[c] = C_out[:, idx_j]
+        tf0 = time.time()
+        for c in batch:
+            js = orbit[c]
+            Qs = [np.linalg.matrix_power(ROT, j) for j in js]
+            E_inc = class_part(probe.x, k, np.array([Q.T @ d for Q in Qs]), np.array([Q.T @ p for Q in Qs]), REFL, c)
+            B = -np.einsum("mab,mwb->maw", probe.T, E_inc).reshape(-1, len(js)) * rw2[:, None]
+            b2 += float(np.linalg.norm(B) ** 2)
+            kp = np.nonzero(probe.keep[c])[0]
+            if len(set(c)) == 1:
+                pc = g2loc_all[c][p1[kp]]
+                c0 = np.nonzero(np.vstack((np.arange(len(kp)), pc, pc[pc])).min(axis=0) == np.arange(len(kp)))[0]
+                c1, c2 = pc[c0], pc[pc[c0]]
+                lc_yz, sg_yz = g2loc_all[c][col_yz[kp]], sgn_yz[kp]
+                Bf = B.reshape(3, 2 * M1, len(js))
+                C_out = np.zeros((len(kp), len(js)), complex)
+                Bq_mat = np.empty((2 * M1, len(c0)), np.complex128, order="F")
+                for q_ord in range(3):
+                    lines.build_c3_tri(A_tri, cls_idx[c], tri_idx, oh_all["hi_pts"], oh_all["hi_tri"],
+                                       lc_yz, sg_yz, c0, c1, c2, complex(w3 ** q_ord), complex(w3 ** (2 * q_ord)), Bq_mat)
+                    fac_q = factor(Bq_mat, overwrite=True)
+                    Bq = (Bf[0] + (w3 ** (-q_ord)) * Bf[1] + (w3 ** (-2 * q_ord)) * Bf[2]) / 3.0
+                    Yq, rq = fac_q.solve(Bq, residual=True)
+                    C_out[c0] += Yq
+                    C_out[c1] += (w3 ** q_ord) * Yq
+                    C_out[c2] += (w3 ** (2 * q_ord)) * Yq
+                    r2 += 3.0 * float(np.sum(np.asarray(rq) ** 2))
+                    del fac_q
+                del Bq_mat
             else:
-                c_rot = c[j:] + c[:j]
-                v = np.empty(len(kp), complex)
-                v[g2loc[c_rot][p1[p1[kp]] if j == 1 else p1[kp]]] = C_out[:, idx_j]
-                coef_all[c_rot] = v
-    t_factor = time.time() - tf0
-    del A_tri, Bq_buf, Z2_buf_p, Z2_buf_m
+                c1_cls = (c[1], c[2], c[0])
+                c1_yz = (c1_cls[0], c1_cls[2], c1_cls[1])
+                kp_b = oh_all["p1_inv"][kp]
+                lc_b, lc_byz, sg_byz = g2loc_all[c1_cls][kp_b], g2loc_all[c1_yz][col_yz[kp_b]], sgn_yz[kp_b]
+                cp, cs = g2loc_all[c][col_yz[kp]], sgn_yz[kp]
+                ic = np.arange(len(kp))
+                c_pair = np.nonzero(ic < cp)[0]
+                c_fp, c_fm = np.nonzero((ic == cp) & (cs > 0))[0], np.nonzero((ic == cp) & (cs < 0))[0]
+
+                Ap = np.empty((len(r_pair) + len(r_fp), len(c_pair) + len(c_fp)), np.complex128, order="F")
+                lines.build_z2_tri(A_tri, cls_idx[c], cls_idx[c1_cls], cls_idx[c1_yz], oh_all["m_row_tri"], oh_all["m_row_ab"],
+                                   lc_b, lc_byz, sg_byz, r_pair, r_fp, c_pair, cp, cs, c_fp, +1.0, Ap)
+                fp = factor(Ap, overwrite=True)
+                Bp = np.vstack((s2 * (B[r_pair] + B[row_p[r_pair]]), B[r_fp]))
+                Yp, rp = fp.solve(Bp, residual=True)
+                del fp, Ap
+
+                Am = np.empty((len(r_pair), len(c_pair) + len(c_fm)), np.complex128, order="F")
+                lines.build_z2_tri(A_tri, cls_idx[c], cls_idx[c1_cls], cls_idx[c1_yz], oh_all["m_row_tri"], oh_all["m_row_ab"],
+                                   lc_b, lc_byz, sg_byz, r_pair, r_fm, c_pair, cp, cs, c_fm, -1.0, Am)
+                fm = factor(Am, overwrite=True)
+                Bm = s2 * (B[r_pair] - B[row_p[r_pair]])
+                Ym, rm = fm.solve(Bm, residual=True)
+                del fm, Am
+
+                np_c = len(c_pair)
+                C_out = np.zeros((len(kp), len(js)), complex)
+                C_out[c_pair] = s2 * (Yp[:np_c] + Ym[:np_c])
+                C_out[cp[c_pair]] = s2 * cs[c_pair, None] * (Yp[:np_c] - Ym[:np_c])
+                C_out[c_fp], C_out[c_fm] = Yp[np_c:], Ym[np_c:]
+                r2 += float(np.sum(np.asarray(rp) ** 2) + np.sum(np.asarray(rm) ** 2))
+
+            for idx_j, j in enumerate(js):
+                if j == 0:
+                    coef_all[c] = C_out[:, idx_j]
+                else:
+                    c_rot = c[j:] + c[:j]
+                    v = np.empty(len(kp), complex)
+                    v[g2loc_all[c_rot][p1[p1[kp]] if j == 1 else p1[kp]]] = C_out[:, idx_j]
+                    coef_all[c_rot] = v
+        t_factor += time.time() - tf0
+        del A_tri
     E = None if pts is None else probe.field(coef_all, pts)
     t = time.time() - t0
 
