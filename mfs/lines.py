@@ -209,10 +209,10 @@ def _line_kernel_single(x, T, refl, r_act, t_hat, mid0, rot, tq, W, off, tlo, th
                 rho2 = p0 * p0 + p1 * p1 + p2 * p2
 
                 for a in range(nc):
-                    up[a] = Tm[a, 0] * px0 + Tm[a, 1] * px1 + Tm[a, 2] * px2
+                    up[a] = Tm[a, 0] * p0 + Tm[a, 1] * p1 + Tm[a, 2] * p2
                     ut[a] = Tm[a, 0] * th0 + Tm[a, 1] * th1 + Tm[a, 2] * th2
                 for cc in range(ncomp):
-                    fp[cc] = rot[cc, 0] * px0 + rot[cc, 1] * px1 + rot[cc, 2] * px2
+                    fp[cc] = rot[cc, 0] * p0 + rot[cc, 1] * p1 + rot[cc, 2] * p2
                 for a in range(nc):
                     u0, u1, u2 = Tm[a, 0], Tm[a, 1], Tm[a, 2]
                     upa, uta = up[a], ut[a]
@@ -223,7 +223,7 @@ def _line_kernel_single(x, T, refl, r_act, t_hat, mid0, rot, tq, W, off, tlo, th
                         q1_c[a, cc] = upa * ft[cc] + uta * fp[cc]
                         q2_c[a, cc] = uta * ft[cc]
                         c0, c1, c2 = f1 * u2 - f2 * u1, f2 * u0 - f0 * u2, f0 * u1 - f1 * u0
-                        cp_c[a, cc] = c0 * px0 + c1 * px1 + c2 * px2
+                        cp_c[a, cc] = c0 * p0 + c1 * p1 + c2 * p2
                         ct_c[a, cc] = c0 * th0 + c1 * th1 + c2 * th2
 
                 I_acc[:] = 0.0
@@ -264,9 +264,9 @@ def _line_kernel_single(x, T, refl, r_act, t_hat, mid0, rot, tq, W, off, tlo, th
                                 W_loc[iq, kk] = ((2 * kk - 1) * u * W_loc[iq, kk - 1] - (kk - 1) * W_loc[iq, kk - 2]) / kk
 
                     for iq in range(nq):
-                        t = t_pan[iq]
-                        dt = pt - t
-                        r2 = rho2 + dt * dt
+                        tau = t_pan[iq] - pt
+                        tau2 = tau * tau
+                        r2 = rho2 + tau2
                         inv_r = 1.0 / np.sqrt(r2)
                         inv_r2 = inv_r * inv_r
                         kr = k * (r2 * inv_r)
@@ -283,13 +283,12 @@ def _line_kernel_single(x, T, refl, r_act, t_hat, mid0, rot, tq, W, off, tlo, th
                         fRi = (c3 * phi + ik3 * phr) * inv_r2
                         fMr = (-ik * phr - phi) * inv_r
                         fMi = (phr - ik * phi) * inv_r
-                        t2 = t * t
                         S_pan[0, iq], S_pan[1, iq] = fIr, fIi
                         S_pan[2, iq], S_pan[3, iq] = fRr, fRi
-                        S_pan[4, iq], S_pan[5, iq] = t * fRr, t * fRi
-                        S_pan[6, iq], S_pan[7, iq] = t2 * fRr, t2 * fRi
+                        S_pan[4, iq], S_pan[5, iq] = tau * fRr, tau * fRi
+                        S_pan[6, iq], S_pan[7, iq] = tau2 * fRr, tau2 * fRi
                         S_pan[8, iq], S_pan[9, iq] = fMr, fMi
-                        S_pan[10, iq], S_pan[11, iq] = t * fMr, t * fMi
+                        S_pan[10, iq], S_pan[11, iq] = tau * fMr, tau * fMi
 
                     if q0 >= 0:
                         for iq in range(nq):
@@ -371,7 +370,7 @@ def _line_kernel_multi(x, T, refl, r_act, t_hat, mids, w, rot, tq, W, off, tlo, 
         ut = np.empty(nc)
         ct_c = np.empty((nc, 3))
         xm = np.empty(3)
-        px_arr = np.empty((npos, 3))
+        p_arr = np.empty((npos, 3))
         pt_arr = np.empty(npos)
         rho2_arr = np.empty(npos)
         stack_l = np.empty(2 * LHARD + 8, np.int64)
@@ -391,9 +390,9 @@ def _line_kernel_multi(x, T, refl, r_act, t_hat, mids, w, rot, tq, W, off, tlo, 
                 for i in range(npos):
                     px0, px1, px2 = xm[0] - mids[i, 0], xm[1] - mids[i, 1], xm[2] - mids[i, 2]
                     pt = px0 * th0 + px1 * th1 + px2 * th2
-                    px_arr[i, 0], px_arr[i, 1], px_arr[i, 2] = px0, px1, px2
-                    pt_arr[i] = pt
                     d0, d1, d2 = px0 - pt * th0, px1 - pt * th1, px2 - pt * th2
+                    p_arr[i, 0], p_arr[i, 1], p_arr[i, 2] = d0, d1, d2
+                    pt_arr[i] = pt
                     r2v = d0 * d0 + d1 * d1 + d2 * d2
                     rho2_arr[i] = r2v
                     if r2v < min_rho2:
@@ -409,7 +408,7 @@ def _line_kernel_multi(x, T, refl, r_act, t_hat, mids, w, rot, tq, W, off, tlo, 
                         ct_c[a, cc] = c0 * th0 + c1 * th1 + c2 * th2
 
                 for i in range(npos):
-                    px0, px1, px2 = px_arr[i, 0], px_arr[i, 1], px_arr[i, 2]
+                    p0, p1, p2 = p_arr[i, 0], p_arr[i, 1], p_arr[i, 2]
                     pt = pt_arr[i]
                     rho2_i = rho2_arr[i]
                     I_sub[:] = 0.0
@@ -450,9 +449,9 @@ def _line_kernel_multi(x, T, refl, r_act, t_hat, mids, w, rot, tq, W, off, tlo, 
                                     W_loc[iq, kk] = ((2 * kk - 1) * u * W_loc[iq, kk - 1] - (kk - 1) * W_loc[iq, kk - 2]) / kk
 
                         for iq in range(nq):
-                            t = t_pan[iq]
-                            dt = pt - t
-                            r2 = rho2_i + dt * dt
+                            tau = t_pan[iq] - pt
+                            tau2 = tau * tau
+                            r2 = rho2_i + tau2
                             inv_r = 1.0 / np.sqrt(r2)
                             inv_r2 = inv_r * inv_r
                             kr = k * (r2 * inv_r)
@@ -469,13 +468,12 @@ def _line_kernel_multi(x, T, refl, r_act, t_hat, mids, w, rot, tq, W, off, tlo, 
                             fRi = (c3 * phi + ik3 * phr) * inv_r2
                             fMr = (-ik * phr - phi) * inv_r
                             fMi = (phr - ik * phi) * inv_r
-                            t2 = t * t
                             S_pan[0, iq], S_pan[1, iq] = fIr, fIi
                             S_pan[2, iq], S_pan[3, iq] = fRr, fRi
-                            S_pan[4, iq], S_pan[5, iq] = t * fRr, t * fRi
-                            S_pan[6, iq], S_pan[7, iq] = t2 * fRr, t2 * fRi
+                            S_pan[4, iq], S_pan[5, iq] = tau * fRr, tau * fRi
+                            S_pan[6, iq], S_pan[7, iq] = tau2 * fRr, tau2 * fRi
                             S_pan[8, iq], S_pan[9, iq] = fMr, fMi
-                            S_pan[10, iq], S_pan[11, iq] = t * fMr, t * fMi
+                            S_pan[10, iq], S_pan[11, iq] = tau * fMr, tau * fMi
 
                         if q0 >= 0:
                             for iq in range(nq):
@@ -493,17 +491,17 @@ def _line_kernel_multi(x, T, refl, r_act, t_hat, mids, w, rot, tq, W, off, tlo, 
 
                     for a in range(nc):
                         u0, u1, u2 = Tm[a, 0], Tm[a, 1], Tm[a, 2]
-                        upa = u0 * px0 + u1 * px1 + u2 * px2
+                        upa = u0 * p0 + u1 * p1 + u2 * p2
                         uta = ut[a]
                         for cc in range(ncomp):
                             f0, f1, f2 = rot[cc, 0], rot[cc, 1], rot[cc, 2]
-                            fpc = f0 * px0 + f1 * px1 + f2 * px2
+                            fpc = f0 * p0 + f1 * p1 + f2 * p2
                             Dac = D[a, cc]
                             q0v = upa * fpc
                             q1v = upa * ft[cc] + uta * fpc
                             q2v = uta * ft[cc]
                             c0, c1, c2 = f1 * u2 - f2 * u1, f2 * u0 - f0 * u2, f0 * u1 - f1 * u0
-                            cpv = c0 * px0 + c1 * px1 + c2 * px2
+                            cpv = c0 * p0 + c1 * p1 + c2 * p2
                             ctv = ct_c[a, cc]
                             for kk in range(n):
                                 er = Dac * I_sub[0, kk] - q0v * I_sub[2, kk] + q1v * I_sub[4, kk] - q2v * I_sub[6, kk]
