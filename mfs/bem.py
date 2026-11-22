@@ -168,6 +168,18 @@ def fold(A, rows, cols, coef):
     return out
 
 
+@njit(parallel=True, cache=True)
+def _expand_a48(A48, rep, rep48, r48_of, g_of, perm48, sgn48, out):
+    """Reconstructs the 1/8-mirror representative rows from the 1/48-octahedral rows in parallel"""
+    N = A48.shape[1]
+    for i8 in prange(len(rep)):
+        dof = rep[i8]
+        ir48, g = r48_of[dof], g_of[dof]
+        s0 = sgn48[g, rep48[ir48]]
+        for j in range(N):
+            out[i8, perm48[g, j]] = (s0 * sgn48[g, j]) * A48[ir48, j]
+
+
 class Symmetric:
     """
     EFIE on a mesh with symmetries given by maps of its vertices vmap[g, v] and elements emap[g, e].
@@ -233,10 +245,9 @@ class Mirror(Symmetric):
             for g in range(48):
                 r48_of[perm48[g, rep48]] = np.arange(len(rep48), dtype=np.int32)
                 g_of[perm48[g, rep48]] = g
-            self.A = np.empty((len(self.rep), N), complex)
-            for i8, dof in enumerate(self.rep):
-                ir48, g = r48_of[dof], g_of[dof]
-                self.A[i8, perm48[g]] = (sgn48[g, rep48[ir48]] * sgn48[g]) * A48[ir48]
+            self.A = np.empty((len(self.rep), N), np.complex128)
+            _expand_a48(A48, self.rep, rep48, r48_of, g_of, perm48, sgn48, self.A)
+            del A48, perm48, sgn48
             self.curl = bempp.function_space(grid, "SNC", 0)
             i_rot = [i for i, P in enumerate(s3_mats) if np.array_equal(P, ROT.T)][0]
             i_yz = [i for i, P in enumerate(s3_mats) if np.array_equal(P, np.array([[1, 0, 0], [0, 0, 1], [0, 1, 0]]))][0]
