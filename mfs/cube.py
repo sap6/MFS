@@ -63,7 +63,7 @@ def graded_uv(levels, ng, n_max=0, hmax=H / 4):
     """
     Anisotropic Gauss-Legendre rule on (0, H)²: panels halve towards u = H and v = H,
     with ng × ng nodes near the corner (|p - q| <= 1) and ng across the nearer edge times
-    fewer nodes along it away from the corner, keeping at least n_max tangential nodes
+    max(3, ng - 1) along it away from the corner (|p - q| >= 2)
     """
     dist = np.concatenate(([0.0], H * 0.5 ** np.arange(levels, -1, -1)))
     brk = [0.0]
@@ -73,21 +73,17 @@ def graded_uv(levels, ng, n_max=0, hmax=H / 4):
     ends = H - np.array(brk)[::-1]
     a, b = ends[:-1], ends[1:]
     P = len(a)
-    ng_mid = max(3, ng - 1)
-    ng_far = max(2, ng - 1)
-    if 2 * ng + 2 * ng_mid + max(0, P - 4) * ng_far < n_max:
-        ng_far = max(ng_far, 3)
-    rules = {n: np.polynomial.legendre.leggauss(n) for n in {ng, ng_mid, ng_far}}
+    ng_t = max(3, ng - 1)
+    rules = {n: np.polynomial.legendre.leggauss(n) for n in {ng, ng_t}}
     us, vs, ws = [], [], []
     for p in range(P):
         for q in range(P):
-            d = abs(p - q)
-            if d <= 1:
+            if abs(p - q) <= 1:
                 nu, nv = ng, ng
             elif q > p:
-                nu, nv = (ng_mid if d <= 3 else ng_far), ng
+                nu, nv = ng_t, ng
             else:
-                nu, nv = ng, (ng_mid if d <= 3 else ng_far)
+                nu, nv = ng, ng_t
             gu, wu = rules[nu]
             gv, wv = rules[nv]
             up = 0.5 * (a[p] + b[p]) + 0.5 * (b[p] - a[p]) * gu
@@ -173,8 +169,8 @@ class Cube:
             self.depths, depths_v, ex = np.zeros(0), np.zeros(0), 0.0
         else:
             self.depths = 0.2 * q ** np.arange(m * J + 1)
-            qv, mv = min(q, 2 ** -0.5), max(2, m)                # vertex ray uses at least two dipoles per octave
-            depths_v = 0.2 * qv ** np.arange(mv * J + 1)
+            mv = max(2, m)                                       # vertex ray uses at least two dipoles per octave
+            depths_v = 0.2 * 2.0 ** (-np.arange(mv * J + 1) / mv)
             n0 = max(4, 2 * J - 4)
             ex = 2 * s * (s + 1) if extra_modes is None else extra_modes
 

@@ -72,7 +72,7 @@ if "--run-mfs" in sys.argv or "--retime-mfs" in sys.argv:
     out = dict(old) if retime else {"pts": pts}
     # Preserve previously computed Bempp E fields if recomputing MFS reference, and update their errors vs new ref_E
     for k_old, v_old in old.items():
-        if k_old.startswith("bem_E"):
+        if k_old.startswith(("bem_E", "bem_uniform_E")):
             out[k_old] = v_old
     for name, Js, kw in (("dense", range(3, 11), {}), ("one", range(3, 9), dict(q=0.5)),
                          ("notail", (4, 6, 8), dict(tails=False)), ("plain", (4, 6, 8, 10), None)):
@@ -90,8 +90,14 @@ if "--run-mfs" in sys.argv or "--retime-mfs" in sys.argv:
                   f"t={t:5.2f}s (best={best_t:5.2f}s), opt={info['optical']:.2e}, ext={info['ext']:.6f}", flush=True)
         out[name] = np.array(rows)
     out["ref_E"] = out["dense_E10"]
-    # Refresh stored Bempp error column against new ref_E if Bempp fields are already present
-    if "bem" in old and len(old["bem"]):
+    # Refresh stored Bempp error columns against new ref_E if Bempp fields are already present
+    if "bem_uniform" in old and len(old["bem_uniform"]):
+        out["bem_uniform"] = np.array([
+            [r[0], r[1], r[2], core.rel(out[f"bem_uniform_E{int(r[0])}"], out["ref_E"])
+             if f"bem_uniform_E{int(r[0])}" in out else r[3]]
+            for r in old["bem_uniform"].tolist()
+        ])
+    if "--reset-bem" not in sys.argv and "bem" in old and len(old["bem"]):
         bem_old = old["bem"]
         if bem_old.shape[1] == 4:
             bem_old = np.column_stack((bem_old[:, 0], np.full(len(bem_old), 8.0), bem_old[:, 1:]))

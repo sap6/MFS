@@ -110,8 +110,8 @@ class Tetrahedron:
             self.depths, depths_v, ex = np.zeros(0), np.zeros(0), 0.0
         else:
             self.depths = 0.14 * q ** np.arange(m * J + 1)
-            qv, mv = min(q, 2 ** -0.5), max(2, m)                # vertex ray uses at least two dipoles per octave
-            depths_v = 0.14 * qv ** np.arange(mv * J + 1)
+            mv = max(2, m)                                       # vertex ray uses at least two dipoles per octave
+            depths_v = 0.14 * 2.0 ** (-np.arange(mv * J + 1) / mv)
             n0 = max(4, 2 * J - 4)
             ex = 2 * s * (s + 1) if extra_modes is None else extra_modes
 
