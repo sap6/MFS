@@ -124,6 +124,9 @@ for _, _, Nb, _, eb in bem_arr:
     best_by_N[int(Nb)] = min(best_by_N.get(int(Nb), 1.0), float(eb))
 curves["graded"] = np.array(sorted(best_by_N.items()))
 bem_time_env = envelope([(float(r[3]), float(r[4])) for r in bem_arr])
+bem_unif = res["bem_uniform"] if "bem_uniform" in res else np.zeros((0, 4))
+if len(bem_unif):
+    curves["uniform"] = np.column_stack((bem_unif[:, 1], bem_unif[:, 3]))
 
 # Root-exponential fit to levels J = 3..8 (J = 9 approaches the J = 10 reference)
 c = curves["dense"][:-1]
@@ -283,35 +286,45 @@ ax_conv.annotate(rf"${np.exp(p[1]):.2f}\,\exp({p[0]:.4f}\sqrt{{N_u}})$",
                  xy=(108.0, np.exp(np.polyval(p, 108.0))), xytext=(88.0, 5.5e-3),
                  fontsize=7.0, color=MUTED, ha="left", va="bottom",
                  arrowprops=dict(arrowstyle="-", color=MUTED, lw=0.55, shrinkA=1, shrinkB=2))
-for key, (col, mk, ls, label) in {"plain": (PURPLE, "^", ":", "plain MFS (inner copy)"),
-                                  "notail": (GREEN, "s", "--", "MFS without tails"),
-                                  "one": (NAVY, "h", (0, (6, 1.5)), "MFS (1 depth/octave)"),
-                                  "dense": (BLUE, "o", "-", "MFS (2 depths/octave)"),
-                                  "graded": (RUST, "X", (0, (3, 1)), "Bempp (graded, symmetry)")}.items():
+for key, (col, mk, ls, label) in {
+    "plain": (PURPLE, "^", ":", "plain MFS (inner copy)"),
+    "notail": (GREEN, "s", "--", "MFS without tails"),
+    "one": (NAVY, "h", (0, (6, 1.5)), "MFS (1 depth/octave)"),
+    "dense": (BLUE, "o", "-", "MFS (2 depths/octave)"),
+    **({"uniform": (ORANGE, "D", "-.", "Bempp (quasi-uniform)")} if "uniform" in curves else {}),
+    "graded": (RUST, "X", (0, (3, 1)), "Bempp (graded, symmetry)"),
+}.items():
     v = curves[key]
-    curve(ax_conv, np.sqrt(v[:, 0]), v[:, 1], col, mk, ls, label, ms=4.3, lw=1.35, logx=False, zorder=3)
+    curve(ax_conv, np.sqrt(v[:, 0]), v[:, 1], col, mk, ls, label, ms=4.2, lw=1.35, logx=False, zorder=3)
 d_c = curves["dense"]
+b_c = curves["graded"]
 ax_conv.text(np.sqrt(d_c[0, 0]) + 2.5, d_c[0, 1] * 1.12, f"$J={int(d_c[0, 3])}$", fontsize=6.8, color=BLUE)
 ax_conv.text(np.sqrt(d_c[-1, 0]) - 2.0, d_c[-1, 1] * 0.58, f"$J={int(d_c[-1, 3])}$", fontsize=6.8, color=BLUE, ha="right")
+ax_conv.text(np.sqrt(b_c[-1, 0]) + 1.5, b_c[-1, 1] * 1.18, "8 GB\nlimit", fontsize=6.2, color=RUST, va="bottom", linespacing=0.95)
 ax_conv.set(xlabel=r"$\sqrt{N_u}$ (whole-body unknowns)", ylabel="relative error of the scattered field",
-            ylim=(4e-5, 1.0))
+            xlim=(14, 152), ylim=(4e-5, 1.0))
 ax_conv.set_title(r"(c) error against $\sqrt{N_u}$", loc="left", fontsize=8.4)
 
-# Panel (d): error against wall time [s] (plotting all J=3..8 of 1 depth/octave — zero uptick!)
-curve(ax_time, curves["one"][:, 2], curves["one"][:, 1], NAVY, "h", (0, (6, 1.5)), ms=4.3, lw=1.35, zorder=3)
-curve(ax_time, curves["dense"][:, 2], curves["dense"][:, 1], BLUE, "o", "-", ms=4.3, lw=1.35, zorder=4)
-curve(ax_time, bem_time_env[:, 0], bem_time_env[:, 1], RUST, "X", (0, (3, 1)), ms=4.3, lw=1.35, zorder=3)
+# Panel (d): error against wall time [s]
+m_tet_env = envelope([(float(r[2]), float(r[1])) for r in np.vstack((curves["one"], curves["dense"]))])
+ax_time.loglog(m_tet_env[:, 0], m_tet_env[:, 1], "-", color=BLUE, lw=3.6, alpha=0.18, zorder=2)
+if len(bem_unif):
+    curve(ax_time, bem_unif[:, 2], bem_unif[:, 3], ORANGE, "D", "-.", ms=4.1, lw=1.3, zorder=3)
+curve(ax_time, curves["one"][:, 2], curves["one"][:, 1], NAVY, "h", (0, (6, 1.5)), ms=4.2, lw=1.35, zorder=3)
+curve(ax_time, curves["dense"][:, 2], curves["dense"][:, 1], BLUE, "o", "-", ms=4.2, lw=1.35, zorder=4)
+curve(ax_time, bem_time_env[:, 0], bem_time_env[:, 1], RUST, "X", (0, (3, 1)), ms=4.2, lw=1.35, zorder=3)
 ax_time.text(d_c[0, 2] * 1.15, d_c[0, 1] * 1.10, f"$J={int(d_c[0, 3])}$", fontsize=6.8, color=BLUE)
 ax_time.text(d_c[-1, 2] * 0.88, d_c[-1, 1] * 0.58, f"$J={int(d_c[-1, 3])}$", fontsize=6.8, color=BLUE, ha="right")
-ax_time.set(xlabel="wall time [s]  (2 cores)", xlim=(1.8, 360), ylim=(4e-5, 1.0))
+ax_time.text(bem_time_env[-1, 0] * 1.02, bem_time_env[-1, 1] * 1.25, "8 GB\nlimit", fontsize=6.2, color=RUST, ha="right", va="bottom", linespacing=0.95)
+ax_time.set(xlabel="wall time [s]  (2 cores)", xlim=(1.6, 390), ylim=(4e-5, 1.0))
 ax_time.set_xticks([2, 5, 10, 20, 50, 100, 250])
 ax_time.xaxis.set_major_formatter(plt.FuncFormatter(lambda v, pos: f"{v:g}"))
 ax_time.xaxis.set_minor_formatter(plt.NullFormatter())
 ax_time.set_title("(d) error against wall time", loc="left", fontsize=8.4)
 
 handles, labels = ax_conv.get_legend_handles_labels()
-fig.legend(handles, labels, frameon=False, fontsize=7.7, loc="lower center", bbox_to_anchor=(0.55, -0.02),
-           ncol=3, columnspacing=1.2, handletextpad=0.45)
+fig.legend(handles, labels, frameon=False, fontsize=7.5, loc="lower center", bbox_to_anchor=(0.54, -0.02),
+           ncol=3, columnspacing=1.05, handletextpad=0.4)
 for a in (ax_conv, ax_time):
     a.grid(True, which="major", color="#e4e3df", lw=0.6)
     for sp in ("top", "right"):

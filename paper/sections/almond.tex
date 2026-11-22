@@ -1,7 +1,7 @@
 \section{The NASA almond}
 \label{sec:almond}
 
-Finally, we apply the MFS to the NASA almond \cite{woo1993} of length $L = 0.2524$\,m, a standard benchmark in computational electromagnetics that is smooth everywhere except at its sharp tip. With its long axis along $x$, its tip at $x = 0.58333\,L$ and its mid-plane in $z = 0$, the body is symmetric under the reflections $y\to-y$ and $z\to-z$. For $t = x/L \in [-0.416667,\,0.58333]$, each cross-section is a $3{:}1$ ellipse $(y/a(x))^2 + (z/b(x))^2 = 1$ with $b(x) = a(x)/3$, where $a(x) = 0.193333\,L\sqrt{1-(t/0.416667)^2}$ on the rounded rear ($t\le0$) and $a(x) = 4.83345\,L\bigl(\sqrt{1-(t/2.08335)^2}-0.96\bigr)$ on the tapered front ($t\ge0$). The almond thus combines both difficulties studied earlier: an interior singular curve running close to the rim, like a thin torus, and a conical point where that curve meets $\Gamma$, like a polyhedral vertex.
+Finally, we apply the MFS to the NASA almond \cite{woo1993,kelley2020} of length $L = 9.936$\,in ($0.2523744$\,m), a standard scattering benchmark that is smooth everywhere except at its sharp tip. With its long axis along $x$, its tip at $x = 0.58333\,L$ and its mid-plane in $z = 0$, the body is symmetric under $y\to-y$ and $z\to-z$. For $t = x/L \in [-0.416667,\,0.58333]$, each cross-section is a $3{:}1$ ellipse $(y/a(x))^2 + (z/b(x))^2 = 1$ with $b(x) = a(x)/3$, where $a(x) = 0.193333\,L\allowbreak\sqrt{1-(t/0.416667)^2}$ on the rounded rear ($t\le0$) and $a(x) = 4.83345\,L\allowbreak\bigl(\sqrt{1-(t/2.08335)^2}-0.96\bigr)$ on the tapered front ($t\ge0$). The almond thus combines both difficulties studied earlier: an interior singular curve running close to the rim, like a thin torus, and a conical point where that curve meets $\Gamma$, like a polyhedral vertex.
 
 \subsection{Sources on the mid-plane and a tail at the tip}
 
@@ -30,7 +30,7 @@ For nose-on incidence along $-x$ polarised along $y$ at $1.19$\,GHz (one wavelen
 
 In practice, the quantity of interest is the monostatic radar cross-section $\sigma(-\bd) = 4\pi|\bF(-\bd)|^2$ in the backscattering direction $-\bd$, reported in decibels relative to one square metre ($\mathrm{dBsm}$), $10\log_{10}(\sigma / 1\,\mathrm{m}^2)$, as a function of azimuth in the mid-plane for horizontal (HH, in-plane $\bE$) and vertical (VV, $z$-polarised $\bE$) polarisation. Because one factorisation per parity class serves every look angle, layout $6{:}3$ (row spacing $0.5$, with $4193$ and $4183$ unknowns in even- and odd-$z$ classes) sweeps all $361$ azimuths ($0^\circ$ to $180^\circ$) and both polarisations in three minutes per frequency.
 
-\autoref{fig:almondbench} and \autoref{tab:almondbench} compare layout $6{:}3$ against the measurements and $397674$-unknown reference simulation of the Austin RCS Benchmark Suite \cite{kelley2020} at $3.5$, $5.125$, $7$ and $10.25$\,GHz (up to $8.6$ wavelengths long). Averaged above the suite's $80$\,dB dynamic-range floor, the MFS differs from the reference simulation by $0.04$ to $0.14$\,dB for HH and $0.01$ to $0.02$\,dB for VV, comparable to the $0.07$ and $0.02$\,dB mesh uncertainty of the reference itself at $7$\,GHz \cite{kelley2020}, while both simulations lie well within the stated $\pm1$\,dB (HH) and $\pm2$\,dB (VV) measurement uncertainty ($0.6\text{--}1.8$\,dB). Pointwise differences are largest on the steep flanks of destructive-interference HH nulls, peaking at $4.3$\,dB at $10.25$\,GHz and $35.5^\circ$ ($-66.7$ versus $-71.1$\,dBsm): layouts $6{:}3$ and $8{:}5$ agree to $0.024$\,dB there, and shifting the curve by $0.1^\circ$ halves the discrepancy.
+\autoref{fig:almondbench} and \autoref{tab:almondbench} compare layout $6{:}3$ against the measurements and $397674$-unknown faceted reference simulation of the Austin RCS Benchmark Suite \cite{kelley2020} at $3.5$, $5.125$, $7$ and $10.25$\,GHz (up to $8.6$ wavelengths long). Averaged over the suite's $361$ half-degree angles above its $80$\,dB dynamic-range floor, the MFS differs from the reference simulation by $0.038$ to $0.121$\,dB for HH and $0.007$ to $0.018$\,dB for VV, matching or beating the $0.07$ and $0.02$\,dB mesh uncertainty of the reference itself at $7$\,GHz \cite{kelley2020}, while both simulations lie well within the $\pm1$\,dB (HH) and $\pm2$\,dB (VV) measurement uncertainty ($0.6\text{--}1.8$\,dB). On the half-degree grid, pointwise differences peak on the steep flanks of destructive-interference HH nulls ($4.0$\,dB at $10.25$\,GHz and $35.5^\circ$, $-67.1$ versus $-71.1$\,dBsm): layouts $6{:}3$ and $7{:}4$ agree to $0.03$\,dB there, and evaluated at $0.05^\circ$ steps the same $6{:}3$ MFS solution reaches $-69.4$\,dBsm at $35.64^\circ$, placing its null within $0.14^\circ$ of the faceted reference.
 
 \begin{figure}[htbp]
   \centering
@@ -47,8 +47,8 @@ In practice, the quantity of interest is the monostatic radar cross-section $\si
     \toprule
     Frequency [GHz] & 3.5 & 5.125 & 7 & 10.25 \\
     \midrule
-    HH [dB] & 0.043 & 0.055 & 0.072 & 0.140 \\
-    VV [dB] & 0.011 & 0.013 & 0.016 & 0.024 \\
+    HH [dB] & 0.038 & 0.049 & 0.065 & 0.121 \\
+    VV [dB] & 0.007 & 0.010 & 0.011 & 0.018 \\
     \bottomrule
   \end{tabular}
 \end{table}

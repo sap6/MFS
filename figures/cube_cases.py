@@ -91,24 +91,28 @@ if "--scan" in sys.argv or "--run" in sys.argv:
         np.savez(data(f"cube_cases_{case}.npz"), mfs=mfs, bem=bem, env=env[np.argsort(env[:, 5])])
 
 # The figure: three panels (the standard wave is panel (d) of Figure 11)
-fig, axs = plt.subplots(1, 3, figsize=(6.6, 2.9), sharex=True, sharey=True)
+fig, axs = plt.subplots(1, 3, figsize=(6.6, 2.95), sharex=True, sharey=True)
 panels = (("k1o", "(a) $k = 2\\pi$, general wave"), ("k2", "(b) $k = 4\\pi$, two wavelengths"), ("k3", "(c) $k = 6\\pi$, three wavelengths"))
 for ax, (case, title) in zip(axs, panels):
     res = np.load(data(f"cube_cases_{case}.npz"))
     mfs = res["mfs"]
     m2 = mfs[mfs[:, 0] == 2]
+    m_env = envelope([(float(r[5]), float(r[6])) for r in mfs])
+    ax.loglog(m_env[:, 0], m_env[:, 1], "-", color=BLUE, lw=3.8, alpha=0.18, zorder=2, label="MFS (lower envelope)")
+    bem_env = res["env"][res["env"][:, 6] < 2.5e-2]
     for pts, col, mk, ls, zo, label in (
         (m2, BLUE, "o", "-", 4, "MFS (two depths per octave)"),
         (mfs[mfs[:, 0] == 1], NAVY, "h", (0, (6, 1.5)), 3, "MFS (one depth per octave)"),
-        (res["env"][res["env"][:, 6] < 2.5e-2], RUST, "X", (0, (3, 1)), 2, "Bempp, graded, with symmetry"),
+        (bem_env, RUST, "X", (0, (3, 1)), 2, "Bempp, graded (lower envelope)"),
     ):
         curve(ax, pts[:, 5], pts[:, 6], col, mk, ls, label, 4.8, 1.4, 0.6, zorder=zo)
     ax.text(m2[0, 5] * 1.18, m2[0, 6] * 1.12, f"$J={int(m2[0, 1])}$", fontsize=7.0, color=BLUE)
     ax.text(m2[-1, 5] * 1.18, m2[-1, 6] * 0.92, f"$J={int(m2[-1, 1])}$", fontsize=7.0, color=BLUE, va="center")
+    ax.text(bem_env[-1, 5] * 1.05, bem_env[-1, 6] * 1.32, "8 GB\nlimit", fontsize=6.2, color=RUST, ha="right", va="bottom", linespacing=0.95)
     ax.set_title(title, loc="left", fontsize=8.5)
     ax.set_xlabel("wall time [s]  (2 cores)")
     ax.xaxis.set_minor_formatter(plt.NullFormatter())
-axs[0].set(xlim=(0.8, 950), ylim=(1e-5, 3.5e-2), ylabel="relative error of the scattered field")
+axs[0].set(xlim=(0.8, 1050), ylim=(1e-5, 3.5e-2), ylabel="relative error of the scattered field")
 h, lab = axs[0].get_legend_handles_labels()
-fig.legend(h, lab, frameon=False, fontsize=8, ncol=3, loc="lower center", bbox_to_anchor=(0.5, 0.005))
-finish(fig, axs, "fig_cube_cases", rect=(0, 0.09, 1, 1))
+fig.legend(h, lab, frameon=False, fontsize=7.7, ncol=2, loc="lower center", bbox_to_anchor=(0.5, -0.02), columnspacing=1.3)
+finish(fig, axs, "fig_cube_cases", rect=(0, 0.14, 1, 1))

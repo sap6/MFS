@@ -280,6 +280,14 @@ D.~Khavinson, E.~Lundberg, A tale of ellipsoids in potential theory, Notices
 \newblock \href {https://doi.org/10.1090/noti1082}
   {\path{doi:10.1090/noti1082}}.
 
+\bibitem{burbano2026}
+J.~Burbano-Gallegos, C.~P{\'e}rez-Arancibia, C.~Turc, Maxwell {\`a} la
+  {H}elmholtz: Electromagnetic scattering by {3D} perfect electric conductors
+  via {H}elmholtz integral operators, ESAIM Math. Model. Numer. Anal. 60~(1)
+  (2026) 273--315.
+\newblock \href {https://doi.org/10.1051/m2an/2025101}
+  {\path{doi:10.1051/m2an/2025101}}.
+
 \bibitem{bespalov2010}
 A.~Bespalov, N.~Heuer, R.~Hiptmair, Convergence of the natural $hp$-{BEM} for
   the electric field integral equation on polyhedral surfaces, SIAM J. Numer.

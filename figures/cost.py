@@ -16,7 +16,7 @@ import sys
 import time
 
 import numpy as np
-from style import BLUE, NAVY, ORANGE, RUST, curve, data, finish, plt, rel
+from style import BLUE, NAVY, ORANGE, RUST, curve, data, envelope, finish, plt, rel
 
 from mfs import almond, core, mie, sphere, torus
 
@@ -141,18 +141,25 @@ ax.xaxis.set_major_formatter(plt.FuncFormatter(lambda v, pos: f"{v:g}"))
 ax = axs[1, 1]
 res = np.load(data("cube_convergence.npz"))
 ref, jref = res["ref_E"], int(res["ref_info"][0])
+m_pts_all = []
 for key, col, mk, ls, lab in (("dense", BLUE, "o", "-", "MFS (two depths per octave)"),
                               ("tail", NAVY, "h", (0, (6, 1.5)), "MFS (one depth per octave)")):
-    rows = [r for r in res[key] if 4 <= r[0] < jref]
-    curve(ax, [r[1] for r in rows], [rel(res[f"{key}_E{int(r[0])}"], ref) for r in rows], col, mk, ls, lab)
+    rows = [r for r in res[key] if 3 <= r[0] < jref]
+    ts = [float(r[1]) for r in rows]
+    es = [rel(res[f"{key}_E{int(r[0])}"], ref) for r in rows]
+    m_pts_all.extend(zip(ts, es))
+    curve(ax, ts, es, col, mk, ls, lab)
+m_env_d = envelope(m_pts_all)
+ax.loglog(m_env_d[:, 0], m_env_d[:, 1], "-", color=BLUE, lw=3.6, alpha=0.18, zorder=1)
 u = np.load(data("cube_bempp_uniform.npz"))
 keep = u["ndof"] > 1000
 curve(ax, u["t"][keep], [rel(E, ref) for E in u["E"][keep]], ORANGE, "D", "-.", "Bempp, quasi-uniform")
 env = np.load(data("cube_cases_k1.npz"))["env"]
-curve(ax, env[:, 5], env[:, 6], RUST, "X", (0, (3, 1)), "Bempp, graded, with symmetry")
+curve(ax, env[:, 5], env[:, 6], RUST, "X", (0, (3, 1)), "Bempp, graded (lower envelope)")
+ax.text(env[-1, 5] * 1.04, env[-1, 6] * 1.35, "8 GB\nlimit", fontsize=6.4, color=RUST, ha="right", va="bottom", linespacing=0.95)
 ax.set_title(r"(d) unit cube, $k = 2\pi$, standard wave", loc="left", fontsize=8.5)
 ax.set_ylim(5e-8, 3e-2)
-ax.set_xticks([2, 5, 10, 50, 200, 500])
+ax.set_xticks([1, 2, 5, 10, 50, 200, 500])
 ax.xaxis.set_major_formatter(plt.FuncFormatter(lambda v, pos: f"{v:g}"))
 
 locs = {(0, 0): ("lower left", None), (0, 1): ("center right", (1.02, 0.55)),

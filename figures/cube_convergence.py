@@ -56,7 +56,8 @@ if "--run" in sys.argv:
 # Errors against the reference, as a function of the unknowns of the whole cube
 res = np.load(data("cube_convergence.npz"))
 ref, jref = res["ref_E"], int(res["ref_info"][0])
-curves = {name: np.array([(4 * r[2], rel(res[f"{name}_E{int(r[0])}"], ref)) for r in res[name] if 4 <= r[0] < jref])
+curves = {name: np.array([(4 * r[2], rel(res[f"{name}_E{int(r[0])}"], ref)) for r in res[name]
+                          if (3 if name == "tail" else 4) <= r[0] < jref])
           for name in ("dense", "tail", "notail", "plain")}
 u = np.load(data("cube_bempp_uniform.npz"))
 curves["uniform"] = np.array([(n, rel(E, ref)) for n, E in zip(u["ndof"], u["E"]) if n > 1000])
@@ -85,13 +86,15 @@ for key, (col, mk, ls, label) in {"plain": (PURPLE, "^", ":", "plain MFS (inner 
     v = curves[key]
     curve(ax, np.sqrt(v[:, 0]), v[:, 1], col, mk, ls, label, lw=1.4, logx=False, zorder=3)
 
-# Level callouts linking markers to Table 2
+# Level callouts linking markers to Table 2, and Bempp's 8 GB RAM ceiling
 d0_xy = (np.sqrt(curves["dense"][0, 0]), curves["dense"][0, 1])
 d1_xy = (np.sqrt(curves["dense"][-1, 0]), curves["dense"][-1, 1])
 t1_xy = (np.sqrt(curves["tail"][-1, 0]), curves["tail"][-1, 1])
+b1_xy = (np.sqrt(curves["graded"][-1, 0]), curves["graded"][-1, 1])
 ax.text(d0_xy[0] + 2.5, d0_xy[1] * 1.18, "$J=4$", fontsize=7.5, color=BLUE)
 ax.text(d1_xy[0] + 3.5, d1_xy[1] * 1.25, "$J=11$", fontsize=7.5, color=BLUE)
 ax.text(t1_xy[0] - 2.0, t1_xy[1] * 1.45, "$J=9$", fontsize=7.4, color=NAVY, ha="right")
+ax.text(b1_xy[0] + 2.5, b1_xy[1] * 1.12, "8 GB limit", fontsize=7.2, color=RUST, va="bottom")
 
 ax.set(xlabel=r"$\sqrt{N_u}$,  $N_u$ = unknowns of the whole cube", ylabel="relative error of the scattered field")
 ax.set_title(r"unit cube, $k = 2\pi$: error against $\sqrt{N_u}$", loc="left", fontsize=8.5)

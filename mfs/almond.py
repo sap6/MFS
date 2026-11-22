@@ -16,7 +16,7 @@ from numba import njit, prange
 
 from .core import class_part, cross_sections, factor, sphere_rule, tangent_basis
 
-L = 0.2524                                                  # length [m]
+L = 9.936 * 0.0254                                          # exact 9.936 in benchmark length [m] (0.2523744 m)
 T0, T1 = -0.416667, 0.58333                                 # rear end and tip, in units of L
 A_, B_, C_ = 0.416667 * L, 0.193333 * L, 0.064444 * L       # semi-axes of the rear half-ellipsoid
 ETA_F = np.sqrt(1 - (C_ / B_) ** 2)                         # focal curve, as a fraction of the half-width (0.943)

@@ -74,7 +74,9 @@ rc = np.load(data("cube_convergence.npz"))
 ref_c = rc["ref_E"]
 c_plain = np.array([(4 * r[2], rel(rc[f"plain_E{int(r[0])}"], ref_c)) for r in rc["plain"] if 4 <= r[0] < 12])
 c_notail = np.array([(4 * r[2], rel(rc[f"notail_E{int(r[0])}"], ref_c)) for r in rc["notail"] if 4 <= r[0] < 12])
-c_dense = np.array([(4 * r[2], rel(rc[f"dense_E{int(r[0])}"], ref_c)) for r in rc["dense"] if 4 <= r[0] <= 10])
+c_dense = np.array([(4 * r[2], rel(rc[f"dense_E{int(r[0])}"], ref_c)) for r in rc["dense"] if 3 <= r[0] <= 11])
+cu = np.load(data("cube_bempp_uniform.npz"))
+c_unif = np.array([(n, rel(E, ref_c)) for n, E in zip(cu["ndof"], cu["E"]) if n > 1000])
 best_b = {}
 for *_, N, _, err in np.load(data("cube_cases_k1.npz"))["bem"]:
     best_b[int(N)] = min(best_b.get(int(N), 1.0), err)
@@ -85,15 +87,17 @@ ref_t = rt["ref_E"]
 t_dense = np.array([(sum(tetrahedron.Tetrahedron(int(r[0]), classes=[]).unknowns.values()),
                      rel(rt[f"dense_E{int(r[0])}"], ref_t)) for r in rt["dense"] if 3 <= r[0] <= 9])
 
-curve(ax, np.sqrt(c_plain[:, 0]), c_plain[:, 1], PURPLE, "^", ":", "inner surface", ms=4.3, lw=1.3, logx=False)
-curve(ax, np.sqrt(c_notail[:, 0]), c_notail[:, 1], GREEN, "s", "--", "no tail", ms=4.1, lw=1.3, logx=False)
-curve(ax, np.sqrt(c_bem[:, 0]), c_bem[:, 1], RUST, "X", (0, (3, 1)), "Bempp (graded)", ms=4.3, lw=1.3, logx=False)
-curve(ax, np.sqrt(t_dense[:, 0]), t_dense[:, 1], NAVY, "D", "-.", "MFS, tetrahedron", ms=4.1, lw=1.35, logx=False)
-curve(ax, np.sqrt(c_dense[:, 0]), c_dense[:, 1], BLUE, "o", "-", "MFS, cube", ms=4.3, lw=1.45, logx=False)
-ax.set(xlabel=r"$\sqrt{N_u}$ (whole-body unknowns)", ylabel="relative field error", ylim=(1e-5, 0.8))
+curve(ax, np.sqrt(c_plain[:, 0]), c_plain[:, 1], PURPLE, "^", ":", "inner surface", ms=4.0, lw=1.25, logx=False)
+curve(ax, np.sqrt(c_notail[:, 0]), c_notail[:, 1], GREEN, "s", "--", "no tail", ms=3.9, lw=1.25, logx=False)
+curve(ax, np.sqrt(c_unif[:, 0]), c_unif[:, 1], ORANGE, "D", "-.", "Bempp (uniform)", ms=3.9, lw=1.25, logx=False)
+curve(ax, np.sqrt(c_bem[:, 0]), c_bem[:, 1], RUST, "X", (0, (3, 1)), "Bempp (graded)", ms=4.1, lw=1.3, logx=False)
+curve(ax, np.sqrt(t_dense[:, 0]), t_dense[:, 1], NAVY, "h", (0, (5, 1.5)), "MFS, tetrahedron", ms=4.1, lw=1.35, logx=False)
+curve(ax, np.sqrt(c_dense[:, 0]), c_dense[:, 1], BLUE, "o", "-", "MFS, cube", ms=4.2, lw=1.45, logx=False)
+ax.text(np.sqrt(c_bem[-1, 0]), c_bem[-1, 1] * 1.48, "8 GB limit", fontsize=6.3, color=RUST, ha="center", va="bottom")
+ax.set(xlabel=r"$\sqrt{N_u}$ (whole-body unknowns)", ylabel="relative field error", ylim=(5e-6, 0.8))
 ax.set_title(r"2. Polyhedra ($k = 2\pi$): $\exp(-c\sqrt{N_u})$", loc="left", fontsize=8.6, fontweight="bold")
-ax.legend(frameon=False, fontsize=7.1, loc="upper center", bbox_to_anchor=(0.48, -0.28), ncol=2,
-          handlelength=1.6, handletextpad=0.35, columnspacing=0.65)
+ax.legend(frameon=False, fontsize=6.8, loc="upper center", bbox_to_anchor=(0.48, -0.28), ncol=2,
+          handlelength=1.55, handletextpad=0.32, columnspacing=0.55)
 
 # (c) NASA almond monostatic RCS at 10.25 GHz (8.6 wavelengths)
 ax = axs[2]
@@ -106,9 +110,9 @@ keep_v = np.isclose(np.round(d_vv[:, 2], 2) * 2, np.round(np.round(d_vv[:, 2], 2
 ref_vv = d_vv[keep_v, 3]
 
 ax.plot(phi, 10 * np.log10(ra["sigma_VV"]), "-", color=NAVY, lw=1.2, label="MFS VV (0.02 dB)", zorder=2)
-ax.plot(phi, ref_vv, ls=(0, (2.2, 1.6)), color=RUST, lw=0.9, label="Austin ref. VV", zorder=3)
-ax.plot(phi, 10 * np.log10(ra["sigma_HH"]), "-", color=BLUE, lw=1.25, label="MFS HH (0.14 dB)", zorder=4)
-ax.plot(phi, ref_hh, ls=(0, (2.2, 1.6)), color=ORANGE, lw=0.95, label="Austin ref. HH", zorder=5)
+ax.plot(phi, ref_vv, ls=(0, (2.2, 1.6)), color=RUST, lw=0.88, label="Austin ref. VV", zorder=3)
+ax.plot(phi, 10 * np.log10(ra["sigma_HH"]), "-", color=BLUE, lw=1.25, label="MFS HH (0.12 dB)", zorder=4)
+ax.plot(phi, ref_hh, ls=(0, (2.2, 1.6)), color=ORANGE, lw=0.90, label="Austin ref. HH", zorder=5)
 ax.set(xlim=(0, 180), ylim=(-72, -16), xticks=[0, 60, 120, 180], xlabel="azimuth [deg]", ylabel="monostatic RCS [dBsm]")
 ax.set_title("3. NASA almond at 10.25 GHz", loc="left", fontsize=8.6, fontweight="bold")
 ax.legend(frameon=False, fontsize=7.1, loc="upper center", bbox_to_anchor=(0.48, -0.28), ncol=2,

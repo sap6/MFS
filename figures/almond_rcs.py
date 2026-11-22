@@ -29,8 +29,8 @@ if "--run" in sys.argv:
     for f in FREQS.values():
         np.savez(data(f"almond_rcs_{f}GHz.npz"), **almond.rcs(f))
 
-# Mean absolute difference in dB from the reference simulation, after raising both curves
-# to the suite's threshold (largest reference value - 80 dB)
+# Mean absolute difference in dB from the reference simulation on the suite's 361 half-degree angles,
+# after raising both curves to the suite's threshold (largest reference value - 80 dB)
 fig, axes = plt.subplots(2, 4, figsize=(6.6, 3.7), sharex=True, sharey=True)
 print("frequency  pol  mean |MFS - reference| [dB]")
 for j, (fx, f) in enumerate(FREQS.items()):
@@ -41,9 +41,9 @@ for j, (fx, f) in enumerate(FREQS.items()):
         th = ref.max() - 80.0
         print(f"{f:8.3f}   {pol}   {np.mean(np.abs(np.maximum(mfs, th) - np.maximum(ref, th))):.3f}")
         ax = axes[i, j]
-        ax.plot(phi, austin("meas.m1", fx, pol)[1], "-", color="#aba9a0", lw=0.85, label="measured (Kelley et al. 2020)", zorder=1)
+        ax.plot(phi, austin("meas.m1", fx, pol)[1], "-", color="#c7c5bd", lw=0.72, label="measured (Kelley et al. 2020)", zorder=1)
         ax.plot(phi, mfs, "-", color=BLUE, lw=1.35, label="MFS (this work)", zorder=3)
-        ax.plot(phi, ref, ls=(0, (2.2, 1.6)), color=ORANGE, lw=1.05, label="reference simulation", zorder=4)
+        ax.plot(phi, ref, ls=(0, (2.2, 1.6)), color=ORANGE, lw=0.95, label="reference simulation", zorder=4)
         ax.set_ylim(-74, -16)
         ax.set_title(f"{f:g} GHz, {pol}", loc="left", fontsize=8.5)
         ax.set_xticks([0, 60, 120, 180])
