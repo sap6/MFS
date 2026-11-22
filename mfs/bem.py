@@ -200,30 +200,150 @@ class Mirror(Symmetric):
     EFIE on a mesh made by mirror_grid, with the parity classes of the reflections refl.
     The rows of the fundamental piece are assembled once; solve() then takes any wave.
     """
-    def __init__(self, grid, vmap, n_piece, refl, k):
-        self.refl, self.lu = refl, {}
+    def __init__(self, grid, vmap, n_piece, refl, k, rot=False, oh=False):
+        self.refl, self.lu, self.rot_act, self.yz_act = refl, {}, None, None
 
-        # Each element of the piece number r has its image under reflection q in piece number (r times q)
+        # Each element of piece number r has its image under reflection q in piece number (r times q)
         ne = grid.number_of_elements
-        r_of = np.arange(ne) // n_piece                             # the piece of each element
+        r_of = np.arange(ne) // n_piece
         idx = {tuple(R): i for i, R in enumerate(refl)}
-        emap = []
-        for Rq in refl:
-            piece = np.array([idx[tuple(R * Rq)] for R in refl])      # piece r -> piece (r times q)
-            emap.append(np.arange(ne) + (piece[r_of] - r_of) * n_piece)
-        super().__init__(grid, vmap, np.array(emap), k)
+        emap = np.array([np.arange(ne) + (np.array([idx[tuple(R * Rq)] for R in refl])[r_of] - r_of) * n_piece for Rq in refl])
+
+        if oh:
+            # Full 48-element octahedral group O_h = (Z_2)^3 x S_3: assemble only 1/48 of the RWG rows
+            self.k, self.G = k, len(vmap)
+            self.div = div = bempp.function_space(grid, "RWG", 0)
+            self.N = N = div.global_dof_count
+            s3_mats = [np.eye(3)[list(p)] for p in itertools.permutations(range(3))]
+            vt, el = grid.vertices.T, grid.elements.T
+            vkey = {tuple(r): i for i, r in enumerate((np.round(vt, 12) + 0.0).tolist())}
+            ekey = {tuple(sorted(e)): i for i, e in enumerate(el.tolist())}
+            vs3 = np.array([[vkey[tuple(r)] for r in (np.round(vt @ P.T, 12) + 0.0).tolist()] for P in s3_mats], np.int32)
+            es3 = np.array([[ekey[tuple(sorted(vs3[s, e].tolist()))] for e in el] for s in range(6)], np.int32)
+            self.perm, self.sgn = action(div, vmap, emap)
+            ps3, ss3 = action(div, vs3, es3)
+            perm48 = self.perm[:, ps3].reshape(48, N)
+            sgn48 = (self.sgn[:, ps3] * ss3[None, :, :]).reshape(48, N)
+            rep48 = np.nonzero(perm48.min(axis=0) == np.arange(N))[0]
+            t0 = time.time()
+            A48 = assemble_rows(div, k, rep48)
+            self.t_assemble = time.time() - t0
+            self.rep = np.nonzero(self.perm.min(axis=0) == np.arange(N))[0]
+            r48_of, g_of = np.full(N, -1, np.int32), np.full(N, -1, np.int32)
+            for g in range(48):
+                r48_of[perm48[g, rep48]] = np.arange(len(rep48), dtype=np.int32)
+                g_of[perm48[g, rep48]] = g
+            self.A = np.empty((len(self.rep), N), complex)
+            for i8, dof in enumerate(self.rep):
+                ir48, g = r48_of[dof], g_of[dof]
+                self.A[i8, perm48[g]] = (sgn48[g, rep48[ir48]] * sgn48[g]) * A48[ir48]
+            self.curl = bempp.function_space(grid, "SNC", 0)
+            i_rot = [i for i, P in enumerate(s3_mats) if np.array_equal(P, ROT.T)][0]
+            i_yz = [i for i, P in enumerate(s3_mats) if np.array_equal(P, np.array([[1, 0, 0], [0, 0, 1], [0, 1, 0]]))][0]
+            self.rot_act, self.yz_act = (ps3[i_rot], ss3[i_rot]), (ps3[i_yz], ss3[i_yz])
+            return
+
+        if rot:
+            vt, el = grid.vertices.T, grid.elements.T
+            vkey = {tuple(r): i for i, r in enumerate((np.round(vt, 12) + 0.0).tolist())}
+            vr = np.array([[vkey[tuple(r)] for r in (np.round(vt @ np.linalg.matrix_power(ROT, a), 12) + 0.0).tolist()] for a in (0, 1)])
+            ekey = {tuple(sorted(e)): i for i, e in enumerate(el.tolist())}
+            er = np.array([[ekey[tuple(sorted(vr[a, e].tolist()))] for e in el] for a in range(2)])
+            self._rot_maps = (vr, er)
+        super().__init__(grid, vmap, emap, k)
+        if rot:
+            pr, sr = action(self.div, *self._rot_maps)
+            self.rot_act = (pr[1], sr[1])
+            del self._rot_maps
 
     def _class(self, c):
-        """Columns, coefficients and LU factors of the symmetrised system of class c"""
+        """Columns, coefficients and LU factors of the symmetrised system of class c (split by C_3 or Z_2 stabilizer)"""
         if c not in self.lu:
             coef = np.array([sign(c, R) for R in self.refl])[:, None] * self.sgn[:, self.rep]
             cols = self.perm[:, self.rep]
-            # An orbit on a mirror plane cancels out of some classes
             keep = np.nonzero(np.abs((coef * (cols == self.rep)).sum(axis=0)) > 1e-12)[0]
             cols, coef = np.ascontiguousarray(cols[:, keep]), np.ascontiguousarray(coef[:, keep])
-            lu = sla.lu_factor(fold(self.A, keep, cols, coef), overwrite_a=True, check_finite=False)
-            self.lu[c] = (keep, cols, coef, lu)
+            if self.rot_act is not None and len(set(c)) == 1:
+                pr1, sr1 = self.rot_act
+                orb_of, orb_sgn = np.full(self.N, -1), np.zeros(self.N)
+                for ik in range(len(keep)):
+                    orb_of[cols[:, ik]] = ik
+                    orb_sgn[cols[:, ik]] = coef[:, ik]
+                rk = self.rep[keep]
+                p1 = orb_of[pr1[rk]]
+                s1 = sr1[rk] * orb_sgn[pr1[rk]]
+                p2, s2 = p1[p1], s1 * s1[p1]
+                c0 = np.nonzero(np.vstack((np.arange(len(keep)), p1, p2)).min(axis=0) == np.arange(len(keep)))[0]
+                c1, c2, g1, g2 = p1[c0], p2[c0], s1[c0], s2[c0]
+                Af = fold(self.A, keep[c0], cols, coef)
+                B0, B1, B2 = Af[:, c0], Af[:, c1] * g1[None, :], Af[:, c2] * g2[None, :]
+                w3 = np.exp(2j * np.pi / 3.0)
+                lus = [sla.lu_factor(np.asfortranarray(B0 + (w3 ** q) * B1 + (w3 ** (2 * q)) * B2), overwrite_a=True, check_finite=False)
+                       for q in range(3)]
+                self.lu[c] = (keep, cols, coef, ("c3", c0, c1, c2, g1, g2, lus))
+            elif self.yz_act is not None and len(set(c)) == 2 and c[1] == c[2]:
+                pyz, syz = self.yz_act
+                orb_of, orb_sgn = np.full(self.N, -1), np.zeros(self.N)
+                for ik in range(len(keep)):
+                    orb_of[cols[:, ik]] = ik
+                    orb_sgn[cols[:, ik]] = coef[:, ik]
+                rk = self.rep[keep]
+                cp = orb_of[pyz[rk]]
+                cs = syz[rk] * orb_sgn[pyz[rk]]
+                ic = np.arange(len(keep))
+                c_pair = np.nonzero(ic < cp)[0]
+                c_fp, c_fm = np.nonzero((ic == cp) & (cs > 0))[0], np.nonzero((ic == cp) & (cs < 0))[0]
+                Af = fold(self.A, keep[np.concatenate((c_pair, c_fp, c_fm))], cols, coef)
+                np_c, nfp, nfm = len(c_pair), len(c_fp), len(c_fm)
+                sc, s2, rt2 = cs[c_pair], np.sqrt(0.5), np.sqrt(2.0)
+                Af_p, Af_fp, Af_fm = Af[:np_c], Af[np_c:np_c + nfp], Af[np_c + nfp:]
+                Ap = np.empty((np_c + nfp, np_c + nfp), complex, order="F")
+                Am = np.empty((np_c + nfm, np_c + nfm), complex, order="F")
+                Ap[:np_c, :np_c] = Af_p[:, c_pair] + sc[None, :] * Af_p[:, cp[c_pair]]
+                Ap[:np_c, np_c:] = rt2 * Af_p[:, c_fp]
+                Ap[np_c:, :np_c] = s2 * (Af_fp[:, c_pair] + sc[None, :] * Af_fp[:, cp[c_pair]])
+                Ap[np_c:, np_c:] = Af_fp[:, c_fp]
+                Am[:np_c, :np_c] = Af_p[:, c_pair] - sc[None, :] * Af_p[:, cp[c_pair]]
+                Am[:np_c, np_c:] = rt2 * Af_p[:, c_fm]
+                Am[np_c:, :np_c] = s2 * (Af_fm[:, c_pair] - sc[None, :] * Af_fm[:, cp[c_pair]])
+                Am[np_c:, np_c:] = Af_fm[:, c_fm]
+                lup = sla.lu_factor(Ap, overwrite_a=True, check_finite=False)
+                lum = sla.lu_factor(Am, overwrite_a=True, check_finite=False)
+                self.lu[c] = (keep, cols, coef, ("z2", c_pair, cp, c_fp, c_fm, sc, lup, lum))
+            else:
+                lu = sla.lu_factor(fold(self.A, keep, cols, coef), overwrite_a=True, check_finite=False)
+                self.lu[c] = (keep, cols, coef, lu)
         return self.lu[c]
+
+    @staticmethod
+    def _lu_solve_block(lu, bc):
+        """Solves a class system for 1D or 2D right-hand side bc"""
+        if isinstance(lu, tuple) and isinstance(lu[0], str) and lu[0] == "c3":
+            _, c0, c1, c2, g1, g2, lus = lu
+            w3 = np.exp(2j * np.pi / 3.0)
+            s1, s2 = (g1[:, None], g2[:, None]) if bc.ndim > 1 else (g1, g2)
+            y = np.zeros_like(bc)
+            for q in range(3):
+                bq = (bc[c0] + (w3 ** (-q)) * s1 * bc[c1] + (w3 ** (-2 * q)) * s2 * bc[c2]) / 3.0
+                yq = sla.lu_solve(lus[q], bq, check_finite=False)
+                y[c0] += yq
+                y[c1] += (w3 ** q) * s1 * yq
+                y[c2] += (w3 ** (2 * q)) * s2 * yq
+            return y
+        if isinstance(lu, tuple) and isinstance(lu[0], str) and lu[0] == "z2":
+            _, c_pair, cp, c_fp, c_fm, sc, lup, lum = lu
+            s2, np_c = np.sqrt(0.5), len(c_pair)
+            sc_b = sc[:, None] if bc.ndim > 1 else sc
+            bp = np.concatenate((s2 * (bc[c_pair] + sc_b * bc[cp[c_pair]]), bc[c_fp]), axis=0)
+            bm = np.concatenate((s2 * (bc[c_pair] - sc_b * bc[cp[c_pair]]), bc[c_fm]), axis=0)
+            yp = sla.lu_solve(lup, bp, check_finite=False)
+            ym = sla.lu_solve(lum, bm, check_finite=False)
+            y = np.zeros_like(bc)
+            y[c_pair] = s2 * (yp[:np_c] + ym[:np_c])
+            y[cp[c_pair]] = s2 * sc_b * (yp[:np_c] - ym[:np_c])
+            y[c_fp], y[c_fm] = yp[np_c:], ym[np_c:]
+            return y
+        return sla.lu_solve(lu, bc, check_finite=False)
 
     def solve(self, d, p, classes=None, b=None):
         """RWG coefficients of the current for the wave p e^{ik d·x}, restricted to the given classes"""
@@ -231,8 +351,8 @@ class Mirror(Symmetric):
         for c in classes_of(self.k, d, p, self.refl):
             if classes is None or c in classes:
                 keep, cols, coef, lu = self._class(c)
-                bc = (coef * b[cols]).sum(axis=0) / len(self.refl)      # the part of b of class c, on the orbits
-                y = sla.lu_solve(lu, bc, check_finite=False)
+                bc = (coef * b[cols]).sum(axis=0) / len(self.refl)
+                y = self._lu_solve_block(lu, bc)
                 np.add.at(J, cols, coef * y[None, :])
         return J
 
@@ -282,18 +402,21 @@ def cube_grid(n, g):
 
 def cube(n, g, k, d, p, pts):
     """
-    Unit cube, n intervals per edge graded towards the edges with exponent g, with the three
-    mirror planes and the rotation about the body diagonal (four classes at most)
+    Unit cube, n intervals per edge graded towards the edges with exponent g, with the full
+    48-element octahedral symmetry group O_h (1/48-mesh RWG assembly and C_3 / Z_2 block LU)
       Returns the field at pts and the number of unknowns of the full mesh
     """
-    sym = Mirror(*cube_grid(n, g), k)
+    sym = Mirror(*cube_grid(n, g), k, oh=True)
     orbit = orbits(classes_of(k, d, p, sym.refl))
     turns = {j: np.linalg.matrix_power(ROT, j) for js in orbit.values() for j in js}
     bs = {j: sym.trace(Q.T @ d, Q.T @ p) for j, Q in turns.items()}
-    Js = {j: 0 for j in turns}
+    Js = {j: np.zeros(sym.N, complex) for j in turns}
     for c, js in orbit.items():                                 # one LU factor in memory at a time
-        for j in js:
-            Js[j] = Js[j] + sym.solve(turns[j].T @ d, turns[j].T @ p, [c], b=bs[j])
+        keep, cols, coef, lu = sym._class(c)
+        bc = np.column_stack([(coef * bs[j][cols]).sum(axis=0) / len(sym.refl) for j in js])
+        Y = sym._lu_solve_block(lu, bc)
+        for idx_j, j in enumerate(js):
+            np.add.at(Js[j], cols, coef * Y[:, idx_j][None, :])
         sym.lu.clear()
     sym.A = None
     return sum(sym.field(J, pts @ turns[j]) @ turns[j].T for j, J in Js.items()), sym.N
@@ -323,7 +446,7 @@ def tetrahedron_grid(n, g):
 
 def tetrahedron(n, g, k, d, p, pts):
     """Regular tetrahedron of unit edge length, with D_2 and the one-third turn about (1, 1, 1) (at most two classes)"""
-    sym = Mirror(*tetrahedron_grid(n, g), k)
+    sym = Mirror(*tetrahedron_grid(n, g), k, rot=True)
     orbit = orbits(classes_of(k, d, p, sym.refl))
     turns = {j: np.linalg.matrix_power(ROT, j) for js in orbit.values() for j in js}
     bs = {j: sym.trace(Q.T @ d, Q.T @ p) for j, Q in turns.items()}

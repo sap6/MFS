@@ -224,7 +224,7 @@ class CSNE:
     refinement with the residual b - A c. About half the work of QR, and as
     accurate while cond(A)² is well below 1/eps. Raises LinAlgError otherwise.
     """
-    def __init__(self, A, max_cond=1e7):
+    def __init__(self, A, max_cond=3e7):
         self.A = A
         if A.flags.f_contiguous:
             G = blas.zherk(1.0, A, trans=2, lower=0)           # upper triangle of A^H A, without copying A

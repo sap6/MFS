@@ -224,6 +224,23 @@ class Tetrahedron:
             beta[:, ne:] = np.einsum("lrmc,mt->lrtc", cm_ray, self.wm).reshape(ncls, n_ray, 3)
         return np.ascontiguousarray(y_pt), np.ascontiguousarray(alpha), np.ascontiguousarray(beta)
 
+    def _unpack_lines(self, ncls, c_all):
+        by_ax = {0: ([], [], []), 1: ([], [], []), 2: ([], [], [])}
+        for i, ln in enumerate(self.lines):
+            if ln.kind == "e":
+                lo = 3 * self.slot0[1 + i]
+                c_pair = c_all[:, lo:lo + 6 * ln.n].reshape(ncls, 2, 1, ln.n, 3)
+                w = np.stack((ln.w, self.lines[i + 1].w))
+                tq, W, off, *_ = lines.build_tree(ln.lam, ln.d, ln.n, H, self.k)
+                pm_n = int(off[1])
+                c_cart = 2.0 * np.einsum("ksic,lksmc,cq->lkimq", w, c_pair, ln.F)
+                M0 = np.einsum("pm,lkimq->lkpiq", W[:pm_n], c_cart).reshape(ncls, 2, -1, 3)
+                ys = (ln.mids[None, :, :] + tq[:pm_n, None, None] * ln.t_hat[None, None, :]).reshape(-1, 3)
+                by_ax[ln.ax][0].append(ys)
+                by_ax[ln.ax][1].append(M0[:, 0])
+                by_ax[ln.ax][2].append(M0[:, 1])
+        return by_ax
+
     def field(self, coef, pts, batch=1000):
         pts = np.ascontiguousarray(pts, dtype=float)
         if not len(pts) or not coef:
@@ -245,20 +262,7 @@ class Tetrahedron:
         if np.any(far_mask):
             pts_f = np.ascontiguousarray(pts[far_mask])
             out_f = np.zeros((ncls, len(pts_f), 3), complex)
-            by_ax = {0: ([], [], []), 1: ([], [], []), 2: ([], [], [])}
-            for i, ln in line_entries:
-                lo = 3 * self.slot0[1 + i]
-                c_pair = c_all[:, lo:lo + 6 * ln.n].reshape(ncls, 2, 1, ln.n, 3)
-                w = np.stack((ln.w, self.lines[i + 1].w))
-                tq, W, off, *_ = lines.build_tree(ln.lam, ln.d, ln.n, H, self.k)
-                pm_n = int(off[1])
-                c_cart = 2.0 * np.einsum("ksic,lksmc,cq->lkimq", w, c_pair, ln.F)
-                M0 = np.einsum("pm,lkimq->lkpiq", W[:pm_n], c_cart).reshape(ncls, 2, -1, 3)
-                ys = (ln.mids[None, :, :] + tq[:pm_n, None, None] * ln.t_hat[None, None, :]).reshape(-1, 3)
-                by_ax[ln.ax][0].append(ys)
-                by_ax[ln.ax][1].append(M0[:, 0])
-                by_ax[ln.ax][2].append(M0[:, 1])
-            for ax, (yl, al, bl) in by_ax.items():
+            for ax, (yl, al, bl) in self._unpack_lines(ncls, c_all).items():
                 if yl:
                     r_act = np.array([ri for ri in range(4) if REFL[ri, (ax + 1) % 3] > 0], np.int64)
                     lines.eval_points_field(pts_f, np.ascontiguousarray(REFL[r_act]), np.ascontiguousarray(sgn[:, r_act]),
@@ -292,21 +296,7 @@ class Tetrahedron:
         y_pt, alpha, beta = self._unpack_points(cl, c_all)
         out = np.zeros((ncls, len(dirs), 3), complex)
         lines.eval_far_dipoles(dirs, REFL, np.arange(4, dtype=np.int64), sgn, y_pt, alpha, beta, float(self.k), out)
-        by_ax = {0: ([], [], []), 1: ([], [], []), 2: ([], [], [])}
-        for i, ln in enumerate(self.lines):
-            if ln.kind == "e":
-                lo = 3 * self.slot0[1 + i]
-                c_pair = c_all[:, lo:lo + 6 * ln.n].reshape(ncls, 2, 1, ln.n, 3)
-                w = np.stack((ln.w, self.lines[i + 1].w))
-                tq, W, off, *_ = lines.build_tree(ln.lam, ln.d, ln.n, H, self.k)
-                pm_n = int(off[1])
-                c_cart = 2.0 * np.einsum("ksic,lksmc,cq->lkimq", w, c_pair, ln.F)
-                M0 = np.einsum("pm,lkimq->lkpiq", W[:pm_n], c_cart).reshape(ncls, 2, -1, 3)
-                ys = (ln.mids[None, :, :] + tq[:pm_n, None, None] * ln.t_hat[None, None, :]).reshape(-1, 3)
-                by_ax[ln.ax][0].append(ys)
-                by_ax[ln.ax][1].append(M0[:, 0])
-                by_ax[ln.ax][2].append(M0[:, 1])
-        for ax, (yl, al, bl) in by_ax.items():
+        for ax, (yl, al, bl) in self._unpack_lines(ncls, c_all).items():
             if yl:
                 r_act = np.array([ri for ri in range(4) if REFL[ri, (ax + 1) % 3] > 0], np.int64)
                 lines.eval_far_dipoles(dirs, REFL, r_act, sgn, np.ascontiguousarray(np.vstack(yl)),
