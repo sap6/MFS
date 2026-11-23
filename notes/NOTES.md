@@ -1,6 +1,6 @@
 # Project notes
 
-Last updated: 2026-11-22 (8-hour polyhedral MFS speed & accuracy campaign + Austin `9.936 in` exact RCS + competitor study: `2.3x` faster projection-centered L2-tiled `lines.py` kernels, `mv = max(2, m)` vertex-ray spacing fix taking cube `1dep` to `7.12e-5` in `14.1 s` and tetrahedron `1dep` to `1.45e-3` in `4.40 s`, universal `20%` anisotropic boundary panels `graded_uv`, root-moment far-target batching, class-by-class `CSNE`, Trefethen--Weideman strip-analyticity floor `exp(-2*pi*theta_e/|ln q|)`, full 2-pass alternating polyhedral re-timing where MFS strictly beats symmetric graded Bempp at every wall time on the tetrahedron and reaches `10^-3` in `0.83x`, `0.51x`, `0.43x` of Bempp's time at `k = 2*pi, 4*pi, 6*pi` on the cube, 17 passing `pytest` tests, 24 journal pages; see `notes/HANDOFF.md`). The research scripts named in the items are in
+Last updated: 2026-11-22 (10-hour JCP strengthening campaign: full 48-element `O_h` symmetry in both `mfs/cube.py` and `mfs/bem.py` across 2 alternating passes so MFS beats Bempp in every cell of Table 5 and across the entire envelope of all 4 cube cases; zero-symmetry asymmetric convex tetrahedron `ScaleneTetrahedron` / `solve_scalene` reaching `1.6e-3` along `8.7 exp(-0.087 sqrt(N_u))` and confirmed by non-symmetric Bempp to `1.2e-3` at its `8 GB` limit; matrix-free coarse-bordered block-QR `LSMR` with `@njit` exact adjoints converging in `17--22` cube iterations and `33--35` scalene tetrahedron iterations using `11--14x` less memory than `A`; `19` passing `pytest` tests, strictly `24` journal pages; see `notes/HANDOFF.md`). The research scripts named in the items are in
 `validation/` at commit 9f5a721. Companion files: `DERIVATIONS.md` (proofs and exponent tables),
 `LITERATURE.md` (T6), `PAPER_OUTLINE.md` (T7). Problem throughout:
 exterior scattering of a plane wave by a perfectly conducting (PEC) body,
@@ -8,7 +8,7 @@ tangential E_sc = -tangential E_inc on the surface, least-squares collocation.
 
 ## Start here
 
-- **22 Nov: read `notes/HANDOFF.md` first** (authoritative state: 17 passing `pytest` tests with `MFS_TEST_BEMPP=1`, all 5 shapes re-timed across 2 alternating passes on the 2-core Intel Xeon @ 2.3 GHz / 8 GB VM, exact `r -> inf` far fields and root-moment exterior batching, redesigned 13 figures, `paper/main_3p.pdf` at 24 journal pages and `paper/main.pdf` at 40 preprint pages with zero LaTeX/BibTeX warnings or bad boxes).
+- **22 Nov: read `notes/HANDOFF.md` first** (authoritative state: 19 passing `pytest` tests with `MFS_TEST_BEMPP=1`, all 5 shapes + zero-symmetry scalene tetrahedron re-timed across 2 alternating passes on the 2-core Intel Xeon @ 2.3 GHz / 8 GB VM, matrix-free coarse-bordered block-QR `LSMR` verified in `data/iterative_check.npz`, redesigned 13 figures, `paper/main_3p.pdf` strictly at 24 journal pages and `paper/main.pdf` at 41 preprint pages with zero LaTeX/BibTeX warnings or bad boxes).
 - **Since 18 Nov the repository has a new layout** (see the "part three"
   block below and `../CLAUDE.md`): `mfs/`, `figures/`, `data/`, `notebooks/`,
   `tests/`, `paper/`, `thesis/`, `notes/`. Script names in the items below
@@ -16,7 +16,7 @@ tangential E_sc = -tangential E_inc on the surface, least-squares collocation.
 - Everything is committed on branch `ccr-116c520c-fts35f`. No
   pull request exists. Nothing was ever pushed to `sap6/mfs-paper`; it is
   still the thesis text (commit 4f8731f).
-- The paper is `paper/main.tex` (one document, 40 preprint pages, 24 in
+- The paper is `paper/main.tex` (one document, 41 preprint pages, 24 in
   the journal `3p,times` layout, zero LaTeX warnings or overfull boxes). Section 6 lists what the paper may and may not claim.
 - The blocks below are in reverse order of time. The newest one is
   authoritative; older blocks are kept as the record and are superseded

@@ -89,7 +89,7 @@ above for as long as the paper is being finished.
 
 ```
 pip install -e ".[test,bempp]"         # the package, pytest, and Bempp with its fast (OpenCL) backend
-python -m pytest tests                 # 20 s warm; MFS_TEST_BEMPP=1 also checks Bempp with symmetry (17 tests)
+python -m pytest tests                 # 20 s warm; MFS_TEST_BEMPP=1 also checks Bempp with symmetry (19 tests)
 for f in figures/*.py; do case "$f" in *style.py|*cone_exponents.py) ;; *) python "$f";; esac; done   # every figure and table from data/
 apt-get install -y --no-install-recommends texlive-latex-base texlive-latex-recommended texlive-latex-extra texlive-fonts-recommended texlive-science latexmk cm-super   # only to build paper/main.pdf
 ```

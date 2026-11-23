@@ -196,3 +196,40 @@ print("Bempp time envelope:", [(round(float(t), 1), f"{e:.2e}") for t, e in tbem
 print("Tet crossover interp: two depths", [f"{x:.2e}" for x in cross(tm2_env, tbem_env)],
       "both", [f"{x:.2e}" for x in cross(tmall_env, tbem_env)])
 
+# Section 5.6: zero-symmetry scalene convex tetrahedron
+if os.path.exists(D + "scalene_tetrahedron.npz"):
+    import itertools
+    sc = np.load(D + "scalene_tetrahedron.npz")
+    sv = _tet.SCALENE_VERTS
+    pr_sc = _tet.ScaleneTetrahedron(2, verts=sv)
+    elens = [float(np.linalg.norm(sv[b] - sv[a])) for a, b in itertools.combinations(range(4), 2)]
+    dih_deg, gammas = [], []
+    for a, b in itertools.combinations(range(4), 2):
+        fc, fd = [f for f in range(4) if f not in (a, b)]
+        dih = float(np.arccos(np.clip(-pr_sc.fnorms[fc] @ pr_sc.fnorms[fd], -1.0, 1.0)))
+        dih_deg.append(np.degrees(dih))
+        gammas.append(np.pi / (2 * np.pi - dih))
+    nu1s = [e[0][0] for e in _tet.SCALENE_EXP]
+    ri = sc["ref_info"]
+    sm2 = sc["mfs"][sc["mfs"][:, 0] == 2]
+    sp = np.polyfit(np.sqrt(sm2[:, 2]), np.log(sm2[:, 5]), 1)
+    print("\n== Section 5.6 (Scalene zero-symmetry tetrahedron)")
+    print(f"edge lengths: [{min(elens):.3f}, {max(elens):.3f}], dihedral deg: [{min(dih_deg):.1f}, {max(dih_deg):.1f}], "
+          f"gamma_e: [{min(gammas):.3f}, {max(gammas):.3f}], nu_1: [{min(nu1s):.3f}, {max(nu1s):.3f}]")
+    print(f"ref J={int(ri[0])}: N_u={int(ri[1])}, t={ri[3]:.1f}s, opt={ri[4]:.2e}")
+    print("m=2 (J, N_u, t, err, opt):", [(int(r[1]), int(r[2]), round(float(r[4]), 1), f"{r[5]:.2e}", f"{r[6]:.2e}") for r in sm2])
+    print("m=1 (J, N_u, t, err, opt):", [(int(r[1]), int(r[2]), round(float(r[4]), 1), f"{r[5]:.2e}", f"{r[6]:.2e}") for r in sc["mfs"] if r[0] == 1])
+    print(f"fit eps = {np.exp(sp[1]):.2f} exp({sp[0]:.4f} sqrt(N_u)), factors: {[round(float(sm2[i,5]/sm2[i+1,5]), 2) for i in range(len(sm2)-1)]}")
+    print("Bempp n=40:", [(int(r[0]), f"{int(r[1])}/{int(r[1])+2}", int(r[2]), round(float(r[3]), 1), f"{r[4]:.2e}") for r in sc["bem"] if int(r[0]) == 40])
+
+# Section 8: matrix-free block-QR preconditioned LSMR
+if os.path.exists(D + "iterative_check.npz"):
+    ic = np.load(D + "iterative_check.npz")
+    print("\n== Section 8 (Matrix-free Block-QR LSMR)")
+    for r in ic["cube"]:
+        print(f"Cube J={int(r[0])} k={int(r[1])}*2pi: A={r[4]:.1f} MiB, P={r[5]:.2f} MiB ({r[4]/r[5]:.1f}x), "
+              f"Blk itn={int(r[6])}, rel_E={r[9]:.2e} | Diag itn={int(r[10])}, rel_E={r[11]:.2e}")
+    for r in ic["scalene"]:
+        print(f"Scalene J={int(r[0])}: A={r[3]:.1f} MiB ({r[3]/1024:.2f} GiB), P={r[4]:.1f} MiB ({r[3]/r[4]:.1f}x), Blk itn={int(r[5])}, rel_E={r[8]:.2e}")
+
+

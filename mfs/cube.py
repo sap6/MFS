@@ -7,17 +7,16 @@ By Theorem 1 the sources lie on the skeleton, the twelve bisector planes of the 
   * base points: an 8 × 8 grid of electric dipoles on each face of an inner cube;
   * singular tails: nine more lines below d_min (and nine points below the deepest vertex
     point), tied with weights from the edge and vertex exponents.
-The three mirror planes split a wave into eight parity classes, each solved on one octant,
-and the rotation about the body diagonal means that only four class matrices are ever needed.
+Under the 48-element octahedral group O_h, kernels are evaluated once on the 1/48-cube triangle
+(y <= z of face x = 1/2), rotated onto at most four representative classes, and factorised in C_3 or Z_2 blocks.
 """
 import itertools
-import os
 import time
 
 import numpy as np
 
 from . import lines
-from .core import class_part, classes_of, cross_sections, dyadic, factor, magnetic, sign, sphere_rule
+from .core import class_part, classes_of, cross_sections, factor, sign, sphere_rule
 
 H = 0.5                                                          # half side length
 CLASSES = list(itertools.product((1, -1), repeat=3))             # parities (sx, sy, sz) under the three mirrors
@@ -149,11 +148,6 @@ class VertexTail:
         self.w = r ** e
         self.w[-1] /= 1 - 0.5 ** e
         self.pts = np.ones((1, 3)) * (H - d * r[:, None] / np.sqrt(3.0))
-
-    def block(self, k, x, T):
-        """Field of the tied dipoles at x, tested with T: (M nc, 3)"""
-        G = (magnetic if self.kind == "m" else dyadic)(x, self.pts, k)  # (M, 9, 3, 3)
-        return np.einsum("mab,mtbc,t->mac", T, G, self.w).reshape(len(x) * T.shape[1], 3)
 
 
 class Cube:

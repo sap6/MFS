@@ -99,30 +99,6 @@ def build_tree(lam, d, n, H, k):
     return out
 
 
-@njit(fastmath=True, cache=True, inline="always")
-def dipoles(Tm, e, k, r, out_e, out_m):
-    """
-    Tested fields of unit electric and magnetic dipoles at distance r in the direction e:
-      out_e[a, c] = Tm[a] · G e_c   with G = fI I - fR e e^T,
-      out_m[a, c] = Tm[a] · (fm e × e_c)
-    """
-    inv_r = 1.0 / r
-    kr = k * r
-    ik = inv_r / k
-    ik2 = ik * ik
-    ph = (np.cos(kr) + 1j * np.sin(kr)) * inv_r
-    fI = (1.0 - ik2 + 1j * ik) * ph
-    fR = (1.0 - 3.0 * ik2 + 3j * ik) * ph
-    fm = (-ik + 1j) * ph
-    for a in range(Tm.shape[0]):
-        te = Tm[a, 0] * e[0] + Tm[a, 1] * e[1] + Tm[a, 2] * e[2]
-        for c in range(3):
-            out_e[a, c] = fI * Tm[a, c] - fR * te * e[c]
-        out_m[a, 0] = fm * (Tm[a, 1] * e[2] - Tm[a, 2] * e[1])
-        out_m[a, 1] = fm * (Tm[a, 2] * e[0] - Tm[a, 0] * e[2])
-        out_m[a, 2] = fm * (Tm[a, 0] * e[1] - Tm[a, 1] * e[0])
-
-
 def _mode_strides(cmap, ns, n):
     """Active mode start k0 and stride kstep (1, or 2 for single parity; k0 = n skips unused components)"""
     k0 = np.full((2, ns, 3), n, np.int64)
@@ -584,17 +560,6 @@ def line_add(x, T, refl, r_act, t_hat, mids, lam, d, n, k, H, A, cmap, sgn, rot=
     else:
         _line_kernel_multi(x_c, T_c, refl, r_c, th_c, mids, w_arr, rot_arr, tq, W, off, tlo, thi,
                            ltab, g, gw, lam, d, n, k, H, A, lcols, gcols, nact, ml, sgn, ncomp)
-
-
-def tree_add(x, T, refl, ax, b, c, pos, lam, d, n, k, H, A, cmap, sgn, rot=None, w=None):
-    """Axis-aligned line wrapper for the cube (edge along axis ax, transverse coordinates b, c)"""
-    pos = np.atleast_2d(pos)
-    mids = np.zeros((len(pos), 3))
-    mids[:, b], mids[:, c] = pos[:, 0], pos[:, 1]
-    t_hat = np.zeros(3)
-    t_hat[ax] = 1.0
-    r_act = np.array([r for r in range(len(refl)) if refl[r, ax] > 0], np.int64)
-    line_add(x, T, refl, r_act, t_hat, mids, lam, d, n, k, H, A, cmap, sgn, rot=rot, w=w)
 
 
 @njit(parallel=True, fastmath=True, cache=True)

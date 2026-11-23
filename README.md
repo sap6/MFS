@@ -71,7 +71,7 @@ Each shape has one entry point:
 | sphere | `sphere.solve(N, k, R)` | source points `y` and coefficients `alpha`; the field is `core.field(pts, y, alpha, k)` |
 | torus | `torus.scatter(k, d, p, ns, nphi)` | a `Solution` with `.field(pts)` and `.far(dirs)` |
 | cube | `cube.solve(J, d, p, pts)` | `(E, elapsed, info)` with unknowns, weighted residual and optical mismatch |
-| tetrahedron | `tetrahedron.solve(J, d, p, pts)` | `(E, elapsed, info)` with unknowns, weighted residual and optical mismatch |
+| tetrahedron | `tetrahedron.solve(J, d, p, pts)` (or `solve_scalene`) | `(E, elapsed, info)` with unknowns, weighted residual and optical mismatch |
 | almond | `almond.nose_on(k, n_mid, n_F, pts)`, `almond.rcs(freq)` | `((y, tail), c, E, shape)` for nose-on incidence, or monostatic RCS dictionary across azimuths |
 
 ## The figures and tables of the paper

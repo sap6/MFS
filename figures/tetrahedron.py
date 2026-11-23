@@ -319,7 +319,7 @@ if len(bem_unif):
 curve(ax_time, curves["one"][:, 2], curves["one"][:, 1], NAVY, "h", (0, (6, 1.5)), ms=4.2, lw=1.35, zorder=3)
 curve(ax_time, curves["dense"][:, 2], curves["dense"][:, 1], BLUE, "o", "-", ms=4.2, lw=1.35, zorder=4)
 curve(ax_time, bem_time_env[:, 0], bem_time_env[:, 1], RUST, "X", (0, (3, 1)), ms=4.2, lw=1.35, zorder=3)
-ax_time.text(d_c[0, 2] * 1.15, d_c[0, 1] * 1.10, f"$J={int(d_c[0, 3])}$", fontsize=6.8, color=BLUE)
+ax_time.text(d_c[0, 2] * 0.88, d_c[0, 1] * 1.35, f"$J={int(d_c[0, 3])}$", fontsize=6.8, color=BLUE, ha="right")
 ax_time.text(d_c[-1, 2] * 0.88, d_c[-1, 1] * 0.58, f"$J={int(d_c[-1, 3])}$", fontsize=6.8, color=BLUE, ha="right")
 ax_time.text(bem_time_env[-1, 0] * 1.02, bem_time_env[-1, 1] * 1.25, "8 GB\nlimit", fontsize=6.2, color=RUST, ha="right", va="bottom", linespacing=0.95)
 ax_time.set(xlabel="wall time [s]  (2 cores)", xlim=(0.75, 390), ylim=(4e-5, 1.0))

@@ -28,7 +28,7 @@ from scipy.linalg import blas
 
 from . import cone, lines
 from .core import class_part, classes_of, cross_sections, factor, plane_wave, sign, sphere_rule, tangent_basis
-from .cube import ROT, graded_nodes, graded_uv, orbits
+from .cube import ROT, graded_uv, orbits
 
 H = 0.5                                                              # half edge length
 A_TET = 0.5 / np.sqrt(2.0)                                           # vertex coordinate for unit edge length
@@ -76,15 +76,9 @@ class Line:
         return kept
 
 
-def face_kites(su, w_or_sv, w2=None):
+def face_kites(su, sv, w2):
     """Three kites covering F_0, graded towards all three edges and vertices (su, sv -> 0.5 is U, V -> 0)"""
-    c0 = FACE0.mean(axis=0)
-    if w2 is None:
-        xi = 1.0 - 2.0 * su
-        U, V = [g.ravel() for g in np.meshgrid(xi, xi, indexing="ij")]
-        W2 = 4.0 * np.outer(w_or_sv, w_or_sv).ravel()
-    else:
-        U, V, W2 = 1.0 - 2.0 * su, 1.0 - 2.0 * w_or_sv, 4.0 * w2
+    c0, U, V, W2 = FACE0.mean(axis=0), 1.0 - 2.0 * su, 1.0 - 2.0 * sv, 4.0 * w2
     pts, wts = [], []
     for i in range(3):
         A, M1, M2 = FACE0[i], 0.5 * (FACE0[i] + FACE0[(i + 1) % 3]), 0.5 * (FACE0[i] + FACE0[(i + 2) % 3])
@@ -158,8 +152,7 @@ class Tetrahedron:
         ng = 2 + max(m, 1 + int(np.ceil(0.5 * s)))
         d_min = self.depths[-1] if len(self.depths) else 0.14
         levels = max(2, int(np.ceil(np.log2(2 * H / d_min))))
-        n_max = max((ln.n for ln in self.lines), default=0)
-        su, sv, wuv = graded_uv(levels, ng, n_max, min(H / 4, np.pi / (2 * k)))
+        su, sv, wuv = graded_uv(levels, ng, 0, min(H / 4, np.pi / (2 * k)))
         self.x, W, dist = face_kites(su, sv, wuv)
         self.T = tangent_basis(np.tile(-v_hat, (len(self.x), 1)))
         rv = np.min([np.linalg.norm(self.x - v, axis=1) for v in FACE0], axis=0)

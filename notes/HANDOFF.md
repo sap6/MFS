@@ -8,7 +8,7 @@ Read this first, then `CLAUDE.md` and the top of `notes/NOTES.md`.
   request; not merged into `main` (merge into `main` before sharing Colab
   links). Nothing was ever pushed to `sap6/mfs-paper` (it syncs to Overleaf):
   never push there without asking the author.
-- `python -m pytest tests` passes (`17` tests with `MFS_TEST_BEMPP=1`), all
+- `python -m pytest tests` passes (`19` tests with `MFS_TEST_BEMPP=1`), all
   `figures/*.py` scripts and `git diff --exit-code paper/tables` pass locally,
   and `python figures/tables.py` reproduces `paper/tables/`.
 - Layout: `mfs/` (the package), `figures/` (one script per figure, replots
@@ -40,25 +40,31 @@ experiment log). The essentials:
      projection (`rel |A_new - A_orig| = 3e-16`), integrates 6 scalar radial
      weights per panel, flushes L2-tiled (`BM = 64`) columnwise target blocks into
      F-ordered class matrices (`2.3x` faster line assembly), contracts root-panel
-     moments for distant exterior targets (`~100x` faster `field()`) and exact
-     `r -> inf` far fields, and factorises class matrices one class at a time.
-  3. Keeping two free vertex dipoles per octave (`mv = max(2, m)`) when `q = 1/2`
+     moments for distant exterior targets (`~100x` faster `field()`), exact
+     `r -> inf` far fields, and `@njit` exact transpose panel/moment adjoints
+     (`eval_points_adj`, `eval_line_adj`).
+  3. Under the full `48`-element octahedral group `O_h` (matched in both `mfs/cube.py`
+     and `mfs/bem.py`), Green's kernels are evaluated once on the `y <= z` triangle of
+     face `x = 1/2` (`1/48` of the surface), cyclic `(x, y, z)` orbits map onto at most
+     four representative classes, and invariant/mixed classes split into three `120°`-rotation
+     (`C_3`) or two `y <-> z` reflection blocks.
+  4. Keeping two free vertex dipoles per octave (`mv = max(2, m)`) when `q = 1/2`
      restores `CSNE` conditioning across all levels, taking `1 depth/octave` down to
-     `7.12e-5` in `14.1 s` on the cube (`J = 9`) and `1.45e-3` in `4.40 s` on the
-     regular tetrahedron (`J = 7`), matching the Trefethen--Weideman strip-analyticity
-     floor `exp(-2*pi*theta_e / |ln q|)`.
-  4. Both MFS and Bempp were re-timed across **two alternating passes** on the same idle
+     `7.12e-5` in `3.8 s` (`5.1 s` in the alternating pass) on the cube (`J = 9`) and
+     `1.45e-3` in `4.40 s` on the regular tetrahedron (`J = 7`), matching the
+     Trefethen--Weideman strip-analyticity floor `exp(-2*pi*theta_e / |ln q|)`.
+  5. Both MFS and Bempp were re-timed across **two alternating passes** on the same idle
      2-core Intel Xeon @ 2.3 GHz (8 GB RAM) VM, keeping the smaller time of each configuration.
 
   Measured crossovers with symmetric graded Bempp on the 2-core Intel Xeon @ 2.3 GHz (8 GB RAM) VM (the MFS is faster below):
 
   | case | best MFS layout (1 or 2 depths/octave) | two depths/octave alone |
   |---|---|---|
-  | cube, standard wave (`k1`) | 9.8e-4 (`3.1 s` vs `3.8 s` at `10^-3`) | 4.0e-4 |
-  | cube, general wave (`k1o`) | 7.7e-4 (`6.0 s` vs `4.5 s` at `10^-3`) | 3.5e-4 |
-  | cube, two wavelengths (`k2`) | 3.7e-3 (`6.3 s` vs `12 s` at `10^-3`) | 8.0e-4 |
-  | cube, three wavelengths (`k3`) | 3.2e-3 (`15 s` vs `34 s` at `10^-3`) | 1.1e-3 |
-  | regular tetrahedron (`k = 2*pi`) | faster at every wall time (`crossover = []`) | 1.8e-3 |
+  | cube, standard wave (`k1`) | faster throughout (`1.5 s` vs `2.1 s` at `10^-3`, `15 s` vs `148 s` at `6.3e-5`) | 4.2e-4 |
+  | cube, general wave (`k1o`) | faster throughout (`1.9 s` vs `2.5 s` at `10^-3`, `25 s` vs `165 s` at `7.6e-5`) | 4.9e-4 |
+  | cube, two wavelengths (`k2`) | faster throughout (`2.2 s` vs `5.3 s` at `10^-3`, `46 s` vs `148 s` at `1.3e-4`) | 8.2e-4 |
+  | cube, three wavelengths (`k3`) | faster throughout (`4.8 s` vs `12 s` at `10^-3`, `11 s` vs `147 s` at `3.1e-4`) | 5.6e-4 |
+  | regular tetrahedron (`k = 2*pi`) | faster throughout (`4.4 s` vs `6.8 s` at `1.5e-3`, `36 s` vs `267 s` at `10^-4`) | 1.8e-3 |
 
 ## 3. Completed on 19--22 November 2026
 
@@ -71,11 +77,12 @@ experiment log). The essentials:
   - **Regular tetrahedron (`mfs/tetrahedron.py`, `figures/tetrahedron.py`, `data/tetrahedron_convergence.npz`, Section 5.6):** Eliminated the 1-depth/octave (`m = 1`) error uptick, cut `m = 2` optical mismatch 13x, and improved symmetric graded Bempp confirmation 2x (`2.19e-4` vs `J = 10` at `N_u = 17424`). Also verified untuned multi-wavelength convergence on the regular tetrahedron at `k = 4*pi` (`1.7e-4` in `79 s`, confirmed by Bempp to `3.2e-4`) and `k = 6*pi` (`1.1e-3`).
   - **Austin RCS exact specification & competitor evaluation (`Section 6`, `Section 7`):** Traced official Austin Problem III-A target length `L = 9.936 in = 0.2523744 m` (exact SI `c_0 = 299,792,458 m/s`), reducing HH mean RCS difference to `0.038, 0.049, 0.065, 0.121 dB` and VV to `0.007, 0.010, 0.011, 0.018 dB` across `3.5--10.25 GHz`. Documented why symmetry-reduced edge-graded OpenCL dense-LU Galerkin EFIE (`Bempp-cl`) is the strongest homogeneous-medium PEC sharp-edge benchmark against volumetric FEM/FDTD+PML, MFIE/smooth Nyström (`burbano2026`), and iterative/Calderón EFIE.
 - **3.4 8-hour polyhedral MFS speed & accuracy campaign (21--22 Nov):**
-  - Upgraded `mfs/lines.py` (vectorised `build_tree`, projection-centered L2-tiled `_line_kernel_single` / `_line_kernel_multi`, column-outer `_points_kernel`), `mfs/cube.py` and `mfs/tetrahedron.py` (`mv = max(2, m)` vertex-ray spacing fix, universal 2-branch anisotropic boundary quadrature `graded_uv`, root-moment far-target batching in `field()`, class-by-class `CSNE` factorisation with `max_gb = min(6.0, 0.60 * ram)`), and `tests/test_mfs.py` (`17` passing checks).
-  - Re-ran all polyhedral benchmarks across two alternating passes (`tetrahedron_convergence`, `cube_convergence`, `cube_cases_{k1,k1o,k2,k3}` + `_ref`):
-    - **Tetrahedron (`k = 2*pi`):** `1dep` reaches `1.45e-3` in `4.40 s` (`J = 7`) and `1.38e-3` in `7.44 s` (`J = 8`); `2dep` reaches `8.64e-4` in `13.3 s` (`J = 7`), `3.32e-4` in `22.4 s` (`J = 8`), `1.01e-4` in `36.2 s` (`J = 9`, vs `J = 10` `55.6 s`, `opt = 2.35e-5`; fit `1.95 exp(-0.0689 sqrt(N_u))` within `12%`). Combined MFS envelope strictly beats symmetric graded Bempp (`6.8 s` to `267 s`) at every wall time!
-    - **Cube (`k1`, `k1o`, `k2`, `k3`):** `k1 1dep` reaches `8.33e-4` in `3.11 s` (`J = 6`, faster than Bempp's `3.76 s` at `10^-3`) and `7.12e-5` in `14.1 s` (`J = 9`, vs `636 s` for Bempp's `6.2e-5` — `45x` faster!); `k1 2dep` reaches `5.5e-5` in `49.6 s` (`J = 9`), `2.1e-5` in `82.8 s` (`J = 10`), and `6.8e-6` in `123.3 s` (`J = 11`, fit `0.44 exp(-0.0473 sqrt(N_u))` within `7%`). At `k = 4*pi` (`k2`), MFS reaches `10^-3` in `6.3 s` vs `12.3 s` (`0.51x`) and `4.3e-5` in `70 s` vs `1.3e-4` in `660 s` (`9.4x`). At `k = 6*pi` (`k3`), MFS reaches `10^-3` in `15.0 s` vs `34.5 s` (`0.43x`) and `2.8e-4` in `35.0 s` vs `3.1e-4` in `665 s` (`19x` faster!).
-  - Regenerated all 13 figures and 4 tables, re-executed all 4 notebooks (`notebooks/1..4`), and compiled `paper/main_3p.pdf` (**24 pages**) and `paper/main.pdf` (**40 pages**) + `paper/mfs-paper-overleaf.zip` with `0` LaTeX/BibTeX warnings and `0` bad boxes.
+  - Upgraded `mfs/lines.py` (vectorised `build_tree`, projection-centered L2-tiled `_line_kernel_single` / `_line_kernel_multi`, column-outer `_points_kernel`), `mfs/cube.py` and `mfs/tetrahedron.py` (`mv = max(2, m)` vertex-ray spacing fix, universal 2-branch anisotropic boundary quadrature `graded_uv`, root-moment far-target batching in `field()`, class-by-class `CSNE` factorisation with `max_gb = min(6.0, 0.60 * ram)`).
+- **3.5 10-hour JCP strengthening campaign: full `O_h` symmetry, zero-symmetry scalene tetrahedron & matrix-free block-QR `LSMR` (22 Nov):**
+  - **Full `48`-element `O_h` symmetry in both `mfs/cube.py` and `mfs/bem.py`:** Evaluated kernels on `1/48` of the cube (`y <= z` of face `x = 1/2`), mapped cyclic orbits onto at most 4 representative classes, and factored `C_3` / `Z_2(y <-> z)` blocks in both MFS and Bempp (`O_h` folding shifts Bempp by at most `3e-5` at `4/6` and `7e-6` at `8/10`). Re-timed `cube_convergence` and `cube_cases_{k1,k1o,k2,k3}` across 2 alternating passes: MFS now beats Bempp in every cell of Table 5 (`1.5 vs 2.1 s`, `1.9 vs 2.5 s`, `2.2 vs 5.3 s`, `4.8 vs 12 s` at `10^-3`; `15 vs 148 s`, `25 vs 165 s`, `46 vs 148 s`, `11 vs 147 s` at Bempp's `8 GB` limit), and the combined MFS envelope lies strictly below Bempp throughout (`crossover = []`) in all four cube cases.
+  - **Zero-symmetry convex polyhedron (`ScaleneTetrahedron` / `solve_scalene`, `notes/scalene_tetrahedron_bench.py`, `data/scalene_tetrahedron.npz`):** Generalized `cone.CubeVertex` to arbitrary trihedral corners and tested an asymmetric tetrahedron with six distinct edge lengths (`[0.93, 1.09]`), dihedral angles `61.3°--78.3°` (`gamma_e in [0.603, 0.639]`), and four corner cones (`nu_1 in [0.309, 0.342]`) with zero symmetry in either MFS or Bempp. Against `J = 7` (`N_u = 12654`, `506 s`, `opt = 3.7e-4`), `m = 2` error falls monotonically from `5.6e-2` (`J = 2`, `N_u = 3444`, `21 s`) to `1.6e-3` (`J = 6`, `N_u = 9894`, `302 s`), following `8.7 exp(-0.087 sqrt(N_u))`, while non-symmetric graded Bempp (`g = 1.8`, `4/6` and `6/8`) hits its `8 GB` limit at `N_u = 14400` (`n = 40`, `337--556 s`) and agrees with `J = 7` to `1.24e-3`.
+  - **Matrix-free coarse-bordered block-QR `LSMR` (`notes/iterative_mfs_bench.py`, `data/iterative_check.npz`, Section 8):** Added `@njit` exact adjoints `eval_points_adj` and `eval_line_adj` (`3.3e-14` transpose exactness) and coarse-bordered edge-wall block-QR preconditioning (`build_bordered_qr`, storing `11--14x` less memory than dense `A` and cutting `cond(A P^-1)` by `4300--7000x` down to `180--400`). Converges to `10^-4` relative normal-equation residual in **`17--22` `LSMR` iterations** on the cube (`J = 4, 6, 8` at `k = 2*pi` and `J = 6` at `k = 4*pi`; `7--53 MiB` vs `88--625 MiB`) and **`33--35` iterations** on the zero-symmetry scalene tetrahedron (`J = 4, 5`; `158--259 MiB` vs `2.10--3.51 GiB`), matching direct solves to `1.3--5.5e-4`.
+  - Regenerated all figures and tables, verified `notes/paper_numbers.py` and `19` passing `pytest` tests (`MFS_TEST_BEMPP=1`), re-executed notebooks `1..4`, and compiled `paper/main_3p.pdf` (**strictly 24 journal pages**) and `paper/main.pdf` (**41 preprint pages**) + `paper/mfs-paper-overleaf.zip` with `0` warnings and `0` bad boxes.
 
 ## 4. Decisions only the author can make (asked, not yet answered)
 

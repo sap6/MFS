@@ -301,6 +301,12 @@ A.~Bespalov, N.~Heuer, R.~Hiptmair, Convergence of the natural $hp$-{BEM} for
 \newblock \href {https://doi.org/10.1137/090766620}
   {\path{doi:10.1137/090766620}}.
 
+\bibitem{fong2011}
+D.~C.-L. Fong, M.~Saunders, {LSMR}: An iterative algorithm for sparse
+  least-squares problems, SIAM J. Sci. Comput. 33~(5) (2011) 2950--2971.
+\newblock \href {https://doi.org/10.1137/10079687X}
+  {\path{doi:10.1137/10079687X}}.
+
 \bibitem{vanbladel1996}
 J.~G. Van~Bladel, Singular Electromagnetic Fields and Sources, IEEE Press,
   1996.

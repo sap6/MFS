@@ -76,7 +76,7 @@ def cube_layout(J=6, fname="fig_cube_layout"):
     for sp in ins.spines.values():
         sp.set_edgecolor(RUST)
         sp.set_linewidth(0.7)
-    ins.text(H - 0.06 * zw, H - 0.90 * zw, r"$\times 16$ zoom", fontsize=6.4, color=RUST, ha="right", va="bottom")
+    ins.text(H - 0.94 * zw, H - 0.08 * zw, r"$\times 16$ zoom", fontsize=6.4, color=RUST, ha="left", va="top")
     ax.add_patch(ConnectionPatch(xyA=(H - zw, H - 0.25 * zw), coordsA=ax.transData,
                                  xyB=(1.0, 0.72), coordsB=ins.transAxes, color=RUST, lw=0.55, ls=":"))
 
