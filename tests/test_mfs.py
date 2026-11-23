@@ -254,6 +254,15 @@ def test_iterative_block_qr():
     E_dir = cb.field({c: cb_dir.fac[c].solve(b)}, pts)
     assert itn < 35 and core.rel(cb.field({c: p_inv(y_blk)}, pts), E_dir) < 5e-4
 
+    ddir = os.path.join(os.path.dirname(__file__), "..", "data")
+    ic = np.load(os.path.join(ddir, "iterative_check.npz"))
+    assert list(ic["scalene"][:, 0].astype(int)) == [4, 5, 6, 7, 8]
+    assert ic["scalene"][-1, 3] > 12000 and ic["scalene"][-1, 4] < 900
+    k4 = np.load(os.path.join(ddir, "cube_k4_check.npz"))
+    assert k4["mfs"][-1, 6] < 2e-4 and k4["bem"][:, 6].min() < 7e-4
+    nc = np.load(os.path.join(ddir, "nonconvex_check.npz"))
+    assert nc["mfs_inner"][:, 5].min() > 0.4 and nc["mfs_full"][-1, 5] < 6e-4 and nc["bem"][:, 9].min() < 1.5e-3
+
 
 @pytest.mark.skipif(not os.environ.get("MFS_TEST_BEMPP"), reason="set MFS_TEST_BEMPP=1 to test the Bempp comparison")
 def test_bempp_symmetry():

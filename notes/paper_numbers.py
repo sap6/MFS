@@ -222,14 +222,36 @@ if os.path.exists(D + "scalene_tetrahedron.npz"):
     print(f"fit eps = {np.exp(sp[1]):.2f} exp({sp[0]:.4f} sqrt(N_u)), factors: {[round(float(sm2[i,5]/sm2[i+1,5]), 2) for i in range(len(sm2)-1)]}")
     print("Bempp n=40:", [(int(r[0]), f"{int(r[1])}/{int(r[1])+2}", int(r[2]), round(float(r[3]), 1), f"{r[4]:.2e}") for r in sc["bem"] if int(r[0]) == 40])
 
-# Section 8: matrix-free block-QR preconditioned LSMR
+# Section 8: matrix-free block-QR preconditioned LSMR, non-convex L-block, and k = 8*pi cube
 if os.path.exists(D + "iterative_check.npz"):
     ic = np.load(D + "iterative_check.npz")
+    ex = {int(r[0]): r for r in ic.get("scalene_extra", np.zeros((0, 6)))}
     print("\n== Section 8 (Matrix-free Block-QR LSMR)")
     for r in ic["cube"]:
         print(f"Cube J={int(r[0])} k={int(r[1])}*2pi: A={r[4]:.1f} MiB, P={r[5]:.2f} MiB ({r[4]/r[5]:.1f}x), "
-              f"Blk itn={int(r[6])}, rel_E={r[9]:.2e} | Diag itn={int(r[10])}, rel_E={r[11]:.2e}")
+              f"Blk itn={int(r[6])}, tot={r[7]+r[8]:.1f}s, rel_E={r[9]:.2e} | Diag itn={int(r[10])}, rel_E={r[11]:.2e}")
     for r in ic["scalene"]:
-        print(f"Scalene J={int(r[0])}: A={r[3]:.1f} MiB ({r[3]/1024:.2f} GiB), P={r[4]:.1f} MiB ({r[3]/r[4]:.1f}x), Blk itn={int(r[5])}, rel_E={r[8]:.2e}")
+        J = int(r[0])
+        it1e4 = int(ex[J][5]) if (J in ex and len(ex[J]) > 5) else int(r[5])
+        opt_s = f", opt={ex[J][1]:.2e}, vs_J7={ex[J][2]:.2e}" if J in ex else ""
+        print(f"Scalene J={J} (N={int(r[2])}): A={r[3]:.1f} MiB ({r[3]/1024:.2f} GiB), P={r[4]:.1f} MiB ({r[3]/r[4]:.1f}x), "
+              f"itn={int(r[5])} (itn@1e-4={it1e4}), tot={(r[6]+r[7])/60:.1f} min, rel_vs_dir={r[8]:.2e}{opt_s}")
+
+if os.path.exists(D + "nonconvex_check.npz"):
+    nc = np.load(D + "nonconvex_check.npz")
+    print("\n== Section 8 (Non-convex 3D L-block, k = 2*pi)")
+    print(f"inner copy min err: {nc['mfs_inner'][:, 5].min():.3f}, full J=5 err vs J=6: {nc['mfs_full'][-1, 5]:.2e} "
+          f"(opt J=6: {nc['ref_info'][7]:.2e}), Bempp best diff vs J=6: {nc['bem'][:, 9].min():.2e}")
+
+if os.path.exists(D + "cube_k4_check.npz"):
+    k4 = np.load(D + "cube_k4_check.npz")
+    m1_8 = [r for r in k4["mfs"] if int(r[0]) == 1 and int(r[1]) == 8][0]
+    m2_8 = [r for r in k4["mfs"] if int(r[0]) == 2 and int(r[1]) == 8][0]
+    b48 = [b for b in k4["bem"] if int(b[3]) == 48][0]
+    ng6 = k4["ng6_J8"]
+    print("\n== Section 8 (Four-wavelength cube, k = 8*pi)")
+    print(f"m=1 J=8: err={m1_8[6]:.2e} in {m1_8[5]:.1f}s | m=2 J=8: err={m2_8[6]:.2e} in {m2_8[5]:.1f}s (ng=6 shift {ng6[1]:.2e}) | "
+          f"Bempp n=48 6/8: diff={b48[6]:.2e} in {b48[5]:.1f}s")
+
 
 
