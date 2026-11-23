@@ -18,7 +18,7 @@ most of the work is shared between targets:
     the symmetry images repeat the other half (mode n times (-1)^n) and are not computed.
 """
 import numpy as np
-from numba import njit, prange
+from numba import get_num_threads, njit, prange
 from scipy.interpolate import BarycentricInterpolator
 
 LMOM = 4          # the four coarsest levels use moments (panel widths 2, 1, 1/2, 1/4 in u)
@@ -818,129 +818,116 @@ def eval_points_field(pts, refl, sgn, y, alpha, beta, k, out):
 
 @njit(parallel=True, fastmath=True, cache=True)
 def _eval_line_field_kernel(pts, refl, r_act, sgn, t_hat, mids, tq, W, off, tlo, thi, ltab, g, gw,
-                            lam, d, n, k, H, n_mom, M_mom, c_cart, out):
-    """Adds field of a solved line/tail pair (pre-contracted on the 15 moment panels) into out[cl, m, 3]"""
+                            lam, d, n, k, H, n_mom, M_mom, c_cart, nch, out):
+    """Adds field of a solved line/tail pair (pre-contracted on moment panels) into out[cl, m, 3]"""
     P, na, npos, ncls = pts.shape[0], r_act.shape[0], mids.shape[0], sgn.shape[0]
     inv_k = 1.0 / k
     th0, th1, th2 = t_hat[0], t_hat[1], t_hat[2]
-    nch = min(64, max(1, P))
+    ntiles = (P + 15) // 16
     for ch in prange(nch):
         px = np.empty((npos, 3))
         Wq = np.empty(n)
         mom = np.empty((ncls, 2, npos, 3), np.complex128)
+        acc = np.empty((ncls, 3), np.complex128)
         stack_l = np.empty(2 * LHARD + 8, np.int64)
         stack_i = np.empty(2 * LHARD + 8, np.int64)
-        for m in range(ch, P, nch):
-            for ia in range(na):
-                r = r_act[ia]
-                rx0, rx1, rx2 = refl[r, 0], refl[r, 1], refl[r, 2]
-                xm0, xm1, xm2 = pts[m, 0] * rx0, pts[m, 1] * rx1, pts[m, 2] * rx2
-                pt0 = (xm0 - mids[0, 0]) * th0 + (xm1 - mids[0, 1]) * th1 + (xm2 - mids[0, 2]) * th2
-                rho2 = 1e300
-                for i in range(npos):
-                    px0 = xm0 - mids[i, 0]
-                    px1 = xm1 - mids[i, 1]
-                    px2 = xm2 - mids[i, 2]
-                    px[i, 0], px[i, 1], px[i, 2] = px0, px1, px2
-                    pt_i = px0 * th0 + px1 * th1 + px2 * th2
-                    p0 = px0 - pt_i * th0
-                    p1 = px1 - pt_i * th1
-                    p2 = px2 - pt_i * th2
-                    d2 = p0 * p0 + p1 * p1 + p2 * p2
-                    if d2 < rho2:
-                        rho2 = d2
+        for tile in range(ch, ntiles, nch):
+            m0, m1 = tile * 16, min(P, (tile + 1) * 16)
+            for m in range(m0, m1):
+                acc[:] = 0.0j
+                for ia in range(na):
+                    r = r_act[ia]
+                    rx0, rx1, rx2 = refl[r, 0], refl[r, 1], refl[r, 2]
+                    xm0, xm1, xm2 = pts[m, 0] * rx0, pts[m, 1] * rx1, pts[m, 2] * rx2
+                    pt0 = (xm0 - mids[0, 0]) * th0 + (xm1 - mids[0, 1]) * th1 + (xm2 - mids[0, 2]) * th2
+                    rho2 = 1e300
+                    for i in range(npos):
+                        px0, px1, px2 = xm0 - mids[i, 0], xm1 - mids[i, 1], xm2 - mids[i, 2]
+                        px[i, 0], px[i, 1], px[i, 2] = px0, px1, px2
+                        pt_i = px0 * th0 + px1 * th1 + px2 * th2
+                        p0, p1, p2 = px0 - pt_i * th0, px1 - pt_i * th1, px2 - pt_i * th2
+                        d2 = p0 * p0 + p1 * p1 + p2 * p2
+                        if d2 < rho2:
+                            rho2 = d2
 
-                sp, stack_l[0], stack_i[0] = 1, 0, 0
-                while sp > 0:
-                    sp -= 1
-                    lev, idx = stack_l[sp], stack_i[sp]
-                    wid = 2.0 / (1 << lev)
-                    p = (1 << lev) - 1 + idx if lev <= ltab else -1
-                    a0 = tlo[p] if p >= 0 else H * np.tanh(0.5 * lam * (-1.0 + wid * idx))
-                    b0 = thi[p] if p >= 0 else H * np.tanh(0.5 * lam * (-1.0 + wid * (idx + 1)))
-                    gap = max(a0 - pt0, 0.0, pt0 - b0)
-                    if b0 - a0 > np.sqrt(rho2 + gap * gap) and lev < LHARD:
-                        stack_l[sp], stack_i[sp], stack_l[sp + 1], stack_i[sp + 1] = lev + 1, 2 * idx, lev + 1, 2 * idx + 1
-                        sp += 2
-                        continue
-                    nq = off[p + 1] - off[p] if p >= 0 else g.shape[0]
-                    for iq in range(nq):
-                        q_idx = off[p] + iq if p >= 0 else -1
-                        if 0 <= q_idx < n_mom:
-                            t = tq[q_idx]
-                        elif q_idx >= 0:
-                            t = tq[q_idx]
-                            for cl in range(ncls):
-                                for kind in range(2):
-                                    for i in range(npos):
-                                        s0, s1, s2 = 0.0j, 0.0j, 0.0j
-                                        for kk in range(n):
-                                            wk = W[q_idx, kk]
-                                            s0 += wk * c_cart[cl, kind, i, kk, 0]
-                                            s1 += wk * c_cart[cl, kind, i, kk, 1]
-                                            s2 += wk * c_cart[cl, kind, i, kk, 2]
-                                        mom[cl, kind, i, 0] = s0
-                                        mom[cl, kind, i, 1] = s1
-                                        mom[cl, kind, i, 2] = s2
-                        else:
-                            u = -1.0 + wid * (idx + 0.5) + 0.5 * wid * g[iq]
-                            ex = np.exp(lam * u)
-                            t = H * (ex - 1.0) / (ex + 1.0)
-                            Wq[0] = 0.5 * wid * gw[iq] * H * 2.0 * lam * ex / ((ex + 1.0) * (ex + 1.0)) / d
-                            if n > 1:
-                                Wq[1] = Wq[0] * u
-                            for kk in range(2, n):
-                                Wq[kk] = ((2 * kk - 1) * u * Wq[kk - 1] - (kk - 1) * Wq[kk - 2]) / kk
-                            for cl in range(ncls):
-                                for kind in range(2):
-                                    for i in range(npos):
-                                        s0, s1, s2 = 0.0j, 0.0j, 0.0j
-                                        for kk in range(n):
-                                            wk = Wq[kk]
-                                            s0 += wk * c_cart[cl, kind, i, kk, 0]
-                                            s1 += wk * c_cart[cl, kind, i, kk, 1]
-                                            s2 += wk * c_cart[cl, kind, i, kk, 2]
-                                        mom[cl, kind, i, 0] = s0
-                                        mom[cl, kind, i, 1] = s1
-                                        mom[cl, kind, i, 2] = s2
+                    sp, stack_l[0], stack_i[0] = 1, 0, 0
+                    while sp > 0:
+                        sp -= 1
+                        lev, idx = stack_l[sp], stack_i[sp]
+                        wid = 2.0 / (1 << lev)
+                        p = (1 << lev) - 1 + idx if lev <= ltab else -1
+                        a0 = tlo[p] if p >= 0 else H * np.tanh(0.5 * lam * (-1.0 + wid * idx))
+                        b0 = thi[p] if p >= 0 else H * np.tanh(0.5 * lam * (-1.0 + wid * (idx + 1)))
+                        gap = max(a0 - pt0, 0.0, pt0 - b0)
+                        if b0 - a0 > np.sqrt(rho2 + gap * gap) and lev < LHARD:
+                            stack_l[sp], stack_i[sp], stack_l[sp + 1], stack_i[sp + 1] = lev + 1, 2 * idx, lev + 1, 2 * idx + 1
+                            sp += 2
+                            continue
+                        nq = off[p + 1] - off[p] if p >= 0 else g.shape[0]
+                        for iq in range(nq):
+                            q_idx = off[p] + iq if p >= 0 else -1
+                            if 0 <= q_idx < n_mom:
+                                t = tq[q_idx]
+                            elif q_idx >= 0:
+                                t = tq[q_idx]
+                                for cl in range(ncls):
+                                    for kind in range(2):
+                                        for i in range(npos):
+                                            s0, s1, s2 = 0.0j, 0.0j, 0.0j
+                                            for kk in range(n):
+                                                wk = W[q_idx, kk]
+                                                s0 += wk * c_cart[cl, kind, i, kk, 0]
+                                                s1 += wk * c_cart[cl, kind, i, kk, 1]
+                                                s2 += wk * c_cart[cl, kind, i, kk, 2]
+                                            mom[cl, kind, i, 0], mom[cl, kind, i, 1], mom[cl, kind, i, 2] = s0, s1, s2
+                            else:
+                                u = -1.0 + wid * (idx + 0.5) + 0.5 * wid * g[iq]
+                                ex = np.exp(lam * u)
+                                t = H * (ex - 1.0) / (ex + 1.0)
+                                Wq[0] = 0.5 * wid * gw[iq] * H * 2.0 * lam * ex / ((ex + 1.0) * (ex + 1.0)) / d
+                                if n > 1:
+                                    Wq[1] = Wq[0] * u
+                                for kk in range(2, n):
+                                    Wq[kk] = ((2 * kk - 1) * u * Wq[kk - 1] - (kk - 1) * Wq[kk - 2]) / kk
+                                for cl in range(ncls):
+                                    for kind in range(2):
+                                        for i in range(npos):
+                                            s0, s1, s2 = 0.0j, 0.0j, 0.0j
+                                            for kk in range(n):
+                                                wk = Wq[kk]
+                                                s0 += wk * c_cart[cl, kind, i, kk, 0]
+                                                s1 += wk * c_cart[cl, kind, i, kk, 1]
+                                                s2 += wk * c_cart[cl, kind, i, kk, 2]
+                                            mom[cl, kind, i, 0], mom[cl, kind, i, 1], mom[cl, kind, i, 2] = s0, s1, s2
 
-                        for i in range(npos):
-                            d0 = px[i, 0] - t * th0
-                            d1 = px[i, 1] - t * th1
-                            d2 = px[i, 2] - t * th2
-                            r2 = d0 * d0 + d1 * d1 + d2 * d2
-                            inv_r = 1.0 / np.sqrt(r2)
-                            inv_r2 = inv_r * inv_r
-                            kr = k * (r2 * inv_r)
-                            ik = inv_r * inv_k
-                            ik2 = ik * ik
-                            ph = (np.cos(kr) + 1j * np.sin(kr)) * inv_r
-                            fI = (1.0 - ik2 + 1j * ik) * ph
-                            fR = (1.0 - 3.0 * ik2 + 3j * ik) * ph * inv_r2
-                            fM = (-ik + 1j) * ph * inv_r
-                            for cl in range(ncls):
-                                sg = sgn[cl, r]
-                                if 0 <= q_idx < n_mom:
-                                    a0 = M_mom[q_idx, cl, 0, i, 0]
-                                    a1 = M_mom[q_idx, cl, 0, i, 1]
-                                    a2 = M_mom[q_idx, cl, 0, i, 2]
-                                    b0 = M_mom[q_idx, cl, 1, i, 0]
-                                    b1 = M_mom[q_idx, cl, 1, i, 1]
-                                    b2 = M_mom[q_idx, cl, 1, i, 2]
-                                else:
-                                    a0 = mom[cl, 0, i, 0]
-                                    a1 = mom[cl, 0, i, 1]
-                                    a2 = mom[cl, 0, i, 2]
-                                    b0 = mom[cl, 1, i, 0]
-                                    b1 = mom[cl, 1, i, 1]
-                                    b2 = mom[cl, 1, i, 2]
-                                da = fR * (d0 * a0 + d1 * a1 + d2 * a2)
-                                e0 = fI * a0 - da * d0 + fM * (d1 * b2 - d2 * b1)
-                                e1 = fI * a1 - da * d1 + fM * (d2 * b0 - d0 * b2)
-                                e2 = fI * a2 - da * d2 + fM * (d0 * b1 - d1 * b0)
-                                out[cl, m, 0] += sg * rx0 * e0
-                                out[cl, m, 1] += sg * rx1 * e1
-                                out[cl, m, 2] += sg * rx2 * e2
+                            for i in range(npos):
+                                d0, d1, d2 = px[i, 0] - t * th0, px[i, 1] - t * th1, px[i, 2] - t * th2
+                                r2 = d0 * d0 + d1 * d1 + d2 * d2
+                                inv_r = 1.0 / np.sqrt(r2)
+                                inv_r2 = inv_r * inv_r
+                                kr = k * (r2 * inv_r)
+                                ik = inv_r * inv_k
+                                ik2 = ik * ik
+                                ph = (np.cos(kr) + 1j * np.sin(kr)) * inv_r
+                                fI = (1.0 - ik2 + 1j * ik) * ph
+                                fR = (1.0 - 3.0 * ik2 + 3j * ik) * ph * inv_r2
+                                fM = (-ik + 1j) * ph * inv_r
+                                for cl in range(ncls):
+                                    sg = sgn[cl, r]
+                                    if 0 <= q_idx < n_mom:
+                                        a0, a1, a2 = M_mom[q_idx, cl, 0, i, 0], M_mom[q_idx, cl, 0, i, 1], M_mom[q_idx, cl, 0, i, 2]
+                                        b0, b1, b2 = M_mom[q_idx, cl, 1, i, 0], M_mom[q_idx, cl, 1, i, 1], M_mom[q_idx, cl, 1, i, 2]
+                                    else:
+                                        a0, a1, a2 = mom[cl, 0, i, 0], mom[cl, 0, i, 1], mom[cl, 0, i, 2]
+                                        b0, b1, b2 = mom[cl, 1, i, 0], mom[cl, 1, i, 1], mom[cl, 1, i, 2]
+                                    da = fR * (d0 * a0 + d1 * a1 + d2 * a2)
+                                    acc[cl, 0] += sg * rx0 * (fI * a0 - da * d0 + fM * (d1 * b2 - d2 * b1))
+                                    acc[cl, 1] += sg * rx1 * (fI * a1 - da * d1 + fM * (d2 * b0 - d0 * b2))
+                                    acc[cl, 2] += sg * rx2 * (fI * a2 - da * d2 + fM * (d0 * b1 - d1 * b0))
+                for cl in range(ncls):
+                    out[cl, m, 0] += acc[cl, 0]
+                    out[cl, m, 1] += acc[cl, 1]
+                    out[cl, m, 2] += acc[cl, 2]
 
 
 def eval_line_field(pts, refl, r_act, sgn, t_hat, mids, lam, d, n, k, H, c_pair, out, rot=None, w=None):
@@ -952,9 +939,10 @@ def eval_line_field(pts, refl, r_act, sgn, t_hat, mids, lam, d, n, k, H, c_pair,
     c_cart = np.ascontiguousarray(2.0 * np.einsum("ksic,lksmc,cq->lkimq", w, c_pair, rot_arr))
     n_mom = int(off[min(511, len(off) - 1)])
     M_mom = np.ascontiguousarray(np.einsum("pm,lkimq->plkiq", W[:n_mom], c_cart))
+    nch = min(get_num_threads(), max(1, (len(pts) + 15) // 16))
     _eval_line_field_kernel(pts, refl, np.ascontiguousarray(r_act, np.int64), sgn,
                             np.ascontiguousarray(t_hat, dtype=float), mids, tq, W, off, tlo, thi,
-                            ltab, g, gw, lam, d, n, k, H, n_mom, M_mom, c_cart, out)
+                            ltab, g, gw, lam, d, n, k, H, n_mom, M_mom, c_cart, nch, out)
 
 
 @njit(parallel=True, fastmath=True, cache=True)
@@ -1093,102 +1081,105 @@ def _eval_line_adj_kernel(pts, refl, r_act, sgn, t_hat, mids, tq, W, off, tlo, t
     inv_k = 1.0 / k
     th0, th1, th2 = t_hat[0], t_hat[1], t_hat[2]
     nch = G_mom.shape[0]
+    ntiles = (P + 15) // 16
     for ch in prange(nch):
         px = np.empty((npos, 3))
         Wq = np.empty(n)
         stack_l = np.empty(2 * LHARD + 8, np.int64)
         stack_i = np.empty(2 * LHARD + 8, np.int64)
-        for m in range(ch, P, nch):
-            for ia in range(na):
-                r = r_act[ia]
-                rx0, rx1, rx2 = refl[r, 0], refl[r, 1], refl[r, 2]
-                xm0, xm1, xm2 = pts[m, 0] * rx0, pts[m, 1] * rx1, pts[m, 2] * rx2
-                pt0 = (xm0 - mids[0, 0]) * th0 + (xm1 - mids[0, 1]) * th1 + (xm2 - mids[0, 2]) * th2
-                rho2 = 1e300
-                for i in range(npos):
-                    px0, px1, px2 = xm0 - mids[i, 0], xm1 - mids[i, 1], xm2 - mids[i, 2]
-                    px[i, 0], px[i, 1], px[i, 2] = px0, px1, px2
-                    pt_i = px0 * th0 + px1 * th1 + px2 * th2
-                    p0, p1, p2 = px0 - pt_i * th0, px1 - pt_i * th1, px2 - pt_i * th2
-                    d2 = p0 * p0 + p1 * p1 + p2 * p2
-                    if d2 < rho2:
-                        rho2 = d2
+        for tile in range(ch, ntiles, nch):
+            m0, m1 = tile * 16, min(P, (tile + 1) * 16)
+            for m in range(m0, m1):
+                for ia in range(na):
+                    r = r_act[ia]
+                    rx0, rx1, rx2 = refl[r, 0], refl[r, 1], refl[r, 2]
+                    xm0, xm1, xm2 = pts[m, 0] * rx0, pts[m, 1] * rx1, pts[m, 2] * rx2
+                    pt0 = (xm0 - mids[0, 0]) * th0 + (xm1 - mids[0, 1]) * th1 + (xm2 - mids[0, 2]) * th2
+                    rho2 = 1e300
+                    for i in range(npos):
+                        px0, px1, px2 = xm0 - mids[i, 0], xm1 - mids[i, 1], xm2 - mids[i, 2]
+                        px[i, 0], px[i, 1], px[i, 2] = px0, px1, px2
+                        pt_i = px0 * th0 + px1 * th1 + px2 * th2
+                        p0, p1, p2 = px0 - pt_i * th0, px1 - pt_i * th1, px2 - pt_i * th2
+                        d2 = p0 * p0 + p1 * p1 + p2 * p2
+                        if d2 < rho2:
+                            rho2 = d2
 
-                sp, stack_l[0], stack_i[0] = 1, 0, 0
-                while sp > 0:
-                    sp -= 1
-                    lev, idx = stack_l[sp], stack_i[sp]
-                    wid = 2.0 / (1 << lev)
-                    p = (1 << lev) - 1 + idx if lev <= ltab else -1
-                    a0 = tlo[p] if p >= 0 else H * np.tanh(0.5 * lam * (-1.0 + wid * idx))
-                    b0 = thi[p] if p >= 0 else H * np.tanh(0.5 * lam * (-1.0 + wid * (idx + 1)))
-                    gap = max(a0 - pt0, 0.0, pt0 - b0)
-                    if b0 - a0 > np.sqrt(rho2 + gap * gap) and lev < LHARD:
-                        stack_l[sp], stack_i[sp], stack_l[sp + 1], stack_i[sp + 1] = lev + 1, 2 * idx, lev + 1, 2 * idx + 1
-                        sp += 2
-                        continue
-                    nq = off[p + 1] - off[p] if p >= 0 else g.shape[0]
-                    for iq in range(nq):
-                        q_idx = off[p] + iq if p >= 0 else -1
-                        if q_idx >= 0:
-                            t = tq[q_idx]
-                        else:
-                            u_loc = -1.0 + wid * (idx + 0.5) + 0.5 * wid * g[iq]
-                            ex = np.exp(lam * u_loc)
-                            t = H * (ex - 1.0) / (ex + 1.0)
-                            Wq[0] = 0.5 * wid * gw[iq] * H * 2.0 * lam * ex / ((ex + 1.0) * (ex + 1.0)) / d
-                            if n > 1:
-                                Wq[1] = Wq[0] * u_loc
-                            for kk in range(2, n):
-                                Wq[kk] = ((2 * kk - 1) * u_loc * Wq[kk - 1] - (kk - 1) * Wq[kk - 2]) / kk
+                    sp, stack_l[0], stack_i[0] = 1, 0, 0
+                    while sp > 0:
+                        sp -= 1
+                        lev, idx = stack_l[sp], stack_i[sp]
+                        wid = 2.0 / (1 << lev)
+                        p = (1 << lev) - 1 + idx if lev <= ltab else -1
+                        a0 = tlo[p] if p >= 0 else H * np.tanh(0.5 * lam * (-1.0 + wid * idx))
+                        b0 = thi[p] if p >= 0 else H * np.tanh(0.5 * lam * (-1.0 + wid * (idx + 1)))
+                        gap = max(a0 - pt0, 0.0, pt0 - b0)
+                        if b0 - a0 > np.sqrt(rho2 + gap * gap) and lev < LHARD:
+                            stack_l[sp], stack_i[sp], stack_l[sp + 1], stack_i[sp + 1] = lev + 1, 2 * idx, lev + 1, 2 * idx + 1
+                            sp += 2
+                            continue
+                        nq = off[p + 1] - off[p] if p >= 0 else g.shape[0]
+                        for iq in range(nq):
+                            q_idx = off[p] + iq if p >= 0 else -1
+                            if q_idx >= 0:
+                                t = tq[q_idx]
+                            else:
+                                u_loc = -1.0 + wid * (idx + 0.5) + 0.5 * wid * g[iq]
+                                ex = np.exp(lam * u_loc)
+                                t = H * (ex - 1.0) / (ex + 1.0)
+                                Wq[0] = 0.5 * wid * gw[iq] * H * 2.0 * lam * ex / ((ex + 1.0) * (ex + 1.0)) / d
+                                if n > 1:
+                                    Wq[1] = Wq[0] * u_loc
+                                for kk in range(2, n):
+                                    Wq[kk] = ((2 * kk - 1) * u_loc * Wq[kk - 1] - (kk - 1) * Wq[kk - 2]) / kk
 
-                        for i in range(npos):
-                            d0, d1, d2 = px[i, 0] - t * th0, px[i, 1] - t * th1, px[i, 2] - t * th2
-                            r2 = d0 * d0 + d1 * d1 + d2 * d2
-                            inv_r = 1.0 / np.sqrt(r2)
-                            inv_r2 = inv_r * inv_r
-                            kr = k * (r2 * inv_r)
-                            ik = inv_r * inv_k
-                            ik2 = ik * ik
-                            phc = (np.cos(kr) - 1j * np.sin(kr)) * inv_r
-                            fIc = (1.0 - ik2 - 1j * ik) * phc
-                            fRc = (1.0 - 3.0 * ik2 - 3j * ik) * phc * inv_r2
-                            fMc = (-ik - 1j) * phc * inv_r
-                            for cl in range(ncls):
-                                sg = sgn[cl, r]
-                                u0 = sg * rx0 * np.conj(u[cl, m, 0])
-                                u1 = sg * rx1 * np.conj(u[cl, m, 1])
-                                u2 = sg * rx2 * np.conj(u[cl, m, 2])
-                                du = fRc * (d0 * u0 + d1 * u1 + d2 * u2)
-                                ge0, ge1, ge2 = fIc * u0 - du * d0, fIc * u1 - du * d1, fIc * u2 - du * d2
-                                gm0 = fMc * (u1 * d2 - u2 * d1)
-                                gm1 = fMc * (u2 * d0 - u0 * d2)
-                                gm2 = fMc * (u0 * d1 - u1 * d0)
-                                if 0 <= q_idx < n_mom:
-                                    G_mom[ch, q_idx, cl, 0, i, 0] += ge0
-                                    G_mom[ch, q_idx, cl, 0, i, 1] += ge1
-                                    G_mom[ch, q_idx, cl, 0, i, 2] += ge2
-                                    G_mom[ch, q_idx, cl, 1, i, 0] += gm0
-                                    G_mom[ch, q_idx, cl, 1, i, 1] += gm1
-                                    G_mom[ch, q_idx, cl, 1, i, 2] += gm2
-                                elif q_idx >= 0:
-                                    for kk in range(n):
-                                        wk = W[q_idx, kk]
-                                        Z_cart[ch, cl, 0, i, kk, 0] += wk * ge0
-                                        Z_cart[ch, cl, 0, i, kk, 1] += wk * ge1
-                                        Z_cart[ch, cl, 0, i, kk, 2] += wk * ge2
-                                        Z_cart[ch, cl, 1, i, kk, 0] += wk * gm0
-                                        Z_cart[ch, cl, 1, i, kk, 1] += wk * gm1
-                                        Z_cart[ch, cl, 1, i, kk, 2] += wk * gm2
-                                else:
-                                    for kk in range(n):
-                                        wk = Wq[kk]
-                                        Z_cart[ch, cl, 0, i, kk, 0] += wk * ge0
-                                        Z_cart[ch, cl, 0, i, kk, 1] += wk * ge1
-                                        Z_cart[ch, cl, 0, i, kk, 2] += wk * ge2
-                                        Z_cart[ch, cl, 1, i, kk, 0] += wk * gm0
-                                        Z_cart[ch, cl, 1, i, kk, 1] += wk * gm1
-                                        Z_cart[ch, cl, 1, i, kk, 2] += wk * gm2
+                            for i in range(npos):
+                                d0, d1, d2 = px[i, 0] - t * th0, px[i, 1] - t * th1, px[i, 2] - t * th2
+                                r2 = d0 * d0 + d1 * d1 + d2 * d2
+                                inv_r = 1.0 / np.sqrt(r2)
+                                inv_r2 = inv_r * inv_r
+                                kr = k * (r2 * inv_r)
+                                ik = inv_r * inv_k
+                                ik2 = ik * ik
+                                phc = (np.cos(kr) - 1j * np.sin(kr)) * inv_r
+                                fIc = (1.0 - ik2 - 1j * ik) * phc
+                                fRc = (1.0 - 3.0 * ik2 - 3j * ik) * phc * inv_r2
+                                fMc = (-ik - 1j) * phc * inv_r
+                                for cl in range(ncls):
+                                    sg = sgn[cl, r]
+                                    u0 = sg * rx0 * np.conj(u[cl, m, 0])
+                                    u1 = sg * rx1 * np.conj(u[cl, m, 1])
+                                    u2 = sg * rx2 * np.conj(u[cl, m, 2])
+                                    du = fRc * (d0 * u0 + d1 * u1 + d2 * u2)
+                                    ge0, ge1, ge2 = fIc * u0 - du * d0, fIc * u1 - du * d1, fIc * u2 - du * d2
+                                    gm0 = fMc * (u1 * d2 - u2 * d1)
+                                    gm1 = fMc * (u2 * d0 - u0 * d2)
+                                    gm2 = fMc * (u0 * d1 - u1 * d0)
+                                    if 0 <= q_idx < n_mom:
+                                        G_mom[ch, q_idx, cl, 0, i, 0] += ge0
+                                        G_mom[ch, q_idx, cl, 0, i, 1] += ge1
+                                        G_mom[ch, q_idx, cl, 0, i, 2] += ge2
+                                        G_mom[ch, q_idx, cl, 1, i, 0] += gm0
+                                        G_mom[ch, q_idx, cl, 1, i, 1] += gm1
+                                        G_mom[ch, q_idx, cl, 1, i, 2] += gm2
+                                    elif q_idx >= 0:
+                                        for kk in range(n):
+                                            wk = W[q_idx, kk]
+                                            Z_cart[ch, cl, 0, i, kk, 0] += wk * ge0
+                                            Z_cart[ch, cl, 0, i, kk, 1] += wk * ge1
+                                            Z_cart[ch, cl, 0, i, kk, 2] += wk * ge2
+                                            Z_cart[ch, cl, 1, i, kk, 0] += wk * gm0
+                                            Z_cart[ch, cl, 1, i, kk, 1] += wk * gm1
+                                            Z_cart[ch, cl, 1, i, kk, 2] += wk * gm2
+                                    else:
+                                        for kk in range(n):
+                                            wk = Wq[kk]
+                                            Z_cart[ch, cl, 0, i, kk, 0] += wk * ge0
+                                            Z_cart[ch, cl, 0, i, kk, 1] += wk * ge1
+                                            Z_cart[ch, cl, 0, i, kk, 2] += wk * ge2
+                                            Z_cart[ch, cl, 1, i, kk, 0] += wk * gm0
+                                            Z_cart[ch, cl, 1, i, kk, 1] += wk * gm1
+                                            Z_cart[ch, cl, 1, i, kk, 2] += wk * gm2
 
 
 def eval_line_adj(pts, refl, r_act, sgn, t_hat, mids, lam, d, n, k, H, u, out_pair, rot=None, w=None):
@@ -1199,7 +1190,7 @@ def eval_line_adj(pts, refl, r_act, sgn, t_hat, mids, lam, d, n, k, H, u, out_pa
     tq, W, off, tlo, thi, ltab, g, gw = build_tree(lam, d, n, H, k)
     n_mom = int(off[min(511, len(off) - 1)])
     ncls, npos = sgn.shape[0], len(mids)
-    nch = min(2, max(1, len(pts)))
+    nch = min(get_num_threads(), max(1, (len(pts) + 15) // 16))
     G_mom = np.zeros((nch, n_mom, ncls, 2, npos, 3), np.complex128)
     Z_cart = np.zeros((nch, ncls, 2, npos, n, 3), np.complex128)
     _eval_line_adj_kernel(pts, refl, np.ascontiguousarray(r_act, np.int64), sgn,

@@ -17,7 +17,7 @@ import time
 
 import numpy as np
 import scipy.linalg as sla
-from scipy.linalg import blas
+from scipy.linalg import blas, lapack
 
 REPO = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 sys.path.insert(0, REPO)
@@ -292,32 +292,53 @@ def scalene_assemble_cols(pr, cols):
 
 def factor_bordered_qr(assemble_fn, idx0, idxe):
     N = len(idx0) + sum(len(ix) for ix in idxe)
-    diag_norm = np.empty(N)
-    A0 = assemble_fn(idx0)
-    sc0 = np.linalg.norm(A0, axis=0)
-    diag_norm[idx0] = sc0
-    A0 /= sc0
-    Q0, R0 = np.linalg.qr(A0, mode="reduced")
-    del A0
     n0 = len(idx0)
-    p_bytes = (n0 * (n0 + 1) // 2) * 16 + sc0.nbytes
+    diag_norm = np.empty(N)
+    A0_raw = assemble_fn(idx0)
+    M = A0_raw.shape[0]
+    sc0 = np.linalg.norm(A0_raw, axis=0)
+    diag_norm[idx0] = sc0
+    mmap_path = "/tmp/mfs_qr0.bin" if A0_raw.nbytes > 1024 ** 3 else None
+    try:
+        if mmap_path is not None:
+            qr_raw = np.memmap(mmap_path, dtype=np.complex128, mode="w+", shape=(M, n0), order="F")
+            qr_raw[:] = A0_raw
+            del A0_raw
+            gc.collect()
+            qr_raw /= sc0
+        else:
+            A0_raw /= sc0
+            qr_raw = A0_raw
+        qr_raw, tau, _, info = lapack.zgeqrf(qr_raw, overwrite_a=1)
+        assert info == 0
+        R0 = np.triu(qr_raw[:n0, :n0]).copy()
+        p_bytes = (n0 * (n0 + 1) // 2) * 16 + sc0.nbytes
 
-    Bs, Rs, scs = [], [], []
-    for idx in idxe:
-        Ae = assemble_fn(idx)
-        sc = np.linalg.norm(Ae, axis=0)
-        diag_norm[idx] = sc
-        Ae /= sc
-        Be = Q0.conj().T @ Ae
-        Ae -= Q0 @ Be
-        Re = np.linalg.qr(Ae, mode="r")
-        del Ae
-        Bs.append(Be)
-        Rs.append(Re)
-        scs.append(sc)
-        nb = len(idx)
-        p_bytes += Be.nbytes + (nb * (nb + 1) // 2) * 16 + sc.nbytes
-    del Q0
+        Bs, Rs, scs = [], [], []
+        for idx in idxe:
+            nb = len(idx)
+            Ae = assemble_fn(idx)
+            sc = np.linalg.norm(Ae, axis=0)
+            diag_norm[idx] = sc
+            Ae /= sc
+            Ae, _, info = lapack.zunmqr("L", "C", qr_raw, tau, Ae, max(1, 64 * nb), overwrite_c=1)
+            assert info == 0
+            Be = Ae[:n0, :].copy()
+            Ae_sub = np.empty((M - n0, nb), np.complex128, order="F")
+            Ae_sub[:] = Ae[n0:, :]
+            del Ae
+            qr_e, _, _, info = lapack.zgeqrf(Ae_sub, overwrite_a=1)
+            assert info == 0
+            Re = np.triu(qr_e[:nb, :nb]).copy()
+            del Ae_sub, qr_e
+            Bs.append(Be)
+            Rs.append(Re)
+            scs.append(sc)
+            p_bytes += Be.nbytes + (nb * (nb + 1) // 2) * 16 + sc.nbytes
+        del qr_raw, tau
+    finally:
+        if mmap_path is not None and os.path.exists(mmap_path):
+            os.remove(mmap_path)
     gc.collect()
     return R0, sc0, Bs, Rs, scs, p_bytes, diag_norm
 
@@ -460,13 +481,23 @@ def _scalene_blocks(pr):
     return np.concatenate(coarse_list), [np.concatenate(el) for el in edge_lists]
 
 
-def run_scalene(J, part="all", step_limit=30):
+def run_scalene(J, part="all", step_limit=20):
     st = load_state()
     tmp_path = f"/tmp/iterative_mfs_scalene_J{J}.npz"
+    sc_npz = os.path.join(REPO, "data", "scalene_tetrahedron.npz")
     if part == "dir":
-        E_dir, t_dir, _ = tetrahedron.solve_scalene(J, D_W, P_W, PTS, q=2 ** -0.5)
-        np.savez(tmp_path, E_dir=E_dir, t_dir=float(t_dir))
-        print(f"Scalene J={J} [dir]: t_dir={t_dir:.2f}s", flush=True)
+        if J == 7 and os.path.exists(sc_npz):
+            dsc = np.load(sc_npz)
+            E_dir, t_dir = dsc["ref_E"], float(dsc["ref_info"][3])
+            np.savez(tmp_path, has_dir=np.array(1), E_dir=E_dir, t_dir=t_dir)
+            print(f"Scalene J=7 [dir]: loaded stored reference (t_dir={t_dir:.2f}s)", flush=True)
+        elif J >= 8:
+            np.savez(tmp_path, has_dir=np.array(0), E_dir=np.zeros((len(PTS), 3), np.complex128), t_dir=np.nan)
+            print(f"Scalene J={J} [dir]: dense A exceeds 8 GB RAM; running matrix-free LSMR without dense solve", flush=True)
+        else:
+            E_dir, t_dir, _ = tetrahedron.solve_scalene(J, D_W, P_W, PTS, q=2 ** -0.5)
+            np.savez(tmp_path, has_dir=np.array(1), E_dir=E_dir, t_dir=float(t_dir))
+            print(f"Scalene J={J} [dir]: t_dir={t_dir:.2f}s", flush=True)
         return
 
     pr_w = tetrahedron.ScaleneTetrahedron(2, q=2 ** -0.5)
@@ -482,7 +513,7 @@ def run_scalene(J, part="all", step_limit=30):
     idx0, idxe = _scalene_blocks(pr)
 
     if part == "prec":
-        sp = dict(np.load(tmp_path))
+        sp = dict(np.load(tmp_path)) if os.path.exists(tmp_path) else {"has_dir": np.array(0), "E_dir": np.zeros((len(PTS), 3), np.complex128), "t_dir": np.nan}
         t0 = time.time()
         R0, sc0, Bs, Rs, scs, p_bytes, _ = factor_bordered_qr(lambda cols: scalene_assemble_cols(pr, cols), idx0, idxe)
         t_prec = time.time() - t0
@@ -495,7 +526,14 @@ def run_scalene(J, part="all", step_limit=30):
         return
 
     if part == "all":
-        E_dir, t_dir, _ = tetrahedron.solve_scalene(J, D_W, P_W, PTS, q=2 ** -0.5)
+        if J == 7 and os.path.exists(sc_npz):
+            dsc = np.load(sc_npz)
+            has_dir, E_dir, t_dir = True, dsc["ref_E"], float(dsc["ref_info"][3])
+        elif J >= 8:
+            has_dir, E_dir, t_dir = False, None, np.nan
+        else:
+            E_dir, t_dir, _ = tetrahedron.solve_scalene(J, D_W, P_W, PTS, q=2 ** -0.5)
+            has_dir = True
         gc.collect()
         t0 = time.time()
         p_inv, p_invH, p_bytes, _ = build_bordered_qr(lambda cols: scalene_assemble_cols(pr, cols), idx0, idxe)
@@ -507,7 +545,8 @@ def run_scalene(J, part="all", step_limit=30):
         t_iter = time.time() - t0
     else:
         sp = dict(np.load(tmp_path))
-        E_dir, t_dir = sp["E_dir"], float(sp["t_dir"])
+        has_dir = bool(int(sp.get("has_dir", 1)))
+        E_dir, t_dir = (sp["E_dir"] if has_dir else None), float(sp["t_dir"])
         if "eR0" not in sp:
             t0 = time.time()
             R0, sc0, Bs, Rs, scs, p_bytes, _ = factor_bordered_qr(lambda cols: scalene_assemble_cols(pr, cols), idx0, idxe)
@@ -542,15 +581,22 @@ def run_scalene(J, part="all", step_limit=30):
 
     x_blk = p_inv(y_blk)
     E_blk = pr.field(x_blk, PTS)
-    rel_blk = core.rel(E_blk, E_dir)
+    ext, sca = core.cross_sections(lambda dirs: pr.far(x_blk, dirs), pr.k, D_W, P_W, tetrahedron.RULE)
+    opt_blk = abs(ext - sca) / sca
+    rel_blk = core.rel(E_blk, E_dir) if has_dir else np.nan
+    rel_j7 = core.rel(E_blk, np.load(sc_npz)["ref_E"]) if os.path.exists(sc_npz) else np.nan
 
-    print(f"Scalene J={J}: M={M}, N={N}, A_dense={dense_mb:.1f} MiB vs P_blk={p_mb:.1f} MiB ({dense_mb/p_mb:.1f}x) | "
-          f"Blk-LSMR: itn={itn_blk:2d} (prec={t_prec:.2f}s, iter={t_iter:.2f}s vs dir={t_dir:.2f}s), "
-          f"NE_res={ne_blk:.2e}, rel_E_vs_dir={rel_blk:.2e}", flush=True)
+    print(f"Scalene J={J}: M={M}, N={N}, A_dense={dense_mb:.1f} MiB ({dense_mb/1024:.2f} GiB) vs P_blk={p_mb:.1f} MiB ({dense_mb/p_mb:.1f}x) | "
+          f"Blk-LSMR: itn={itn_blk:2d} (prec={t_prec:.2f}s, iter={t_iter:.2f}s, tot={t_prec+t_iter:.1f}s vs dir={t_dir:.1f}s), "
+          f"NE_res={ne_blk:.2e}, opt={opt_blk:.2e}, rel_vs_dir={rel_blk:.2e}, rel_vs_J7={rel_j7:.2e}", flush=True)
 
     prev = {int(r[0]): list(r) for r in st.get("scalene", np.zeros((0, 9)))}
     prev[J] = [J, M, N, dense_mb, p_mb, itn_blk, t_prec, t_iter, rel_blk]
     st["scalene"] = np.array([prev[k] for k in sorted(prev)])
+    st[f"scalene_E{J}"] = E_blk
+    ex_prev = {int(r[0]): list(r) for r in st.get("scalene_extra", np.zeros((0, 4)))}
+    ex_prev[J] = [J, opt_blk, rel_j7, t_dir]
+    st["scalene_extra"] = np.array([ex_prev[k] for k in sorted(ex_prev)])
     np.savez(NPZ, **st)
     if os.path.exists(tmp_path):
         os.remove(tmp_path)
@@ -564,15 +610,19 @@ def show_summary():
             print(f"  J={int(r[0])} (k={int(r[1])}*2pi): M={int(r[2]):5d}, N={int(r[3]):4d}, A={r[4]:6.1f} MiB vs P={r[5]:5.2f} MiB ({r[4]/r[5]:4.1f}x) | "
                   f"Blk itn={int(r[6]):2d} (prec={r[7]:.2f}s, iter={r[8]:.2f}s, rel_E={r[9]:.2e}) vs Diag itn={int(r[10]):3d} (rel_E={r[11]:.2e})")
     if "scalene" in st:
+        ex = {int(r[0]): r for r in st.get("scalene_extra", np.zeros((0, 4)))}
         print("\n=== Zero-Symmetry Scalene Tetrahedron Matrix-Free Block-QR LSMR (tol_NE = 1e-4) ===")
         for r in st["scalene"]:
-            print(f"  J={int(r[0])}: M={int(r[1]):5d}, N={int(r[2]):4d}, A={r[3]:6.1f} MiB vs P={r[4]:5.1f} MiB ({r[3]/r[4]:4.1f}x) | "
-                  f"Blk itn={int(r[5]):2d} (prec={r[6]:.2f}s, iter={r[7]:.2f}s, rel_E_vs_dir={r[8]:.2e})")
+            J = int(r[0])
+            opt_s = f", opt={ex[J][1]:.2e}, vs_J7={ex[J][2]:.2e}" if J in ex else ""
+            vs_e8 = f", vs_E8={core.rel(st[f'scalene_E{J}'], st['scalene_E8']):.2e}" if (f"scalene_E{J}" in st and "scalene_E8" in st and J < 8) else ""
+            print(f"  J={J}: M={int(r[1]):5d}, N={int(r[2]):5d}, A={r[3]:7.1f} MiB ({r[3]/1024:.2f} GiB) vs P={r[4]:5.1f} MiB ({r[3]/r[4]:4.1f}x) | "
+                  f"Blk itn={int(r[5]):2d} (prec={r[6]:.1f}s, iter={r[7]:.1f}s, tot={r[6]+r[7]:.1f}s, rel_vs_dir={r[8]:.2e}{opt_s}{vs_e8})")
 
 
 if __name__ == "__main__":
     part = sys.argv[sys.argv.index("--part") + 1] if "--part" in sys.argv else "all"
-    step = int(sys.argv[sys.argv.index("--step") + 1]) if "--step" in sys.argv else 30
+    step = int(sys.argv[sys.argv.index("--step") + 1]) if "--step" in sys.argv else 20
     if "--scalene-dir" in sys.argv:
         run_scalene(int(sys.argv[sys.argv.index("--scalene-dir") + 1]), part="dir")
     elif "--scalene-prec" in sys.argv:
