@@ -985,7 +985,7 @@ def eval_line_field(pts, refl, r_act, sgn, t_hat, mids, lam, d, n, k, H, c_pair,
     rot_arr = np.eye(3) if rot is None else np.ascontiguousarray(rot)
     tq, W, off, tlo, thi, ltab, g, gw = build_tree(lam, d, n, H, k)
     c_cart = np.ascontiguousarray(2.0 * np.einsum("ksic,lksmc,cq->lkimq", w, c_pair, rot_arr))
-    n_mom = int(off[min(15, len(off) - 1)])
+    n_mom = int(off[min(511, len(off) - 1)])
     M_mom = np.ascontiguousarray(np.einsum("pm,lkimq->plkiq", W[:n_mom], c_cart))
     _eval_line_field_kernel(pts, refl, np.ascontiguousarray(r_act, np.int64), sgn,
                             np.ascontiguousarray(t_hat, dtype=float), mids, tq, W, off, tlo, thi,
@@ -1081,3 +1081,165 @@ def build_z2_tri(A_tri, ic_a, ic_b, ic_byz, m_row_tri, m_row_ab, lc_b, lc_byz, s
             out[i, col_out] = rt2 * v
         for i in range(nf_r):
             out[np_r + i, col_out] = A_tri[ic_a, m_row_tri[r_fix[i]], c0]
+
+
+@njit(parallel=True, fastmath=True, cache=True)
+def eval_points_adj(pts, refl, sgn, u, y, k, out_a, out_b):
+    """Exact conjugate transpose of eval_points_field for boundary dipoles u[cl, m, 3] = Σ_a Tw[m, a] conj(v[cl, m, a])"""
+    P, ncls, nr, N = pts.shape[0], sgn.shape[0], refl.shape[0], y.shape[0]
+    inv_k = 1.0 / k
+    for j in prange(N):
+        y0, y1, y2 = y[j, 0], y[j, 1], y[j, 2]
+        for m in range(P):
+            for r in range(nr):
+                rx0, rx1, rx2 = refl[r, 0], refl[r, 1], refl[r, 2]
+                d0 = pts[m, 0] * rx0 - y0
+                d1 = pts[m, 1] * rx1 - y1
+                d2 = pts[m, 2] * rx2 - y2
+                r2 = d0 * d0 + d1 * d1 + d2 * d2
+                inv_r = 1.0 / np.sqrt(r2)
+                inv_r2 = inv_r * inv_r
+                kr = k * (r2 * inv_r)
+                ik = inv_r * inv_k
+                ik2 = ik * ik
+                phc = (np.cos(kr) - 1j * np.sin(kr)) * inv_r
+                fIc = (1.0 - ik2 - 1j * ik) * phc
+                fRc = (1.0 - 3.0 * ik2 - 3j * ik) * phc * inv_r2
+                fMc = (-ik - 1j) * phc * inv_r
+                for cl in range(ncls):
+                    sg = sgn[cl, r]
+                    u0 = sg * rx0 * np.conj(u[cl, m, 0])
+                    u1 = sg * rx1 * np.conj(u[cl, m, 1])
+                    u2 = sg * rx2 * np.conj(u[cl, m, 2])
+                    du = fRc * (d0 * u0 + d1 * u1 + d2 * u2)
+                    out_a[cl, j, 0] += fIc * u0 - du * d0
+                    out_a[cl, j, 1] += fIc * u1 - du * d1
+                    out_a[cl, j, 2] += fIc * u2 - du * d2
+                    out_b[cl, j, 0] += fMc * (u1 * d2 - u2 * d1)
+                    out_b[cl, j, 1] += fMc * (u2 * d0 - u0 * d2)
+                    out_b[cl, j, 2] += fMc * (u0 * d1 - u1 * d0)
+
+
+@njit(parallel=True, fastmath=True, cache=True)
+def _eval_line_adj_kernel(pts, refl, r_act, sgn, t_hat, mids, tq, W, off, tlo, thi, ltab, g, gw,
+                          lam, d, n, k, H, n_mom, u, G_mom, Z_cart):
+    """Exact conjugate transpose of _eval_line_field_kernel using moment-panel accumulation on levels < LMOM"""
+    P, na, npos, ncls = pts.shape[0], r_act.shape[0], mids.shape[0], sgn.shape[0]
+    inv_k = 1.0 / k
+    th0, th1, th2 = t_hat[0], t_hat[1], t_hat[2]
+    nch = G_mom.shape[0]
+    for ch in prange(nch):
+        px = np.empty((npos, 3))
+        Wq = np.empty(n)
+        stack_l = np.empty(2 * LHARD + 8, np.int64)
+        stack_i = np.empty(2 * LHARD + 8, np.int64)
+        for m in range(ch, P, nch):
+            for ia in range(na):
+                r = r_act[ia]
+                rx0, rx1, rx2 = refl[r, 0], refl[r, 1], refl[r, 2]
+                xm0, xm1, xm2 = pts[m, 0] * rx0, pts[m, 1] * rx1, pts[m, 2] * rx2
+                pt0 = (xm0 - mids[0, 0]) * th0 + (xm1 - mids[0, 1]) * th1 + (xm2 - mids[0, 2]) * th2
+                rho2 = 1e300
+                for i in range(npos):
+                    px0, px1, px2 = xm0 - mids[i, 0], xm1 - mids[i, 1], xm2 - mids[i, 2]
+                    px[i, 0], px[i, 1], px[i, 2] = px0, px1, px2
+                    pt_i = px0 * th0 + px1 * th1 + px2 * th2
+                    p0, p1, p2 = px0 - pt_i * th0, px1 - pt_i * th1, px2 - pt_i * th2
+                    d2 = p0 * p0 + p1 * p1 + p2 * p2
+                    if d2 < rho2:
+                        rho2 = d2
+
+                sp, stack_l[0], stack_i[0] = 1, 0, 0
+                while sp > 0:
+                    sp -= 1
+                    lev, idx = stack_l[sp], stack_i[sp]
+                    wid = 2.0 / (1 << lev)
+                    p = (1 << lev) - 1 + idx if lev <= ltab else -1
+                    a0 = tlo[p] if p >= 0 else H * np.tanh(0.5 * lam * (-1.0 + wid * idx))
+                    b0 = thi[p] if p >= 0 else H * np.tanh(0.5 * lam * (-1.0 + wid * (idx + 1)))
+                    gap = max(a0 - pt0, 0.0, pt0 - b0)
+                    if b0 - a0 > np.sqrt(rho2 + gap * gap) and lev < LHARD:
+                        stack_l[sp], stack_i[sp], stack_l[sp + 1], stack_i[sp + 1] = lev + 1, 2 * idx, lev + 1, 2 * idx + 1
+                        sp += 2
+                        continue
+                    nq = off[p + 1] - off[p] if p >= 0 else g.shape[0]
+                    for iq in range(nq):
+                        q_idx = off[p] + iq if p >= 0 else -1
+                        if q_idx >= 0:
+                            t = tq[q_idx]
+                        else:
+                            u_loc = -1.0 + wid * (idx + 0.5) + 0.5 * wid * g[iq]
+                            ex = np.exp(lam * u_loc)
+                            t = H * (ex - 1.0) / (ex + 1.0)
+                            Wq[0] = 0.5 * wid * gw[iq] * H * 2.0 * lam * ex / ((ex + 1.0) * (ex + 1.0)) / d
+                            if n > 1:
+                                Wq[1] = Wq[0] * u_loc
+                            for kk in range(2, n):
+                                Wq[kk] = ((2 * kk - 1) * u_loc * Wq[kk - 1] - (kk - 1) * Wq[kk - 2]) / kk
+
+                        for i in range(npos):
+                            d0, d1, d2 = px[i, 0] - t * th0, px[i, 1] - t * th1, px[i, 2] - t * th2
+                            r2 = d0 * d0 + d1 * d1 + d2 * d2
+                            inv_r = 1.0 / np.sqrt(r2)
+                            inv_r2 = inv_r * inv_r
+                            kr = k * (r2 * inv_r)
+                            ik = inv_r * inv_k
+                            ik2 = ik * ik
+                            phc = (np.cos(kr) - 1j * np.sin(kr)) * inv_r
+                            fIc = (1.0 - ik2 - 1j * ik) * phc
+                            fRc = (1.0 - 3.0 * ik2 - 3j * ik) * phc * inv_r2
+                            fMc = (-ik - 1j) * phc * inv_r
+                            for cl in range(ncls):
+                                sg = sgn[cl, r]
+                                u0 = sg * rx0 * np.conj(u[cl, m, 0])
+                                u1 = sg * rx1 * np.conj(u[cl, m, 1])
+                                u2 = sg * rx2 * np.conj(u[cl, m, 2])
+                                du = fRc * (d0 * u0 + d1 * u1 + d2 * u2)
+                                ge0, ge1, ge2 = fIc * u0 - du * d0, fIc * u1 - du * d1, fIc * u2 - du * d2
+                                gm0 = fMc * (u1 * d2 - u2 * d1)
+                                gm1 = fMc * (u2 * d0 - u0 * d2)
+                                gm2 = fMc * (u0 * d1 - u1 * d0)
+                                if 0 <= q_idx < n_mom:
+                                    G_mom[ch, q_idx, cl, 0, i, 0] += ge0
+                                    G_mom[ch, q_idx, cl, 0, i, 1] += ge1
+                                    G_mom[ch, q_idx, cl, 0, i, 2] += ge2
+                                    G_mom[ch, q_idx, cl, 1, i, 0] += gm0
+                                    G_mom[ch, q_idx, cl, 1, i, 1] += gm1
+                                    G_mom[ch, q_idx, cl, 1, i, 2] += gm2
+                                elif q_idx >= 0:
+                                    for kk in range(n):
+                                        wk = W[q_idx, kk]
+                                        Z_cart[ch, cl, 0, i, kk, 0] += wk * ge0
+                                        Z_cart[ch, cl, 0, i, kk, 1] += wk * ge1
+                                        Z_cart[ch, cl, 0, i, kk, 2] += wk * ge2
+                                        Z_cart[ch, cl, 1, i, kk, 0] += wk * gm0
+                                        Z_cart[ch, cl, 1, i, kk, 1] += wk * gm1
+                                        Z_cart[ch, cl, 1, i, kk, 2] += wk * gm2
+                                else:
+                                    for kk in range(n):
+                                        wk = Wq[kk]
+                                        Z_cart[ch, cl, 0, i, kk, 0] += wk * ge0
+                                        Z_cart[ch, cl, 0, i, kk, 1] += wk * ge1
+                                        Z_cart[ch, cl, 0, i, kk, 2] += wk * ge2
+                                        Z_cart[ch, cl, 1, i, kk, 0] += wk * gm0
+                                        Z_cart[ch, cl, 1, i, kk, 1] += wk * gm1
+                                        Z_cart[ch, cl, 1, i, kk, 2] += wk * gm2
+
+
+def eval_line_adj(pts, refl, r_act, sgn, t_hat, mids, lam, d, n, k, H, u, out_pair, rot=None, w=None):
+    """Exact conjugate transpose of eval_line_field, adding mode sensitivities into out_pair[cl, 2, ns, n, 3]"""
+    mids = np.ascontiguousarray(np.atleast_2d(mids), dtype=float)
+    w = np.ones((2, 1, len(mids), 3)) if w is None else np.ascontiguousarray(w)
+    rot_arr = np.eye(3) if rot is None else np.ascontiguousarray(rot)
+    tq, W, off, tlo, thi, ltab, g, gw = build_tree(lam, d, n, H, k)
+    n_mom = int(off[min(511, len(off) - 1)])
+    ncls, npos = sgn.shape[0], len(mids)
+    nch = min(2, max(1, len(pts)))
+    G_mom = np.zeros((nch, n_mom, ncls, 2, npos, 3), np.complex128)
+    Z_cart = np.zeros((nch, ncls, 2, npos, n, 3), np.complex128)
+    _eval_line_adj_kernel(pts, refl, np.ascontiguousarray(r_act, np.int64), sgn,
+                          np.ascontiguousarray(t_hat, dtype=float), mids, tq, W, off, tlo, thi,
+                          ltab, g, gw, lam, d, n, k, H, n_mom, u, G_mom, Z_cart)
+    Z_tot = Z_cart.sum(axis=0) + np.einsum("pm,plkiq->lkimq", W[:n_mom], G_mom.sum(axis=0))
+    out_pair += 2.0 * np.einsum("ksic,lkimq,cq->lksmc", w, Z_tot, rot_arr)
+

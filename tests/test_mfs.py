@@ -210,6 +210,51 @@ def test_scalene_tetrahedron():
     assert core.rel(E3, E4) < 0.4 * core.rel(E2, E4) and i4["optical"] < 0.4 * i2["optical"]
 
 
+def test_iterative_block_qr():
+    # Section 8: matrix-free panel/moment matvec & adjoint match dense A and converge in ~20 block-QR LSMR iterations
+    import sys
+    from scipy.sparse.linalg import LinearOperator, lsmr
+    sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+    from notes import iterative_mfs_bench as ib
+
+    rng = np.random.default_rng(7)
+    c = (-1, 1, 1)
+    cb = cube.Cube(3, classes=[])
+    N, M = cb.unknowns[c], cb.rows
+    Ad = cb.matrix(cb.x, cb.T * cb.rw[:, None, None], [c])[0, :, :N]
+    mv, rmv = ib.cube_mf_ops(cb, c)
+    xr = rng.standard_normal(N) + 1j * rng.standard_normal(N)
+    vr = rng.standard_normal(M) + 1j * rng.standard_normal(M)
+    yx, zv = mv(xr), rmv(vr)
+    assert core.rel(yx, Ad @ xr) < 1e-11 and core.rel(zv, Ad.conj().T @ vr) < 1e-11
+    assert abs(np.vdot(vr, yx) - np.vdot(zv, xr)) / abs(np.vdot(vr, yx)) < 1e-13
+
+    b = -np.einsum("mab,mb->ma", cb.T, core.class_part(cb.x, cb.k, D, P, cube.REFL, c)).reshape(-1) * np.repeat(cb.rw, 2)
+    op = LinearOperator((M, N), matvec=lambda y: Ad @ y, rmatvec=lambda w: Ad.conj().T @ w, dtype=np.complex128)
+    y_sp, *_ = lsmr(op, b, atol=0, btol=0, maxiter=10)
+    y_ne, *_ = ib.lsmr_ne(op.matvec, op.rmatvec, b, tol_ne=0.0, maxiter=10)
+    assert core.rel(y_ne, y_sp) < 1e-13
+
+    kp = np.nonzero(cb.keep[c])[0]
+    g2l = np.full(3 * cb.slot0[-1], -1, np.int64)
+    g2l[kp] = np.arange(N)
+    cg = np.concatenate([np.arange(3 * cb.slot0[1]), np.arange(3 * cb.slot0[-3], 3 * cb.slot0[-1])] +
+                        [np.arange(3 * cb.slot0[1 + i], 3 * cb.slot0[1 + i] + 6 * ln.n)
+                         for i, ln in enumerate(cb.lines) if isinstance(ln, cube.Line) and ln.kind == "e" and not ln.tail and ln.d >= cb.depths[1] - 1e-12])
+    idx0 = g2l[cg[g2l[cg] >= 0]]
+    idxe = [g2l[np.concatenate([np.arange(3 * cb.slot0[1 + i], 3 * cb.slot0[1 + i] + 6 * ln.n)
+                                for i, ln in enumerate(cb.lines) if isinstance(ln, cube.Line) and ln.kind == "e" and ln.ax == ax and (ln.tail or ln.d < cb.depths[1] - 1e-12)])]
+            for ax in range(3)]
+    idxe = [ix[ix >= 0] for ix in idxe]
+    p_inv, p_invH, p_bytes, _ = ib.build_bordered_qr(lambda loc: ib.cube_assemble_cols(cb, c, kp[loc]), idx0, idxe)
+    assert p_bytes < 0.15 * Ad.nbytes
+    y_blk, itn, *_ = ib.lsmr_ne(lambda v: mv(p_inv(v)), lambda w: p_invH(rmv(w)), b, tol_ne=1e-4, maxiter=50)
+    pts = 2.0 * core.fibonacci(60)
+    cb_dir = cube.Cube(3, classes=[c])
+    E_dir = cb.field({c: cb_dir.fac[c].solve(b)}, pts)
+    assert itn < 35 and core.rel(cb.field({c: p_inv(y_blk)}, pts), E_dir) < 5e-4
+
+
 @pytest.mark.skipif(not os.environ.get("MFS_TEST_BEMPP"), reason="set MFS_TEST_BEMPP=1 to test the Bempp comparison")
 def test_bempp_symmetry():
     # Symmetric boundary element solves (Cyclic torus, Mirror cube, tetrahedron & almond), F-ordered fold, chunked assembly
