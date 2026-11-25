@@ -116,7 +116,7 @@ TET_EDGES = np.array([[0.0, -1.0, -1.0], [-1.0, 0.0, -1.0], [-1.0, -1.0, 0.0]]) 
 
 class CubeVertex:
     """
-    Symmetric trihedral vertex spanned by three unit edge vectors V (by default -I, the solid
+    Trihedral vertex spanned by three unit edge vectors V (by default -I, the solid
     octant x, y, z < 0 of the cube; TET_EDGES gives a vertex of the regular tetrahedron). Poles
     lie inside the spherical triangle and cluster exponentially towards its three corners, each
     carrying the fundamental solution and its two tangential derivatives.

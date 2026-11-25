@@ -173,7 +173,7 @@ def test_polyhedra_far_field_contraction():
 
 def test_polyhedra_anisotropic_and_mixed_field():
     # Anisotropic graded_uv reduces boundary rows while preserving accuracy, and mixed near/far .field() is exact
-    u, v, w = cube.graded_uv(8, 4, 28)
+    u, v, w = cube.graded_uv(8, 4)
     sc, w1 = cube.graded_nodes(8, 4)
     assert len(w) < 0.85 * len(sc) ** 2 and abs(w.sum() - w1.sum() ** 2) < 1e-14
     pts_mix = np.vstack((1.15 * core.fibonacci(15), 2.3 * core.fibonacci(15)))
@@ -181,11 +181,54 @@ def test_polyhedra_anisotropic_and_mixed_field():
                        (tetrahedron.Tetrahedron(3, classes=[(-1, 1, -1)]), tetrahedron.A_TET * np.sqrt(3.0) + 2.0 * tetrahedron.H)):
         coef = {obj.classes[0]: np.ones(obj.unknowns[obj.classes[0]], complex)}
         E_mix = obj.field(coef, pts_mix)
-        # Force the tree-descent path by scaling far points inside r_cut? Instead compare point just inside vs outside r_cut:
         u_dir = core.fibonacci(12)
         E_in = obj.field(coef, (r_cut - 1e-9) * u_dir)
         E_out = obj.field(coef, (r_cut + 1e-9) * u_dir)
         assert core.rel(E_out, E_in) < 1e-7 and E_mix.shape == (30, 3)
+        assert obj.solve(D, P, only=())[1] == 0.0
+
+
+def test_dipole_and_deep_panel_kernels():
+    # Compiled point, mid-plane, and deep untabulated line/adjoint kernels match core.dyadic + core.magnetic
+    from mfs import lines
+    rng = np.random.default_rng(11)
+    pts = np.array([[0.35, 0.22, 0.19], [-0.41, 0.18, -0.27]])
+    y = np.array([[0.08, 0.05, 0.0], [0.14, 0.09, 0.0]])
+    al = rng.standard_normal((1, 2, 3)) + 1j * rng.standard_normal((1, 2, 3))
+    bt = rng.standard_normal((1, 2, 3)) + 1j * rng.standard_normal((1, 2, 3))
+    E_ref = np.einsum("mnab,nb->ma", core.dyadic(pts, y, K), al[0]) + np.einsum("mnab,nb->ma", core.magnetic(pts, y, K), bt[0])
+    out = np.zeros((1, 2, 3), complex)
+    lines.eval_points_field(pts, np.ones((1, 3)), np.ones((1, 1)), y, al, bt, float(K), out)
+    assert core.rel(out[0], E_ref) < 1e-14
+
+    T = core.tangent_basis(cone.unit(pts))
+    c_vec = rng.standard_normal((2, 3)) + 1j * rng.standard_normal((2, 3))
+    for sz in (1, -1):
+        A_alm = almond.matrix(pts, y, K, T, (-1, sz))
+        Em = np.zeros((2, 3), complex)
+        almond._eval_midplane(pts, y, c_vec, almond.midplane_comps(sz), -1.0, float(K), Em)
+        assert core.rel(np.einsum("mab,mb->ma", T, Em).ravel(), A_alm @ c_vec.ravel()) < 1e-14
+
+    # Target at perpendicular distance 1e-5 from a line forces untabulated deep panels (lev > ltab)
+    d_ln, n_ln = 0.05, 6
+    lam = np.log((1.0 - d_ln) / d_ln)
+    x_deep = np.array([[0.12, 0.5 - d_ln / np.sqrt(2.0) + 1e-5, 0.5 - d_ln / np.sqrt(2.0)]])
+    T_deep = np.eye(3)[None]
+    mid = np.array([[0.0, 0.5 - d_ln / np.sqrt(2.0), 0.5 - d_ln / np.sqrt(2.0)]])
+    A_deep = np.moveaxis(np.zeros((3, 2 * 3 * n_ln, 1), complex, order="F"), 2, 0)
+    cmap = np.arange(2 * 3 * n_ln, dtype=np.int64)[None, :]
+    lines.line_add(x_deep, T_deep, np.ones((1, 3)), np.zeros(1, np.int64), np.array([1.0, 0.0, 0.0]),
+                   mid, lam, d_ln, n_ln, K, 0.5, A_deep, cmap, np.ones((1, 1)))
+    c_pair = rng.standard_normal((1, 2, n_ln, 3)) + 1j * rng.standard_normal((1, 2, n_ln, 3))
+    out_d = np.zeros((1, 1, 3), complex)
+    lines.eval_line_field(x_deep, np.ones((1, 3)), np.zeros(1, np.int64), np.ones((1, 1)),
+                          np.array([1.0, 0.0, 0.0]), mid, lam, d_ln, n_ln, K, 0.5, c_pair, out_d)
+    assert core.rel(out_d[0, 0], A_deep[0] @ c_pair.ravel()) < 1e-13
+    u_d = rng.standard_normal((1, 1, 3)) + 1j * rng.standard_normal((1, 1, 3))
+    adj_d = np.zeros((1, 2, n_ln, 3), complex)
+    lines.eval_line_adj(x_deep, np.ones((1, 3)), np.zeros(1, np.int64), np.ones((1, 1)),
+                        np.array([1.0, 0.0, 0.0]), mid, lam, d_ln, n_ln, K, 0.5, u_d, adj_d)
+    assert core.rel(adj_d.ravel(), A_deep[0].conj().T @ np.conj(u_d[0, 0])) < 1e-13
 
 
 def test_cone():
@@ -202,12 +245,25 @@ def test_cone():
 
 
 def test_scalene_tetrahedron():
-    # Section 5.6: zero-symmetry scalene convex tetrahedron converges across levels with decreasing optical mismatch
+    # Section 5.6: zero-symmetry scalene convex tetrahedron converges across levels, chunked path & far field match
     pts = 2.0 * core.fibonacci(50)
     E2, _, i2 = tetrahedron.solve_scalene(2, DW, PW, pts=pts, q=0.5)
+    E2_chk, _, i2_chk = tetrahedron.solve_scalene(2, DW, PW, pts=pts, q=0.5, max_gb=1e-6)
+    assert core.rel(E2_chk, E2) < 1e-10 and abs(i2_chk["residual"] - i2["residual"]) < 1e-7
     E3, _, i3 = tetrahedron.solve_scalene(3, DW, PW, pts=pts, q=0.5)
     E4, _, i4 = tetrahedron.solve_scalene(4, DW, PW, pts=pts, q=0.5)
     assert core.rel(E3, E4) < 0.4 * core.rel(E2, E4) and i4["optical"] < 0.4 * i2["optical"]
+
+    dirs = core.fibonacci(20)
+    r_inf = 1e6
+    phase = r_inf * np.exp(-1j * K * r_inf)
+    pr = tetrahedron.ScaleneTetrahedron(2, q=0.5)
+    rng = np.random.default_rng(3)
+    cf = rng.standard_normal(pr.n_unknowns) + 1j * rng.standard_normal(pr.n_unknowns)
+    assert core.rel(pr.far(cf, dirs), phase * pr.field(cf, r_inf * dirs)) < 2e-5
+    ka = 2 * np.pi * 1.19e9 / almond.C0
+    src_a, c_a, E_a_inf, _ = almond.nose_on(ka, 3, 0, r_inf * dirs)
+    assert core.rel(almond.far(ka, src_a[0], c_a, dirs, (-1, 1), src_a[1]), r_inf * np.exp(-1j * ka * r_inf) * E_a_inf) < 2e-5
 
 
 def test_iterative_block_qr():
@@ -276,13 +332,15 @@ def test_bempp_symmetry():
     E_full, _ = bem.efie(grid_t, K, D, P, pts)
     assert core.rel(E_sym, E_full) < 1e-10
     div_t = bem.bempp.function_space(grid_t, "RWG", 0)
-    assert core.rel(bem.assemble_rows(div_t, K, np.array([0, 3, 7]), max_gb=1e-6), bem.assemble_rows(div_t, K, np.array([0, 3, 7]))) < 1e-14
+    assert core.rel(bem.assemble_rows(div_t, K, np.array([7, 0, 3]), max_gb=1e-6), bem.assemble_rows(div_t, K, np.array([7, 0, 3]))) < 1e-14
     Ec_sym, _ = bem.cube(4, 1.5, K, DW, PW, pts)
     Ec_full, _ = bem.efie(bem.cube_grid(4, 1.5)[0], K, DW, PW, pts)
     assert core.rel(Ec_sym, Ec_full) < 5e-5
     Et_sym, _ = bem.tetrahedron(6, 1.8, K, DW, PW, pts)
     Et_full, _ = bem.efie(bem.tetrahedron_grid(6, 1.8)[0], K, DW, PW, pts)
     assert core.rel(Et_sym, Et_full) < 1e-12
+    g_sc = bem.scalene_tetrahedron_grid(tetrahedron.SCALENE_VERTS, 4, 1.8)
+    assert bem.bempp.function_space(g_sc, "RWG", 0).global_dof_count == 144
     ka, pt_a = 2 * np.pi * 1.19e9 / almond.C0, 0.3 * core.fibonacci(30)
     Ea_sym, _ = bem.almond(12, 12, ka, DW, PW, pt_a)
     q = 3

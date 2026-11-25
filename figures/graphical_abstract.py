@@ -20,7 +20,7 @@ H = cube.H
 layout = cube.Cube(5, classes=[])
 depths = layout.depths
 tail = depths[-1] * 0.5 ** np.arange(1, 7)
-nodes = np.unique(layout.x[layout.x[:, 0] < H, 0])
+nodes = cube.graded_nodes(max(2, int(np.ceil(np.log2(H / depths[-1])))), 4, H / 4)[0]
 ax.fill([0, H, H, 0], [0, 0, H, H], color=BODY, lw=0, zorder=0)
 ax.plot([0, H, H], [H, H, 0], color=INK, lw=1.25, zorder=2)
 ax.plot([0, H], [0, H], color=MUTED, lw=0.8, ls=(0, (4, 3)), zorder=1)
@@ -29,7 +29,7 @@ ax.plot(np.full_like(nodes, H + 0.006), nodes, ".", color=INK, ms=2.1, zorder=3)
 
 c = np.sqrt(0.5)
 ax.plot(H - depths * c, H - depths * c, "o", color=BLUE, ms=3.9, mec="white", mew=0.45, zorder=4, label="free lines")
-ax.plot(H - tail * c, H - tail * c, "o", mfc="white", mec=ORANGE, ms=3.2, mew=0.8, zorder=5, label=r"tail ($r^e$)")
+ax.plot(H - tail * c, H - tail * c, "o", mfc="white", mec=ORANGE, ms=3.2, mew=0.8, zorder=5, label=r"tail ($2^{-ie}$)")
 s = np.array([0.075, 0.225])
 ax.plot(s, np.full_like(s, H - 0.2), "s", color=GREEN, ms=3.5, mec="white", mew=0.4, zorder=3, label="base dipoles")
 ax.plot(np.full_like(s, H - 0.2), s, "s", color=GREEN, ms=3.5, mec="white", mew=0.4, zorder=3)

@@ -12,23 +12,14 @@ from style import BLUE, BODY, GREEN, INK, MUTED, ORANGE, RUST, finish, plt
 from mfs import almond, cube
 
 
-def _cube_panel_breaks(levels, hmax=cube.H / 4):
-    H = cube.H
-    dist = np.concatenate(([0.0], H * 0.5 ** np.arange(levels, -1, -1)))
-    brk = [0.0]
-    for a, b in zip(dist[:-1], dist[1:]):
-        n = int(np.ceil((b - a) / hmax))
-        brk.extend(a + (b - a) * np.arange(1, n + 1) / n)
-    return H - np.array(brk)[::-1]
-
-
 def cube_layout(J=6, fname="fig_cube_layout"):
     """Figure 3: the source and boundary collocation layout of the cube at level J"""
     H, layout = cube.H, cube.Cube(J, classes=[])
     depths = layout.depths
     tail = depths[-1] * 0.5 ** np.arange(1, 10)
-    ends = _cube_panel_breaks(max(2, int(np.ceil(np.log2(H / depths[-1])))), H / 4)
-    nodes = np.unique(layout.x[layout.x[:, 0] < H, 0])
+    levels = max(2, int(np.ceil(np.log2(H / depths[-1]))))
+    ends = cube.panel_breaks(levels, H / 4)
+    nodes = cube.graded_nodes(levels, 4, H / 4)[0]
     c = np.sqrt(0.5)
 
     fig, axs = plt.subplots(1, 3, figsize=(7.5, 3.2), gridspec_kw=dict(width_ratios=[1.08, 1.15, 1.02]))
@@ -116,7 +107,7 @@ def cube_layout(J=6, fname="fig_cube_layout"):
     ax.text(depths[0], y_src + 0.15, "$d_0$", ha="center", fontsize=7.6, color=INK)
     ax.text(depths[-1] * 1.18, 0.05, r"$d_{\min}$", ha="left", va="center", fontsize=7.6, color=MUTED)
     ax.text(5.2e-2, y_src - 0.13, "free lines\n(2 / octave)", ha="center", va="top", fontsize=7.1, color=BLUE)
-    ax.text(6.5e-5, y_src - 0.13, "singular tail\n(1 / oct, $r^e$)", ha="center", va="top", fontsize=7.1, color=ORANGE)
+    ax.text(6.5e-5, y_src - 0.13, "singular tail\n(1 / oct, $2^{-ie}$)", ha="center", va="top", fontsize=7.1, color=ORANGE)
 
     ax.set(xscale="log", xlim=(2.5e-6, 0.65), ylim=(-0.55, 0.46), yticks=[], xlabel=r"distance / depth from edge (log scale)")
     ax.set_box_aspect(0.92)

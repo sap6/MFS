@@ -1,4 +1,4 @@
-# JCP submission checklist (21 November 2026)
+# JCP submission checklist (24 November 2026)
 
 Checked against the Elsevier guide for authors of the Journal of
 Computational Physics. The guide itself could not be downloaded from this
@@ -9,7 +9,7 @@ guide.
 | Rule | Ours | Status |
 |---|---|---|
 | Abstract at most 250 words | 237 words | done |
-| Highlights: 3 to 5 bullets, at most 85 characters each, including spaces (encouraged, not required) | 5 bullets, 71 to 76 characters (`73` to `78` with `- `, `paper/highlights.txt`) | done |
+| Highlights: 3 to 5 bullets, at most 85 characters each, including spaces (encouraged, not required) | 5 bullets, 69 to 76 characters (`71` to `78` with `- `, `paper/highlights.txt`) | done |
 | Keywords: 1 to 7, in English; avoid multi-word terms joined by "and" or "of" | 6 keywords | "Method of Fundamental Solutions" contains "of", but it is the name of the method, so I would keep it |
 | Declaration of competing interest | missing | **authors**: template in `main.tex` (commented) |
 | CRediT authorship statement (required from the corresponding author) | missing | **authors**: template with suggested roles in `main.tex` |
@@ -20,7 +20,7 @@ guide.
 | Graphical abstract (encouraged, optional) | `figures/fig_graphical_abstract.pdf` / `.png` (`figures/graphical_abstract.py`) | done |
 | Cover letter | `notes/cover_letter_jcp.md` | done (fill `[Submission Date]`) |
 | Reference style: numbered (elsarticle-num) | elsarticle-num | done |
-| Length | no page limit known; 24 pages in the journal `3p,times` layout (40 preprint pages), concise and accessible | fine |
+| Length | no page limit known; 24 pages in the journal `3p,times` layout (41 preprint pages), concise and accessible | fine |
 
 The JCP home page also says the journal "strongly encourages authors to
 make available all software or data that would allow published results to

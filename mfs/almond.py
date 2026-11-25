@@ -11,10 +11,12 @@ The almond is symmetric under y → -y and z → -z, so a wave splits into four
 parity classes, each solved on a quarter of the body.
 """
 import math
+
 import numpy as np
 from numba import njit, prange
 
 from .core import class_part, cross_sections, factor, sphere_rule, tangent_basis
+from .lines import _dipole_factors
 
 L = 9.936 * 0.0254                                          # exact 9.936 in benchmark length [m] (0.2523744 m)
 T0, T1 = -0.416667, 0.58333                                 # rear end and tip, in units of L
@@ -57,56 +59,28 @@ def _block(x, T, y, comps, sy, k, out):
     for n in prange(N):
         yn0, yn1, yn2 = y[n, 0], y[n, 1], y[n, 2]
         col = 3 * n
+        g6 = np.empty((nc, 6), np.complex128)
         for m in range(M):
-            mt = m * tmul
-            row = m * nc
-            dx0_p = x[m, 0] - yn0
-            dx1_p = x[m, 1] - yn1
-            dx2_p = x[m, 2] - yn2
-            r2_p = dx0_p * dx0_p + dx1_p * dx1_p + dx2_p * dx2_p
-            ir_p = 1.0 / np.sqrt(r2_p)
-            kr_p = k * (r2_p * ir_p)
-            ik_p = ir_p * inv_k
-            ik2_p = ik_p * ik_p
-            ph_p = (np.cos(kr_p) + 1j * np.sin(kr_p)) * ir_p
-            fI_p = (1.0 + 1j * ik_p - ik2_p) * ph_p
-            fR_p = (1.0 + 3j * ik_p - 3.0 * ik2_p) * ph_p * (ir_p * ir_p)
-            fm_p = (1j - ik_p) * ph_p * ir_p
-
-            dx1_m = -x[m, 1] - yn1
-            r2_m = dx0_p * dx0_p + dx1_m * dx1_m + dx2_p * dx2_p
-            ir_m = 1.0 / np.sqrt(r2_m)
-            kr_m = k * (r2_m * ir_m)
-            ik_m = ir_m * inv_k
-            ik2_m = ik_m * ik_m
-            ph_m = (np.cos(kr_m) + 1j * np.sin(kr_m)) * ir_m
-            fI_m = (1.0 + 1j * ik_m - ik2_m) * ph_m
-            fR_m = (1.0 + 3j * ik_m - 3.0 * ik2_m) * ph_m * (ir_m * ir_m)
-            fm_m = (1j - ik_m) * ph_m * ir_m
-            sg_m = 2.0 * sy
-
+            mt, row = m * tmul, m * nc
+            g6[:] = 0.0j
+            for g in range(2):
+                ry = 1.0 if g == 0 else -1.0
+                sg = 2.0 if g == 0 else 2.0 * sy
+                dx0, dx1, dx2 = x[m, 0] - yn0, ry * x[m, 1] - yn1, x[m, 2] - yn2
+                fI, fR, fM = _dipole_factors(dx0, dx1, dx2, k, inv_k, 1.0)
+                for a in range(nc):
+                    t0, t1, t2 = T[mt, a, 0], ry * T[mt, a, 1], T[mt, a, 2]
+                    td = fR * (t0 * dx0 + t1 * dx1 + t2 * dx2)
+                    g6[a, 0] += sg * (fI * t0 - td * dx0)
+                    g6[a, 1] += sg * (fI * t1 - td * dx1)
+                    g6[a, 2] += sg * (fI * t2 - td * dx2)
+                    g6[a, 3] += sg * fM * (t1 * dx2 - t2 * dx1)
+                    g6[a, 4] += sg * fM * (t2 * dx0 - t0 * dx2)
+                    g6[a, 5] += sg * fM * (t0 * dx1 - t1 * dx0)
             for a in range(nc):
-                t0, t1, t2 = T[mt, a, 0], T[mt, a, 1], T[mt, a, 2]
-                td_p = fR_p * (t0 * dx0_p + t1 * dx1_p + t2 * dx2_p)
-                ge0 = 2.0 * (fI_p * t0 - td_p * dx0_p)
-                ge1 = 2.0 * (fI_p * t1 - td_p * dx1_p)
-                ge2 = 2.0 * (fI_p * t2 - td_p * dx2_p)
-                gm0 = 2.0 * fm_p * (t1 * dx2_p - t2 * dx1_p)
-                gm1 = 2.0 * fm_p * (t2 * dx0_p - t0 * dx2_p)
-                gm2 = 2.0 * fm_p * (t0 * dx1_p - t1 * dx0_p)
-
-                t1m = -t1
-                td_m = fR_m * (t0 * dx0_p + t1m * dx1_m + t2 * dx2_p)
-                ge0 += sg_m * (fI_m * t0 - td_m * dx0_p)
-                ge1 += sg_m * (fI_m * t1m - td_m * dx1_m)
-                ge2 += sg_m * (fI_m * t2 - td_m * dx2_p)
-                gm0 += sg_m * fm_m * (t1m * dx2_p - t2 * dx1_m)
-                gm1 += sg_m * fm_m * (t2 * dx0_p - t0 * dx2_p)
-                gm2 += sg_m * fm_m * (t0 * dx1_m - t1m * dx0_p)
-
-                out[row + a, col] = ge0 if c0 == 0 else (ge1 if c0 == 1 else (ge2 if c0 == 2 else (gm0 if c0 == 3 else (gm1 if c0 == 4 else gm2))))
-                out[row + a, col + 1] = ge0 if c1 == 0 else (ge1 if c1 == 1 else (ge2 if c1 == 2 else (gm0 if c1 == 3 else (gm1 if c1 == 4 else gm2))))
-                out[row + a, col + 2] = ge0 if c2 == 0 else (ge1 if c2 == 1 else (ge2 if c2 == 2 else (gm0 if c2 == 3 else (gm1 if c2 == 4 else gm2))))
+                out[row + a, col] = g6[a, c0]
+                out[row + a, col + 1] = g6[a, c1]
+                out[row + a, col + 2] = g6[a, c2]
 
 
 @njit(parallel=True, fastmath=True, cache=True)
@@ -116,6 +90,7 @@ def _eval_midplane(pts, y, c_vec, comps, sy, k, out):
     inv_k = 1.0 / k
     c0, c1, c2 = comps[0], comps[1], comps[2]
     for m in prange(P):
+        ab = np.zeros(6, np.complex128)
         s0, s1, s2 = 0.0j, 0.0j, 0.0j
         for g in range(2):
             ry = 1.0 if g == 0 else -1.0
@@ -123,37 +98,15 @@ def _eval_midplane(pts, y, c_vec, comps, sy, k, out):
             px0, px1, px2 = pts[m, 0], pts[m, 1] * ry, pts[m, 2]
             e0, e1, e2 = 0.0j, 0.0j, 0.0j
             for n in range(N):
-                dx0 = px0 - y[n, 0]
-                dx1 = px1 - y[n, 1]
-                dx2 = px2 - y[n, 2]
-                r2 = dx0 * dx0 + dx1 * dx1 + dx2 * dx2
-                inv_r = 1.0 / np.sqrt(r2)
-                kr = k * (r2 * inv_r)
-                ik = inv_r * inv_k
-                ik2 = ik * ik
-                ph = (np.cos(kr) + 1j * np.sin(kr)) * inv_r
-                fI = (1.0 + 1j * ik - ik2) * ph
-                fR = (1.0 + 3j * ik - 3.0 * ik2) * ph * (inv_r * inv_r)
-                fm = (1j - ik) * ph * inv_r
-                ax, ay, az, bx, by, bz = 0.0j, 0.0j, 0.0j, 0.0j, 0.0j, 0.0j
-                for idx, cid in ((0, c0), (1, c1), (2, c2)):
-                    v = c_vec[n, idx]
-                    if cid == 0:
-                        ax = v
-                    elif cid == 1:
-                        ay = v
-                    elif cid == 2:
-                        az = v
-                    elif cid == 3:
-                        bx = v
-                    elif cid == 4:
-                        by = v
-                    else:
-                        bz = v
+                dx0, dx1, dx2 = px0 - y[n, 0], px1 - y[n, 1], px2 - y[n, 2]
+                fI, fR, fM = _dipole_factors(dx0, dx1, dx2, k, inv_k, 1.0)
+                ab[:] = 0.0j
+                ab[c0], ab[c1], ab[c2] = c_vec[n, 0], c_vec[n, 1], c_vec[n, 2]
+                ax, ay, az, bx, by, bz = ab[0], ab[1], ab[2], ab[3], ab[4], ab[5]
                 da = fR * (dx0 * ax + dx1 * ay + dx2 * az)
-                e0 += fI * ax - da * dx0 + fm * (dx1 * bz - dx2 * by)
-                e1 += fI * ay - da * dx1 + fm * (dx2 * bx - dx0 * bz)
-                e2 += fI * az - da * dx2 + fm * (dx0 * by - dx1 * bx)
+                e0 += fI * ax - da * dx0 + fM * (dx1 * bz - dx2 * by)
+                e1 += fI * ay - da * dx1 + fM * (dx2 * bx - dx0 * bz)
+                e2 += fI * az - da * dx2 + fM * (dx0 * by - dx1 * bx)
             s0 += sg * e0
             s1 += sg * ry * e1
             s2 += sg * e2
@@ -162,12 +115,12 @@ def _eval_midplane(pts, y, c_vec, comps, sy, k, out):
 
 @njit(parallel=True, fastmath=True, cache=True)
 def _far_midplane(dirs, y, c_mat, comps, sy, k, diag, out):
-    """Exact r -> inf far-field pattern for W waves; if diag=True, dirs has shape (W, 3) and out has shape (W, 3)"""
+    """Exact r -> inf far-field pattern for W waves; if diag=True, dirs has shape (W, 3) and out has shape (W, 3, 1)"""
     D, N, W = dirs.shape[0], y.shape[0], c_mat.shape[2]
     c0, c1, c2 = comps[0], comps[1], comps[2]
     for m in prange(D):
-        w0 = m if diag else 0
-        w1 = m + 1 if diag else W
+        ab = np.zeros(6, np.complex128)
+        w0, w1 = (m, m + 1) if diag else (0, W)
         for w in range(w0, w1):
             s0, s1, s2 = 0.0j, 0.0j, 0.0j
             for g in range(2):
@@ -178,21 +131,9 @@ def _far_midplane(dirs, y, c_mat, comps, sy, k, diag, out):
                 for n in range(N):
                     ang = -k * (d0 * y[n, 0] + d1 * y[n, 1] + d2 * y[n, 2])
                     ph = np.cos(ang) + 1j * np.sin(ang)
-                    ax, ay, az, bx, by, bz = 0.0j, 0.0j, 0.0j, 0.0j, 0.0j, 0.0j
-                    for idx, cid in ((0, c0), (1, c1), (2, c2)):
-                        v = c_mat[n, idx, w]
-                        if cid == 0:
-                            ax = v
-                        elif cid == 1:
-                            ay = v
-                        elif cid == 2:
-                            az = v
-                        elif cid == 3:
-                            bx = v
-                        elif cid == 4:
-                            by = v
-                        else:
-                            bz = v
+                    ab[:] = 0.0j
+                    ab[c0], ab[c1], ab[c2] = c_mat[n, 0, w], c_mat[n, 1, w], c_mat[n, 2, w]
+                    ax, ay, az, bx, by, bz = ab[0], ab[1], ab[2], ab[3], ab[4], ab[5]
                     da = d0 * ax + d1 * ay + d2 * az
                     fm = 1j * ph
                     e0 += ph * (ax - da * d0) + fm * (d1 * bz - d2 * by)
@@ -201,10 +142,8 @@ def _far_midplane(dirs, y, c_mat, comps, sy, k, diag, out):
                 s0 += sg * e0
                 s1 += sg * ry * e1
                 s2 += sg * e2
-            if diag:
-                out[m, 0, 0], out[m, 1, 0], out[m, 2, 0] = s0, s1, s2
-            else:
-                out[m, 0, w], out[m, 1, w], out[m, 2, w] = s0, s1, s2
+            iw = 0 if diag else w
+            out[m, 0, iw], out[m, 1, iw], out[m, 2, iw] = s0, s1, s2
 
 
 def tail_weights(tail, cls, n_e=2, n_m=1):
@@ -327,47 +266,8 @@ def surface_point(u, phi, rear):
     return np.stack((x * np.ones_like(phi), a * np.cos(phi), b * np.sin(phi)), axis=-1)
 
 
-def _count_collocation(s, hmax, tip_cut=0.002, end_cut=0.02):
-    """Fast scalar count of collocation points without forming surface arrays or finite-difference normals"""
-    rings, phi = [], 0.0
-    while phi < math.pi / 2:
-        sp, cp = math.sin(phi), math.cos(phi)
-        sp9, cp9 = math.sin(phi + 1e-9), math.cos(phi + 1e-9)
-        rd = math.sqrt((sp9 / 3.0) ** 2 + max(0.0, cp9 - ETA_F) ** 2)
-        dphi = min(s * rd / math.sqrt(sp * sp + cp * cp / 9.0), hmax / B_, math.pi / 2 - phi)
-        rings.append((phi + 0.5 * dphi, dphi))
-        phi += dphi
-    cnt = 0
-    for phi, _ in rings:
-        sp, cp = math.sin(phi), math.cos(phi)
-        rd = math.sqrt((sp / 3.0) ** 2 + max(0.0, cp - ETA_F) ** 2)
-        cf = cp * cp + sp * sp / 9.0
-        for rear in (False, True):
-            u, u_end = 0.0, ((math.pi / 2 - end_cut) if rear else L * (T1 - tip_cut))
-            while u < u_end:
-                if rear:
-                    cu, su = math.cos(u), math.sin(u)
-                    a = B_ * cu
-                    metric = math.sqrt((A_ * cu) ** 2 + (B_ * su) ** 2 * cf)
-                else:
-                    t = u / L
-                    a = 4.83345 * (math.sqrt(max(0.0, 1.0 - (t / 2.08335) ** 2)) - 0.96) * L
-                    metric = 1.0
-                du = min(min(s * a * rd, hmax) / metric, u_end - u)
-                cnt += 1
-                u += du
-    return cnt
-
-
-def collocation(s=0.35, hmax=0.012, tip_cut=0.002, end_cut=0.02):
-    """
-    Boundary points that refine towards the rim, as the sources do
-      Returns points (M, 3), area weights (M,) and outward normals (M, 3)
-    """
-    key = (round(float(s), 12), round(float(hmax), 12), tip_cut, end_cut)
-    if key in _COLLOC_CACHE:
-        return _COLLOC_CACHE[key]
-
+def _collocation_steps(s, hmax, tip_cut=0.002, end_cut=0.02):
+    """Azimuthal rings and axial step intervals on the quarter y, z >= 0, refining towards the rim"""
     def rel_dist(phi):                                          # distance to the focal curve, relative to the half-width
         return math.sqrt((math.sin(phi) / 3.0) ** 2 + max(0.0, math.cos(phi) - ETA_F) ** 2)
 
@@ -378,7 +278,7 @@ def collocation(s=0.35, hmax=0.012, tip_cut=0.002, end_cut=0.02):
         rings.append((phi + 0.5 * dphi, dphi))
         phi += dphi
 
-    pts, wts, nrm, e = [], [], [], 1e-7
+    steps = []
     for phi, dphi in rings:
         rd, cf = rel_dist(phi), math.cos(phi) ** 2 + math.sin(phi) ** 2 / 9.0
         for rear in (False, True):
@@ -386,8 +286,7 @@ def collocation(s=0.35, hmax=0.012, tip_cut=0.002, end_cut=0.02):
             while u < u_end:
                 if rear:
                     cu, su = math.cos(u), math.sin(u)
-                    a = B_ * cu
-                    metric = math.sqrt((A_ * cu) ** 2 + (B_ * su) ** 2 * cf)
+                    a, metric = B_ * cu, math.sqrt((A_ * cu) ** 2 + (B_ * su) ** 2 * cf)
                 else:
                     t = u / L
                     a = max(0.0, 4.83345 * (math.sqrt(max(0.0, 1.0 - (t / 2.08335) ** 2)) - 0.96) * L)
@@ -396,15 +295,34 @@ def collocation(s=0.35, hmax=0.012, tip_cut=0.002, end_cut=0.02):
                 ums.append(u + 0.5 * du)
                 dus.append(du)
                 u += du
-            um, du = np.array(ums), np.array(dus)
-            ph = np.full_like(um, phi)
-            pu = (surface_point(um + e, ph, rear) - surface_point(um - e, ph, rear)) / (2 * e)
-            pp = (surface_point(um, ph + e, rear) - surface_point(um, ph - e, rear)) / (2 * e)
-            n = np.cross(pu, pp)
-            ln = np.linalg.norm(n, axis=1)
-            pts.append(surface_point(um, ph, rear))
-            wts.append(ln * du * dphi)
-            nrm.append((n if rear else -n) / ln[:, None])       # u runs towards -x on the rear and +x on the front
+            steps.append((phi, dphi, rear, ums, dus))
+    return steps
+
+
+def _count_collocation(s, hmax, tip_cut=0.002, end_cut=0.02):
+    """Fast scalar count of collocation points without forming surface arrays or finite-difference normals"""
+    return sum(len(ums) for *_, ums, _ in _collocation_steps(s, hmax, tip_cut, end_cut))
+
+
+def collocation(s=0.35, hmax=0.012, tip_cut=0.002, end_cut=0.02):
+    """
+    Boundary points that refine towards the rim, as the sources do
+      Returns points (M, 3), area weights (M,) and outward normals (M, 3)
+    """
+    key = (round(float(s), 12), round(float(hmax), 12), tip_cut, end_cut)
+    if key in _COLLOC_CACHE:
+        return _COLLOC_CACHE[key]
+    pts, wts, nrm, e = [], [], [], 1e-7
+    for phi, dphi, rear, ums, dus in _collocation_steps(s, hmax, tip_cut, end_cut):
+        um, du = np.array(ums), np.array(dus)
+        ph = np.full_like(um, phi)
+        pu = (surface_point(um + e, ph, rear) - surface_point(um - e, ph, rear)) / (2 * e)
+        pp = (surface_point(um, ph + e, rear) - surface_point(um, ph - e, rear)) / (2 * e)
+        n = np.cross(pu, pp)
+        ln = np.linalg.norm(n, axis=1)
+        pts.append(surface_point(um, ph, rear))
+        wts.append(ln * du * dphi)
+        nrm.append((n if rear else -n) / ln[:, None])       # u runs towards -x on the rear and +x on the front
     out = (np.vstack(pts), np.concatenate(wts), np.vstack(nrm))
     if len(_COLLOC_CACHE) >= 8:
         _COLLOC_CACHE.clear()

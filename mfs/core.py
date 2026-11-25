@@ -63,6 +63,17 @@ def magnetic(x, y, k):
     return f[..., None, None] * np.cross(np.eye(3), e[..., None, :])   # the matrix of β → e × β
 
 
+@njit(fastmath=True, inline="always")
+def _electric_factors(dx0, dx1, dx2, k, inv_k):
+    r2 = dx0 * dx0 + dx1 * dx1 + dx2 * dx2
+    inv_r = 1.0 / np.sqrt(r2)
+    kr = k * (r2 * inv_r)
+    ik = inv_r * inv_k
+    ik2 = ik * ik
+    ph = (np.cos(kr) + 1j * np.sin(kr)) * inv_r
+    return (1.0 + 1j * ik - ik2) * ph, (1.0 + 3j * ik - 3.0 * ik2) * ph * (inv_r * inv_r)
+
+
 @njit(parallel=True, fastmath=True, cache=True)
 def electric_block(x, T, y, k, out):
     """out[m * nc + a, 3 * n + c] = T[m, a] · G(x[m], y[n]) e_c, assembled columnwise into F-ordered out"""
@@ -73,19 +84,9 @@ def electric_block(x, T, y, k, out):
         yn0, yn1, yn2 = y[n, 0], y[n, 1], y[n, 2]
         c0 = 3 * n
         for m in range(M):
-            dx0 = x[m, 0] - yn0
-            dx1 = x[m, 1] - yn1
-            dx2 = x[m, 2] - yn2
-            r2 = dx0 * dx0 + dx1 * dx1 + dx2 * dx2
-            inv_r = 1.0 / np.sqrt(r2)
-            kr = k * (r2 * inv_r)
-            ik = inv_r * inv_k
-            ik2 = ik * ik
-            ph = (np.cos(kr) + 1j * np.sin(kr)) * inv_r
-            fI = (1.0 + 1j * ik - ik2) * ph
-            fR = (1.0 + 3j * ik - 3.0 * ik2) * ph * (inv_r * inv_r)
-            mt = m * tmul
-            row = m * nc
+            dx0, dx1, dx2 = x[m, 0] - yn0, x[m, 1] - yn1, x[m, 2] - yn2
+            fI, fR = _electric_factors(dx0, dx1, dx2, k, inv_k)
+            mt, row = m * tmul, m * nc
             for a in range(nc):
                 t0, t1, t2 = T[mt, a, 0], T[mt, a, 1], T[mt, a, 2]
                 td = fR * (t0 * dx0 + t1 * dx1 + t2 * dx2)
@@ -102,17 +103,8 @@ def _field_kernel(pts, y, alpha, k, out):
         px0, px1, px2 = pts[i, 0], pts[i, 1], pts[i, 2]
         s0, s1, s2 = 0.0j, 0.0j, 0.0j
         for j in range(N):
-            dx0 = px0 - y[j, 0]
-            dx1 = px1 - y[j, 1]
-            dx2 = px2 - y[j, 2]
-            r2 = dx0 * dx0 + dx1 * dx1 + dx2 * dx2
-            inv_r = 1.0 / np.sqrt(r2)
-            kr = k * (r2 * inv_r)
-            ik = inv_r * inv_k
-            ik2 = ik * ik
-            ph = (np.cos(kr) + 1j * np.sin(kr)) * inv_r
-            fI = (1.0 + 1j * ik - ik2) * ph
-            fR = (1.0 + 3j * ik - 3.0 * ik2) * ph * (inv_r * inv_r)
+            dx0, dx1, dx2 = px0 - y[j, 0], px1 - y[j, 1], px2 - y[j, 2]
+            fI, fR = _electric_factors(dx0, dx1, dx2, k, inv_k)
             a0, a1, a2 = alpha[j, 0], alpha[j, 1], alpha[j, 2]
             da = fR * (dx0 * a0 + dx1 * a1 + dx2 * a2)
             s0 += fI * a0 - da * dx0
@@ -145,7 +137,7 @@ def tangent_basis(n):
     return np.stack((t1, np.cross(n, t1)), axis=1)
 
 
-def field(pts, y, alpha, k, batch=400):
+def field(pts, y, alpha, k):
     """
     E_N(x) = Σ_j G(x, y_j) α_j, evaluated without forming the 4-tensor G
       pts  : evaluation points, shape (P, 3)

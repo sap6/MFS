@@ -21,7 +21,7 @@ sphere, a torus, a cube, a regular tetrahedron and the NASA almond:
 
 ![Source layout on the skeleton of the cube](figures/fig_cube_layout.png)
 
-*Source layout on the cube at level $J = 6$ (Figure 3 of the paper): free dipole lines on the edge-bisector plane down to $d_{\min}$, followed by a nine-line singular tail with fixed power-law weights. Whereas dipoles on a scaled inner cube stall above 20% error, this layout converges root-exponentially down to $2\times10^{-5}$.*
+*Source layout on the cube at level $J = 6$ (Figure 3 of the paper): free dipole lines on the edge-bisector plane down to $d_{\min}$, followed by a nine-line singular tail with fixed power-law weights. Whereas dipoles on a scaled inner cube stall above 20% error, this layout converges root-exponentially down to $2\times10^{-5}$ ($6.8\times10^{-6}$ at $J = 11$).*
 
 ![Error against wall time for the MFS and for Bempp](figures/fig_cost_all.png)
 
@@ -90,7 +90,7 @@ involve Bempp need `pip install -e ".[bempp]"`.
 | Figures 3 and 9: source layouts | [`figures/layouts.py`](figures/layouts.py) | (a drawing) |
 | Figure 4: the wedge at an edge | [`figures/wedge.py`](figures/wedge.py) | (a sketch) |
 | Figure 5: the residual near an edge | [`figures/edge_residual.py`](figures/edge_residual.py) | 1 minute |
-| Figure 6, Table 2: convergence on the cube | [`figures/cube_convergence.py`](figures/cube_convergence.py) | 8 minutes, Bempp 8 more |
+| Figure 6, Table 2: convergence on the cube | [`figures/cube_convergence.py`](figures/cube_convergence.py) | 12 minutes, Bempp 8 more |
 | Figure 7, Table 5: other waves and larger cubes | [`figures/cube_cases.py`](figures/cube_cases.py) | 30 to 65 minutes per case (`--run CASE`: `k1`, `k1o`, `k2`, `k3`; `--scan CASE`: 2 hours) |
 | Figure 8: the regular tetrahedron | [`figures/tetrahedron.py`](figures/tetrahedron.py) | 12 minutes |
 | Figure 10, Table 3: almond radar cross-section | [`figures/almond_rcs.py`](figures/almond_rcs.py) | 12 minutes |
@@ -117,7 +117,7 @@ kept the smaller time of each configuration.
 | [`tests/`](tests) | checks against exact solutions and against the stored results of the paper |
 | [`paper/`](paper) | the manuscript in LaTeX |
 | [`thesis/`](thesis) | the notebooks of the MSci thesis, as submitted |
-| [`notes/`](notes) | our research log: what was tried, what failed, derivations, literature |
+| [`notes/`](notes) | our research log, derivations, literature, number/inline checks (`paper_numbers.py`, `verify_inline_checks.py`), and Section 5.6/8 auxiliary benchmark scripts (`scalene_tetrahedron_bench.py`, `iterative_mfs_bench.py`, `cube_k4_check.py`, `nonconvex_check.py`) |
 
 The scripts of every experiment in the research log are in the git history: run
 `git checkout 9f5a721 -- validation` to restore the folder.

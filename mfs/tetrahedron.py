@@ -1,14 +1,14 @@
 """
 Scattering by the perfectly conducting regular tetrahedron of unit edge length
 (Section 5.6 of the paper), with vertices (a, a, a), (a, -a, -a), (-a, a, -a)
-and (-a, -a, a), a = 1 / (2 sqrt(2)).
+and (-a, -a, a), a = 1 / (2 sqrt(2)), together with zero-symmetry convex tetrahedra.
 
 By Theorem 1 the sources lie on the skeleton, the six triangular bisector walls
-joining the edges to the origin:
+joining the edges to the insphere centre (the origin for the regular tetrahedron):
   * edge lines parallel to each edge at the depths d_j = 0.14 q^j down to d_min = 0.14 · 2^{-J},
     meeting the 0.56-scaled inner tetrahedron (edge depth (1 - 0.56)/(2 sqrt(2)) = 0.156),
     each with an electric and a magnetic dipole density (Legendre modes in a stretched variable);
-  * vertex points on the four rays from the origin to the vertices, and a uniform grid of
+  * vertex points on the four rays from the centre to the vertices, and a uniform grid of
     electric dipoles on the faces of an inner tetrahedron;
   * singular tails: nine sub-lines below d_min weighted by the wedge exponents gamma = pi / Phi
     (Phi = 2 pi - arccos(1/3), irrational), and radial nine-point tails on the central ray and
@@ -28,7 +28,7 @@ from scipy.linalg import blas
 
 from . import cone, lines
 from .core import class_part, classes_of, cross_sections, factor, plane_wave, sign, sphere_rule, tangent_basis
-from .cube import ROT, graded_uv, orbits
+from .cube import ROT, Skeleton, graded_uv, orbits
 
 H = 0.5                                                              # half edge length
 A_TET = 0.5 / np.sqrt(2.0)                                           # vertex coordinate for unit edge length
@@ -52,19 +52,14 @@ class Line:
         b_hat = np.zeros(3)
         b_hat[ax] = -1.0
         self.t_hat = t_hat
-        self.F = np.ascontiguousarray(np.vstack((t_hat, b_hat, np.cross(t_hat, b_hat))))
+        self.rot = np.ascontiguousarray(np.vstack((t_hat, b_hat, np.cross(t_hat, b_hat))))
         self.r_act = np.array([r for r in range(4) if REFL[r, (ax + 1) % 3] > 0], np.int64)
         self.lam = np.log((1.0 - 1.5 * d) / (1.5 * d))          # |t| <= 1/2 - 1.5 d stays inside the skeleton wall (1.5 > sqrt(2))
         r = 0.5 ** np.arange(1, 10) if tail else np.ones(1)
         mid0 = np.zeros(3)
         mid0[ax] = A_TET
         self.mids = np.ascontiguousarray(mid0[None, :] + (d * r)[:, None] * b_hat[None, :])
-        if tail:
-            e = np.array(TAIL_E[kind] + (2.0,))
-            self.w = r[None, :, None] ** e[None, None, :]
-            self.w[:, -1, :] /= 1.0 - 0.5 ** e
-        else:
-            self.w = np.ones((1, 1, 3))
+        self.w = lines.geom_weights(TAIL_E[kind] + (2.0,)).T[None, :, :] if tail else None
 
     def keep(self, cls):
         """Columns kept by parity class cls under the half-turn REFL[1 + self.ax] that maps the edge to itself"""
@@ -76,29 +71,35 @@ class Line:
         return kept
 
 
-def face_kites(su, sv, w2):
-    """Three kites covering F_0, graded towards all three edges and vertices (su, sv -> 0.5 is U, V -> 0)"""
-    c0, U, V, W2 = FACE0.mean(axis=0), 1.0 - 2.0 * su, 1.0 - 2.0 * sv, 4.0 * w2
-    pts, wts = [], []
+def _tri_kites(fverts, su, sv, wuv, nu1s):
+    """Three graded kites covering triangle fverts (3, 3), with corner weights r_v^{1 - 2 nu1s[i]}"""
+    c0, U, V, W2 = fverts.mean(axis=0), 1.0 - 2.0 * su, 1.0 - 2.0 * sv, 4.0 * wuv
+    pts, wts, rfac = [], [], []
     for i in range(3):
-        A, M1, M2 = FACE0[i], 0.5 * (FACE0[i] + FACE0[(i + 1) % 3]), 0.5 * (FACE0[i] + FACE0[(i + 2) % 3])
-        pts.append(((1 - U) * (1 - V))[:, None] * A + ((1 - U) * V)[:, None] * M1 + (U * (1 - V))[:, None] * M2 + (U * V)[:, None] * c0)
+        A, M1, M2 = fverts[i], 0.5 * (fverts[i] + fverts[(i + 1) % 3]), 0.5 * (fverts[i] + fverts[(i + 2) % 3])
+        pk = ((1 - U) * (1 - V))[:, None] * A + ((1 - U) * V)[:, None] * M1 + (U * (1 - V))[:, None] * M2 + (U * V)[:, None] * c0
         du = -(1 - V)[:, None] * A - V[:, None] * M1 + (1 - V)[:, None] * M2 + V[:, None] * c0
         dv = -(1 - U)[:, None] * A + (1 - U)[:, None] * M1 - U[:, None] * M2 + U[:, None] * c0
+        pts.append(pk)
         wts.append(np.linalg.norm(np.cross(du, dv), axis=1) * W2)
+        rfac.append(np.linalg.norm(pk - A, axis=1) ** (1.0 - 2.0 * nu1s[i]))
     pts = np.vstack(pts)
-    dists = [np.linalg.norm(pts - (FACE0[i] + np.clip((pts - FACE0[i]) @ (FACE0[(i + 1) % 3] - FACE0[i]), 0.0, 1.0)[:, None]
-                                   * (FACE0[(i + 1) % 3] - FACE0[i])), axis=1) for i in range(3)]
-    return pts, np.concatenate(wts), np.min(dists, axis=0)
+    dists = [np.linalg.norm(pts - (fverts[i] + np.clip(((pts - fverts[i]) @ (fverts[(i + 1) % 3] - fverts[i]))
+             / float(np.sum((fverts[(i + 1) % 3] - fverts[i]) ** 2)), 0.0, 1.0)[:, None]
+             * (fverts[(i + 1) % 3] - fverts[i])), axis=1) for i in range(3)]
+    return pts, np.concatenate(wts), np.min(dists, axis=0), np.concatenate(rfac)
 
 
-class Tetrahedron:
+class Tetrahedron(Skeleton):
     """
     MFS for the regular tetrahedron of unit edge length at level J (smallest depth 0.14 · 2^{-J}).
       q      : depth ratio, 2^{-1/2} (two per octave) or 1/2
       tails  : with or without the edge and corner singular tails
       J=None : plain inner-tetrahedron layout (n_base barycentric order per face) that stalls
     """
+    refl = REFL
+    r_far = A_TET * np.sqrt(3.0) + 2.0 * H
+
     def __init__(self, J, k=2 * np.pi, q=2 ** -0.5, extra_modes=None, tails=True, classes=CLASSES, n_base=12):
         self.k, self.classes, self.tails = k, [tuple(c) for c in classes], bool(tails and J is not None)
         s = max(0.0, k / (2 * np.pi) - 1.0)
@@ -130,16 +131,12 @@ class Tetrahedron:
                 b_hat = np.zeros(3)
                 b_hat[ax] = -1.0
                 for fr in (0.8, 0.4, 0.2):
-                    vec = t_hat - (fr / np.sqrt(2.0)) * b_hat
-                    ray_dirs.append(vec / np.linalg.norm(vec))
+                    ray_dirs.append(cone.unit(t_hat - (fr / np.sqrt(2.0)) * b_hat))
             r_steps = 0.5 ** np.arange(1, 10)
-            ee, em = np.array(NU) + 2.0, np.array(TAU) + 2.0
-            self.we = r_steps[None, :] ** ee[:, None]
-            self.we[:, -1] /= 1.0 - 0.5 ** ee
-            self.wm = r_steps[None, :] ** em[:, None]
-            self.wm[:, -1] /= 1.0 - 0.5 ** em
+            self.we = lines.geom_weights(np.array(NU) + 2.0)
+            self.wm = lines.geom_weights(np.array(TAU) + 2.0)
             self.ray_pts = np.array([VERTS[0][None, :] - (1.2 * self.depths[-1] * r_steps)[:, None] * rd[None, :] for rd in ray_dirs])
-            n_ray_slots = len(ray_dirs) * (len(ee) + len(em))
+            n_ray_slots = len(ray_dirs) * (len(self.we) + len(self.wm))
 
         sizes = [len(self.pe) + len(self.pm)] + [ln.n for ln in self.lines] + ([n_ray_slots] if n_ray_slots else [])
         self.slot0 = np.cumsum([0] + sizes)
@@ -152,11 +149,10 @@ class Tetrahedron:
         ng = 2 + max(m, 1 + int(np.ceil(0.5 * s)))
         d_min = self.depths[-1] if len(self.depths) else 0.14
         levels = max(2, int(np.ceil(np.log2(2 * H / d_min))))
-        su, sv, wuv = graded_uv(levels, ng, 0, min(H / 4, np.pi / (2 * k)))
-        self.x, W, dist = face_kites(su, sv, wuv)
+        su, sv, wuv = graded_uv(levels, ng, min(H / 4, np.pi / (2 * k)))
+        self.x, W, dist, rfac = _tri_kites(FACE0, su, sv, wuv, [NU[0]] * 3)
         self.T = tangent_basis(np.tile(-v_hat, (len(self.x), 1)))
-        rv = np.min([np.linalg.norm(self.x - v, axis=1) for v in FACE0], axis=0)
-        self.rw = np.sqrt(W * dist * (rv ** (1.0 - 2.0 * NU[0])))
+        self.rw = np.sqrt(W * dist * rfac)
         self.rows = 2 * len(self.x)
 
         self.fac, self.t_assemble, self.t_factor = {}, 0.0, 0.0
@@ -168,38 +164,11 @@ class Tetrahedron:
         self.fac = {c: factor(A[i, :, :self.unknowns[c]], overwrite=True) for i, c in enumerate(self.classes)}
         self.t_factor = time.time() - t0
 
-    def matrix(self, x, T, classes):
-        nmax = max(self.unknowns[c] for c in classes)
-        cmap = np.full((len(classes), 3 * self.slot0[-1]), -1, np.int64)
-        for i, c in enumerate(classes):
-            cmap[i, self.keep[c]] = np.arange(self.unknowns[c])
-        T = np.eye(3)[None] if T is None else np.ascontiguousarray(T)
-        A = np.moveaxis(np.zeros((len(x) * T.shape[1], nmax, len(classes)), complex, order="F"), 2, 0)
-        sgn = np.array([[sign(c, R) for R in REFL] for c in classes])
-        x = np.ascontiguousarray(x)
-        lines.points_add(x, T, REFL, self.pe, self.pm, self.k, A, np.ascontiguousarray(cmap[:, 0]), sgn)
-        for i, ln in enumerate(self.lines):
-            if ln.kind == "e":
-                lo = 3 * self.slot0[1 + i]
-                w = np.ascontiguousarray(np.stack((ln.w, self.lines[i + 1].w)))
-                lines.line_add(x, T, REFL, ln.r_act, ln.t_hat, ln.mids, ln.lam, ln.d, ln.n, self.k, H, A,
-                               cmap[:, lo:lo + 6 * ln.n], sgn, rot=ln.F, w=w)
-        if self.tails:
-            lo = 3 * self.slot0[-2]
-            ne_cols = len(self.ray_pts) * len(self.we) * 3
-            lines.radial_tails_add(x, T, REFL, self.ray_pts, self.we, self.wm, self.k, A,
-                                   np.ascontiguousarray(cmap[:, lo]), np.ascontiguousarray(cmap[:, lo + ne_cols]), sgn)
-        return A
-
-    def solve(self, d, p, only=None):
-        coef, r2, b2 = {}, 0.0, 0.0
-        for c in classes_of(self.k, d, p, REFL):
-            if only is not None and c not in only:
-                continue
-            b = -np.einsum("mab,mb->ma", self.T, class_part(self.x, self.k, d, p, REFL, c)).reshape(-1) * np.repeat(self.rw, 2)
-            coef[c], res = self.fac[c].solve(b, residual=True)
-            r2, b2 = r2 + float(res) ** 2, b2 + np.linalg.norm(b) ** 2
-        return coef, np.sqrt(r2 / b2), b2
+    def _add_vertex_tails(self, x, T, A, cmap, sgn):
+        lo = 3 * self.slot0[-2]
+        ne_cols = len(self.ray_pts) * len(self.we) * 3
+        lines.radial_tails_add(x, T, REFL, self.ray_pts, self.we, self.wm, self.k, A,
+                               np.ascontiguousarray(cmap[:, lo]), np.ascontiguousarray(cmap[:, lo + ne_cols]), sgn)
 
     def _unpack_points(self, cl, c_all):
         ncls, ne, nm = len(cl), len(self.pe), len(self.pm)
@@ -220,89 +189,13 @@ class Tetrahedron:
             beta[:, ne:] = np.einsum("lrmc,mt->lrtc", cm_ray, self.wm).reshape(ncls, n_ray, 3)
         return np.ascontiguousarray(y_pt), np.ascontiguousarray(alpha), np.ascontiguousarray(beta)
 
-    def _unpack_lines(self, ncls, c_all):
-        by_ax = {0: ([], [], []), 1: ([], [], []), 2: ([], [], [])}
-        for i, ln in enumerate(self.lines):
-            if ln.kind == "e":
-                lo = 3 * self.slot0[1 + i]
-                c_pair = c_all[:, lo:lo + 6 * ln.n].reshape(ncls, 2, 1, ln.n, 3)
-                w = np.stack((ln.w, self.lines[i + 1].w))
-                tq, W, off, *_ = lines.build_tree(ln.lam, ln.d, ln.n, H, self.k)
-                pm_n = int(off[1])
-                c_cart = 2.0 * np.einsum("ksic,lksmc,cq->lkimq", w, c_pair, ln.F)
-                M0 = np.einsum("pm,lkimq->lkpiq", W[:pm_n], c_cart).reshape(ncls, 2, -1, 3)
-                ys = (ln.mids[None, :, :] + tq[:pm_n, None, None] * ln.t_hat[None, None, :]).reshape(-1, 3)
-                by_ax[ln.ax][0].append(ys)
-                by_ax[ln.ax][1].append(M0[:, 0])
-                by_ax[ln.ax][2].append(M0[:, 1])
-        return by_ax
-
-    def field(self, coef, pts, batch=1000):
-        pts = np.ascontiguousarray(pts, dtype=float)
-        if not len(pts) or not coef:
-            return np.zeros((len(pts), 3), complex)
-        cl = list(coef)
-        ncls = len(cl)
-        c_all = np.zeros((ncls, 3 * self.slot0[-1]), complex)
-        for j, c in enumerate(cl):
-            c_all[j, self.keep[c]] = coef[c]
-        sgn = np.array([[sign(c, R) for R in REFL] for c in cl])
-        y_pt, alpha, beta = self._unpack_points(cl, c_all)
-        out = np.zeros((ncls, len(pts), 3), complex)
-        lines.eval_points_field(pts, REFL, sgn, y_pt, alpha, beta, float(self.k), out)
-        line_entries = [(i, ln) for i, ln in enumerate(self.lines) if ln.kind == "e"]
-        if not line_entries:
-            return out.sum(axis=0)
-
-        far_mask = np.linalg.norm(pts, axis=1) >= A_TET * np.sqrt(3.0) + 2.0 * H + 1e-9
-        if np.any(far_mask):
-            pts_f = np.ascontiguousarray(pts[far_mask])
-            out_f = np.zeros((ncls, len(pts_f), 3), complex)
-            for ax, (yl, al, bl) in self._unpack_lines(ncls, c_all).items():
-                if yl:
-                    r_act = np.array([ri for ri in range(4) if REFL[ri, (ax + 1) % 3] > 0], np.int64)
-                    lines.eval_points_field(pts_f, np.ascontiguousarray(REFL[r_act]), np.ascontiguousarray(sgn[:, r_act]),
-                                            np.ascontiguousarray(np.vstack(yl)),
-                                            np.ascontiguousarray(np.concatenate(al, axis=1)),
-                                            np.ascontiguousarray(np.concatenate(bl, axis=1)), float(self.k), out_f)
-            out[:, far_mask] += out_f
-
-        if np.any(~far_mask):
-            pts_n = np.ascontiguousarray(pts[~far_mask])
-            out_n = np.zeros((ncls, len(pts_n), 3), complex)
-            for i, ln in line_entries:
-                lo = 3 * self.slot0[1 + i]
-                c_pair = c_all[:, lo:lo + 6 * ln.n].reshape(ncls, 2, 1, ln.n, 3)
-                w = np.stack((ln.w, self.lines[i + 1].w))
-                lines.eval_line_field(pts_n, REFL, ln.r_act, sgn, ln.t_hat, ln.mids, ln.lam, ln.d, ln.n,
-                                      float(self.k), H, c_pair, out_n, rot=ln.F, w=w)
-            out[:, ~far_mask] += out_n
-        return out.sum(axis=0)
-
-    def far(self, coef, dirs):
-        dirs = np.ascontiguousarray(dirs, dtype=float)
-        if not len(dirs) or not coef:
-            return np.zeros((len(dirs), 3), complex)
-        cl = list(coef)
-        ncls = len(cl)
-        c_all = np.zeros((ncls, 3 * self.slot0[-1]), complex)
-        for j, c in enumerate(cl):
-            c_all[j, self.keep[c]] = coef[c]
-        sgn = np.array([[sign(c, R) for R in REFL] for c in cl])
-        y_pt, alpha, beta = self._unpack_points(cl, c_all)
-        out = np.zeros((ncls, len(dirs), 3), complex)
-        lines.eval_far_dipoles(dirs, REFL, np.arange(4, dtype=np.int64), sgn, y_pt, alpha, beta, float(self.k), out)
-        for ax, (yl, al, bl) in self._unpack_lines(ncls, c_all).items():
-            if yl:
-                r_act = np.array([ri for ri in range(4) if REFL[ri, (ax + 1) % 3] > 0], np.int64)
-                lines.eval_far_dipoles(dirs, REFL, r_act, sgn, np.ascontiguousarray(np.vstack(yl)),
-                                       np.ascontiguousarray(np.concatenate(al, axis=1)),
-                                       np.ascontiguousarray(np.concatenate(bl, axis=1)), float(self.k), out)
-        return out.sum(axis=0)
-
 
 def solve(J, d=(0, 0, -1.0), p=(0, 1.0, 0), pts=None, k=2 * np.pi, max_gb=None, **layout):
-    """One plane wave at level J using D_2 and the one-third turn about (1, 1, 1) (at most two matrices)"""
+    """
+    One plane wave on the regular tetrahedron at level J, using D_2 and the one-third turn about (1, 1, 1)
+      pts: evaluation points, shape (P, 3), or None
+      Returns the scattered field at pts, the wall time, and a dictionary of checks
+    """
     if max_gb is None:
         pages = os.sysconf("SC_PHYS_PAGES") if "SC_PHYS_PAGES" in getattr(os, "sysconf_names", ()) else -1
         ram = pages * os.sysconf("SC_PAGE_SIZE") / 2 ** 30 if pages > 0 else 12.0
@@ -366,25 +259,6 @@ SCALENE_EXP = [                                                      # 5-digit s
     ((0.30948, 1.07668), (0.92297,)), ((0.34176, 1.12037), (0.90798,)),
 ]
 _REFL1, _RACT1, _SGN1, _CONE_CACHE = np.ones((1, 3)), np.zeros(1, np.int64), np.ones((1, 1)), {}
-
-
-def _tri_kites(fverts, su, sv, wuv, nu1s):
-    """Three graded kites on an arbitrary triangle fverts (3, 3) with local corner exponents nu1s"""
-    c0, U, V, W2 = fverts.mean(axis=0), 1.0 - 2.0 * su, 1.0 - 2.0 * sv, 4.0 * wuv
-    pts, wts, rfac = [], [], []
-    for i in range(3):
-        A, M1, M2 = fverts[i], 0.5 * (fverts[i] + fverts[(i + 1) % 3]), 0.5 * (fverts[i] + fverts[(i + 2) % 3])
-        pk = ((1 - U) * (1 - V))[:, None] * A + ((1 - U) * V)[:, None] * M1 + (U * (1 - V))[:, None] * M2 + (U * V)[:, None] * c0
-        du = -(1 - V)[:, None] * A - V[:, None] * M1 + (1 - V)[:, None] * M2 + V[:, None] * c0
-        dv = -(1 - U)[:, None] * A + (1 - U)[:, None] * M1 - U[:, None] * M2 + U[:, None] * c0
-        pts.append(pk)
-        wts.append(np.linalg.norm(np.cross(du, dv), axis=1) * W2)
-        rfac.append(np.linalg.norm(pk - A, axis=1) ** (1.0 - 2.0 * nu1s[i]))
-    pts = np.vstack(pts)
-    dists = [np.linalg.norm(pts - (fverts[i] + np.clip(((pts - fverts[i]) @ (fverts[(i + 1) % 3] - fverts[i]))
-             / float(np.sum((fverts[(i + 1) % 3] - fverts[i]) ** 2)), 0.0, 1.0)[:, None]
-             * (fverts[(i + 1) % 3] - fverts[i])), axis=1) for i in range(3)]
-    return pts, np.concatenate(wts), np.min(dists, axis=0), np.concatenate(rfac)
 
 
 class ScaleneTetrahedron:
@@ -451,12 +325,8 @@ class ScaleneTetrahedron:
                 n, lam = ln_last[5], ln_last[3]
                 q_e = ln_last[2][0] - d_min * b_hat                  # shift purely along b_hat so Meixner modes stay unsheared
                 mids = np.ascontiguousarray(q_e[None, :] + (d_min * r_st)[:, None] * b_hat[None, :])
-                w_pair = np.zeros((2, 1, 9, 3))
-                for ki, (e0, e1) in enumerate(((gamma, gamma + 1.0), (2 * gamma, 2 * gamma + 1.0))):
-                    ev = np.array([e0, e1, 2.0])
-                    wv = r_st[:, None] ** ev[None, :]
-                    wv[-1] /= 1.0 - 0.5 ** ev
-                    w_pair[ki, 0] = wv
+                w_pair = np.stack([lines.geom_weights((e0, e1, 2.0)).T[None, :, :]
+                                   for e0, e1 in ((gamma, gamma + 1.0), (2 * gamma, 2 * gamma + 1.0))])
                 self.lines.append((0.5 * L, t_hat, mids, lam, d_min, n, F, np.ascontiguousarray(w_pair), True))
 
         if np.allclose(V, SCALENE_VERTS, atol=1e-12):
@@ -482,17 +352,16 @@ class ScaleneTetrahedron:
                         t_out, tan_ev = (-t_hat, tan_a) if v == a else (t_hat, tan_b)
                         for fr in (0.8, 0.4, 0.2):
                             ray_dirs.append(cone.unit(t_out - (fr * tan_ev) * b_hat))
-                ee, em = np.array(nu_v) + 2.0, np.array(tau_v) + 2.0
-                we = r_st[None, :] ** ee[:, None]; we[:, -1] /= 1.0 - 0.5 ** ee
-                wm = r_st[None, :] ** em[:, None]; wm[:, -1] /= 1.0 - 0.5 ** em
+                we = lines.geom_weights(np.array(nu_v) + 2.0)
+                wm = lines.geom_weights(np.array(tau_v) + 2.0)
                 rpts = np.ascontiguousarray([V[v][None, :] - (1.2 * self.depths[-1] * r_st)[:, None] * rd[None, :] for rd in ray_dirs])
-                nc_e, nc_m = len(ray_dirs) * len(ee) * 3, len(ray_dirs) * len(em) * 3
+                nc_e, nc_m = len(ray_dirs) * len(we) * 3, len(ray_dirs) * len(wm) * 3
                 self.v_tails.append((rpts, np.ascontiguousarray(we), np.ascontiguousarray(wm), nc_e, nc_m))
                 n_vt_cols += nc_e + nc_m
 
         col = 3 * (len(self.pe) + len(self.pm))
         self.line_cmaps = []
-        for H_e, t_hat, mids, lam, d, n, F, w_pair, is_tail in self.lines:
+        for *_, n, _, _, is_tail in self.lines:
             cm = np.full((1, 6 * n), -1, np.int64)
             for kind in range(2):
                 for kk in range(n):
@@ -506,7 +375,7 @@ class ScaleneTetrahedron:
         ng = 3 + int(np.ceil(0.5 * s))
         d_min = self.depths[-1] if len(self.depths) else d0
         levels = max(2, int(np.ceil(np.log2(L_mean / d_min))))
-        su, sv, wuv = graded_uv(levels, ng, 0, min(0.125, np.pi / (2 * k * L_mean)))
+        su, sv, wuv = graded_uv(levels, ng, min(0.125, np.pi / (2 * k * L_mean)))
         xs, Ts, rws = [], [], []
         for f in range(4):
             idx_v = [j for j in range(4) if j != f]
@@ -548,6 +417,7 @@ class ScaleneTetrahedron:
         return np.ascontiguousarray(np.vstack(y_list)), np.ascontiguousarray(np.concatenate(a_list, axis=1)), np.ascontiguousarray(np.concatenate(b_list, axis=1))
 
     def field(self, coef, pts):
+        """Scattered field at pts (P, 3), evaluated directly from mode coefficients without forming A"""
         pts = np.ascontiguousarray(pts, dtype=float)
         if not len(pts):
             return np.zeros((0, 3), complex)
@@ -559,10 +429,11 @@ class ScaleneTetrahedron:
             act = cm[0] >= 0
             c_pair[0, act] = coef[cm[0, act]]
             lines.eval_line_field(pts, _REFL1, _RACT1, _SGN1, t_hat, mids, lam, dp, n, self.k, H_e,
-                                  c_pair.reshape(1, 2, 1, n, 3), out, rot=F, w=w_pair if is_tail else None)
+                                  c_pair, out, rot=F, w=w_pair if is_tail else None)
         return out[0]
 
     def far(self, coef, dirs):
+        """Exact r -> infinity far-field pattern F, with E ~ F e^{ikr}/r, in directions dirs (D, 3)"""
         dirs = np.ascontiguousarray(dirs, dtype=float)
         if not len(dirs):
             return np.zeros((0, 3), complex)
@@ -576,7 +447,7 @@ class ScaleneTetrahedron:
             c_pair[0, act] = coef[cm[0, act]]
             tq, W, off, *_ = lines.build_tree(lam, dp, n, H_e, self.k)
             pm_n = int(off[1])
-            c_cart = 2.0 * np.einsum("ksic,lksmc,cq->lkimq", w_pair, c_pair.reshape(1, 2, 1, n, 3), F)
+            c_cart = 2.0 * np.einsum("kic,lkmc,cq->lkimq", w_pair.reshape(2, len(mids), 3), c_pair.reshape(1, 2, n, 3), F)
             M0 = np.einsum("pm,lkimq->lkpiq", W[:pm_n], c_cart).reshape(1, 2, -1, 3)
             ys_l.append((mids[None, :, :] + tq[:pm_n, None, None] * t_hat[None, None, :]).reshape(-1, 3))
             al_l.append(M0[:, 0])
@@ -588,8 +459,13 @@ class ScaleneTetrahedron:
         return out[0]
 
 
-def solve_scalene(J, d=(0, 0, -1.0), p=(0, 1.0, 0), pts=None, k=2 * np.pi, verts=SCALENE_VERTS, **layout):
-    """One plane wave on a zero-symmetry convex tetrahedron (chunking A^H A face-by-face above 1.2 GB)"""
+def solve_scalene(J, d=(0, 0, -1.0), p=(0, 1.0, 0), pts=None, k=2 * np.pi, verts=SCALENE_VERTS, max_gb=1.2, **layout):
+    """
+    One plane wave on a zero-symmetry convex tetrahedron (chunking A^H A face-by-face above max_gb)
+      pts  : evaluation points, shape (P, 3), or None
+      verts: vertex coordinates, shape (4, 3)
+      Returns the scattered field at pts, the wall time, and a dictionary of checks
+    """
     d, p = np.asarray(d, float), np.asarray(p, float)
     pts = None if pts is None else np.asarray(pts, float)
     t0 = time.time()
@@ -599,7 +475,7 @@ def solve_scalene(J, d=(0, 0, -1.0), p=(0, 1.0, 0), pts=None, k=2 * np.pi, verts
     b = -np.einsum("mab,mb->ma", probe.T, plane_wave(probe.x, k, d, p)).reshape(-1) * np.repeat(probe.rw, 2)
     b2 = float(np.linalg.norm(b) ** 2)
 
-    if 16.0 * probe.rows * N <= 1.2 * 2 ** 30:
+    if 16.0 * probe.rows * N <= max_gb * 2 ** 30:
         ta0 = time.time()
         A = np.moveaxis(np.zeros((probe.rows, N, 1), complex, order="F"), 2, 0)
         probe._assemble_into(probe.x, Tw, A)
@@ -624,7 +500,7 @@ def solve_scalene(J, d=(0, 0, -1.0), p=(0, 1.0, 0), pts=None, k=2 * np.pi, verts
             blas.zherk(1.0, A_sub[0], beta=1.0, c=G, trans=2, lower=0, overwrite_c=1)
             rhs += blas.zgemv(1.0, A_sub[0], b[2 * m0:2 * m1], trans=2)
             tf_acc += time.time() - tf1
-        del A_buf
+        del A_buf, A_sub
         t_asm, tf2 = (time.time() - ta0) - tf_acc, time.time()
         scale = np.sqrt(np.real(np.diag(G)))
         G /= scale[:, None]

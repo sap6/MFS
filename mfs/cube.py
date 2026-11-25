@@ -3,7 +3,7 @@ Scattering by the perfectly conducting unit cube [-1/2, 1/2]³ (Section 5 of the
 By Theorem 1 the sources lie on the skeleton, the twelve bisector planes of the edges:
   * edge lines parallel to each edge at the depths d_j = 0.2 q^j down to d_min = 0.2 · 2^{-J},
     each with an electric and a magnetic dipole density (Legendre modes in a stretched variable);
-  * vertex points: electric and magnetic dipoles on the body diagonals at the same depths;
+  * vertex points: electric and magnetic dipoles on the body diagonals at depths 0.2 · 2^{-j/max(2,m)};
   * base points: an 8 × 8 grid of electric dipoles on each face of an inner cube;
   * singular tails: nine more lines below d_min (and nine points below the deepest vertex
     point), tied with weights from the edge and vertex exponents.
@@ -50,54 +50,46 @@ def orbits(classes):
     return orbit
 
 
-def graded_nodes(levels, ng, hmax=H / 4):
-    """Gauss-Legendre nodes on (0, H): ng per panel, panels halving towards H, none longer than hmax"""
-    dist = np.concatenate(([0.0], H * 0.5 ** np.arange(levels, -1, -1)))   # distance from the edge
-    brk = [0.0]
-    for a, b in zip(dist[:-1], dist[1:]):
-        n = int(np.ceil((b - a) / hmax))
-        brk.extend(a + (b - a) * np.arange(1, n + 1) / n)
-    ends = H - np.array(brk)[::-1]
-    a, b = ends[:-1, None], ends[1:, None]
-    g, w = np.polynomial.legendre.leggauss(ng)
-    return (0.5 * (a + b) + 0.5 * (b - a) * g).ravel(), (0.5 * (b - a) * w).ravel()
-
-
-def graded_uv(levels, ng, n_max=0, hmax=H / 4):
-    """
-    Anisotropic Gauss-Legendre rule on (0, H)²: panels halve towards u = H and v = H,
-    with ng × ng nodes near the corner (|p - q| <= 1) and ng across the nearer edge times
-    max(3, ng - 1) along it away from the corner (|p - q| >= 2)
-    """
+def panel_breaks(levels, hmax=H / 4):
+    """Dyadic panel endpoints on [0, H], halving towards H with no panel longer than hmax"""
     dist = np.concatenate(([0.0], H * 0.5 ** np.arange(levels, -1, -1)))
     brk = [0.0]
     for a, b in zip(dist[:-1], dist[1:]):
         n = int(np.ceil((b - a) / hmax))
         brk.extend(a + (b - a) * np.arange(1, n + 1) / n)
-    ends = H - np.array(brk)[::-1]
+    return H - np.array(brk)[::-1]
+
+
+def graded_nodes(levels, ng, hmax=H / 4):
+    """Gauss-Legendre nodes on (0, H): ng per panel, panels halving towards H, none longer than hmax"""
+    ends = panel_breaks(levels, hmax)
+    a, b = ends[:-1, None], ends[1:, None]
+    g, w = np.polynomial.legendre.leggauss(ng)
+    return (0.5 * (a + b) + 0.5 * (b - a) * g).ravel(), (0.5 * (b - a) * w).ravel()
+
+
+def graded_uv(levels, ng, hmax=H / 4):
+    """
+    Anisotropic Gauss-Legendre rule on (0, H)²: panels halve towards u = H and v = H,
+    with ng × ng nodes near the corner (|p - q| <= 1) and ng across the nearer edge times
+    max(3, ng - 1) along it away from the corner (|p - q| >= 2)
+    """
+    ends = panel_breaks(levels, hmax)
     a, b = ends[:-1], ends[1:]
-    P = len(a)
-    ng_t = max(3, ng - 1)
+    P, ng_t = len(a), max(3, ng - 1)
     rules = {n: np.polynomial.legendre.leggauss(n) for n in {ng, ng_t}}
     us, vs, ws = [], [], []
     for p in range(P):
         for q in range(P):
-            if abs(p - q) <= 1:
-                nu, nv = ng, ng
-            elif q > p:
-                nu, nv = ng_t, ng
-            else:
-                nu, nv = ng, ng_t
+            nu, nv = (ng, ng) if abs(p - q) <= 1 else ((ng_t, ng) if q > p else (ng, ng_t))
             gu, wu = rules[nu]
             gv, wv = rules[nv]
             up = 0.5 * (a[p] + b[p]) + 0.5 * (b[p] - a[p]) * gu
             vq = 0.5 * (a[q] + b[q]) + 0.5 * (b[q] - a[q]) * gv
-            wp = 0.5 * (b[p] - a[p]) * wu
-            wq = 0.5 * (b[q] - a[q]) * wv
             U, V = np.meshgrid(up, vq, indexing="ij")
             us.append(U.ravel())
             vs.append(V.ravel())
-            ws.append(np.outer(wp, wq).ravel())
+            ws.append(np.outer(0.5 * (b[p] - a[p]) * wu, 0.5 * (b[q] - a[q]) * wv).ravel())
     return np.concatenate(us), np.concatenate(vs), np.concatenate(ws)
 
 
@@ -122,9 +114,7 @@ class Line:
             self.rot = np.zeros((3, 3))
             self.rot[0, ax] = 1.0
             self.rot[1:, [self.b, self.c]] = np.array([[1, 1], [1, -1]]) / np.sqrt(2)
-            e = np.array(TAIL_E[kind] + (2.0,))                  # the normal component is not used
-            self.w = r[None, :, None] ** e[None, None, :]
-            self.w[:, -1, :] /= 1 - 0.5 ** e                     # the last line carries the rest of the sheet
+            self.w = lines.geom_weights(TAIL_E[kind] + (2.0,)).T[None, :, :]
         else:
             self.rot, self.w = None, None
 
@@ -144,13 +134,136 @@ class VertexTail:
     def __init__(self, d, kind):
         self.kind, self.n = kind, 1
         r = 0.5 ** np.arange(1, 10)
-        e = (TAU if kind == "m" else NU) + 2.0
-        self.w = r ** e
-        self.w[-1] /= 1 - 0.5 ** e
+        self.w = lines.geom_weights((TAU if kind == "m" else NU) + 2.0)[0]
         self.pts = np.ones((1, 3)) * (H - d * r[:, None] / np.sqrt(3.0))
 
 
-class Cube:
+class Skeleton:
+    """Shared matrix assembly, parity-class solve, and direct near/far field evaluation on a symmetric polyhedron"""
+
+    def matrix(self, x, T, classes):
+        """
+        Matrices of the classes, summed over the symmetry images self.refl of the points
+          x: points (M, 3), T: rows to test with (M, nc, 3), or None for the Cartesian components
+          Returns an array (classes, M nc, columns), each slice F-ordered and padded to the largest class
+        """
+        nmax = max(self.unknowns[c] for c in classes)
+        cmap = np.full((len(classes), 3 * self.slot0[-1]), -1, np.int64)   # column of each unknown in each class
+        for i, c in enumerate(classes):
+            cmap[i, self.keep[c]] = np.arange(self.unknowns[c])
+        T = np.eye(3)[None] if T is None else np.ascontiguousarray(T)
+        A = np.moveaxis(np.zeros((len(x) * T.shape[1], nmax, len(classes)), complex, order="F"), 2, 0)
+        sgn = np.array([[sign(c, R) for R in self.refl] for c in classes])
+        x = np.ascontiguousarray(x)
+
+        # Point dipoles: electric, then magnetic
+        lines.points_add(x, T, self.refl, self.pe, self.pm, self.k, A, np.ascontiguousarray(cmap[:, 0]), sgn)
+
+        # Lines, each electric line with its magnetic twin, and the vertex tails
+        for i, ln in enumerate(self.lines):
+            if hasattr(ln, "ax") and ln.kind == "e":             # the magnetic twin follows in the next 3 n columns
+                lo = 3 * self.slot0[1 + i]
+                w = None if ln.w is None else np.stack((ln.w, self.lines[i + 1].w))
+                lines.line_add(x, T, self.refl, ln.r_act, ln.t_hat, ln.mids, ln.lam, ln.d, ln.n, self.k, H, A,
+                               cmap[:, lo:lo + 6 * ln.n], sgn, rot=ln.rot, w=w)
+        if self.tails:
+            self._add_vertex_tails(x, T, A, cmap, sgn)
+        return A
+
+    def solve(self, d, p, only=None):
+        """Coefficients of each class for the wave (d, p), the relative boundary residual, and |b|²"""
+        coef, r2, b2 = {}, 0.0, 0.0
+        for c in classes_of(self.k, d, p, self.refl):
+            if only is not None and c not in only:
+                continue
+            b = -np.einsum("mab,mb->ma", self.T, class_part(self.x, self.k, d, p, self.refl, c)).reshape(-1) * np.repeat(self.rw, 2)
+            coef[c], res = self.fac[c].solve(b, residual=True)
+            r2, b2 = r2 + float(res) ** 2, b2 + np.linalg.norm(b) ** 2
+        return coef, np.sqrt(r2 / max(b2, 1e-300)), b2
+
+    def _unpack_lines(self, ncls, c_all):
+        """Root-panel multipole moments grouped by edge axis, for distant exterior targets and exact far fields"""
+        by_ax = {}
+        for i, ln in enumerate(self.lines):
+            if hasattr(ln, "ax") and ln.kind == "e":
+                lo = 3 * self.slot0[1 + i]
+                c_pair = c_all[:, lo:lo + 6 * ln.n].reshape(ncls, 2, ln.n, 3)
+                w = np.ones((2, len(ln.mids), 3)) if ln.w is None else np.stack((ln.w, self.lines[i + 1].w)).reshape(2, len(ln.mids), 3)
+                rot = np.eye(3) if ln.rot is None else ln.rot
+                tq, W, off, *_ = lines.build_tree(ln.lam, ln.d, ln.n, H, self.k)
+                pm_n = int(off[1])
+                c_cart = 2.0 * np.einsum("kic,lkmc,cq->lkimq", w, c_pair, rot)
+                M0 = np.einsum("pm,lkimq->lkpiq", W[:pm_n], c_cart).reshape(ncls, 2, -1, 3)
+                ys = (ln.mids[None, :, :] + tq[:pm_n, None, None] * ln.t_hat[None, None, :]).reshape(-1, 3)
+                _, yl, al, bl = by_ax.setdefault(ln.ax, (ln.r_act, [], [], []))
+                yl.append(ys)
+                al.append(M0[:, 0])
+                bl.append(M0[:, 1])
+        return by_ax
+
+    def field(self, coef, pts):
+        """Scattered field at the points pts (P, 3), evaluated directly from mode coefficients without forming A"""
+        pts = np.ascontiguousarray(pts, dtype=float)
+        if not len(pts) or not coef:
+            return np.zeros((len(pts), 3), complex)
+        cl = list(coef)
+        ncls = len(cl)
+        c_all = np.zeros((ncls, 3 * self.slot0[-1]), complex)
+        for j, c in enumerate(cl):
+            c_all[j, self.keep[c]] = coef[c]
+        sgn = np.array([[sign(c, R) for R in self.refl] for c in cl])
+        y_pt, alpha, beta = self._unpack_points(cl, c_all)
+        out = np.zeros((ncls, len(pts), 3), complex)
+        lines.eval_points_field(pts, self.refl, sgn, y_pt, alpha, beta, float(self.k), out)
+        line_entries = [(i, ln) for i, ln in enumerate(self.lines) if hasattr(ln, "ax") and ln.kind == "e"]
+        if not line_entries:
+            return out.sum(axis=0)
+
+        # Beyond r_far, the root panel is accepted for every line and symmetry image
+        far_mask = np.linalg.norm(pts, axis=1) >= self.r_far + 1e-9
+        if np.any(far_mask):
+            pts_f = np.ascontiguousarray(pts[far_mask])
+            out_f = np.zeros((ncls, len(pts_f), 3), complex)
+            for r_act, yl, al, bl in self._unpack_lines(ncls, c_all).values():
+                lines.eval_points_field(pts_f, np.ascontiguousarray(self.refl[r_act]), np.ascontiguousarray(sgn[:, r_act]),
+                                        np.ascontiguousarray(np.vstack(yl)),
+                                        np.ascontiguousarray(np.concatenate(al, axis=1)),
+                                        np.ascontiguousarray(np.concatenate(bl, axis=1)), float(self.k), out_f)
+            out[:, far_mask] += out_f
+
+        if np.any(~far_mask):
+            pts_n = np.ascontiguousarray(pts[~far_mask])
+            out_n = np.zeros((ncls, len(pts_n), 3), complex)
+            for i, ln in line_entries:
+                lo = 3 * self.slot0[1 + i]
+                w = None if ln.w is None else np.stack((ln.w, self.lines[i + 1].w))
+                lines.eval_line_field(pts_n, self.refl, ln.r_act, sgn, ln.t_hat, ln.mids, ln.lam, ln.d, ln.n,
+                                      float(self.k), H, c_all[:, lo:lo + 6 * ln.n], out_n, rot=ln.rot, w=w)
+            out[:, ~far_mask] += out_n
+        return out.sum(axis=0)
+
+    def far(self, coef, dirs):
+        """Exact r -> infinity far-field pattern F, with E ~ F e^{ikr}/r, in directions dirs (D, 3)"""
+        dirs = np.ascontiguousarray(dirs, dtype=float)
+        if not len(dirs) or not coef:
+            return np.zeros((len(dirs), 3), complex)
+        cl = list(coef)
+        ncls = len(cl)
+        c_all = np.zeros((ncls, 3 * self.slot0[-1]), complex)
+        for j, c in enumerate(cl):
+            c_all[j, self.keep[c]] = coef[c]
+        sgn = np.array([[sign(c, R) for R in self.refl] for c in cl])
+        y_pt, alpha, beta = self._unpack_points(cl, c_all)
+        out = np.zeros((ncls, len(dirs), 3), complex)
+        lines.eval_far_dipoles(dirs, self.refl, np.arange(len(self.refl), dtype=np.int64), sgn, y_pt, alpha, beta, float(self.k), out)
+        for r_act, yl, al, bl in self._unpack_lines(ncls, c_all).values():
+            lines.eval_far_dipoles(dirs, self.refl, r_act, sgn, np.ascontiguousarray(np.vstack(yl)),
+                                   np.ascontiguousarray(np.concatenate(al, axis=1)),
+                                   np.ascontiguousarray(np.concatenate(bl, axis=1)), float(self.k), out)
+        return out.sum(axis=0)
+
+
+class Cube(Skeleton):
     """
     MFS for the cube at level J (smallest depth 0.2 · 2^{-J}). The given parity
     classes are assembled and factorised once; solve() then takes any wave
@@ -158,9 +271,13 @@ class Cube:
       q          : ratio of the depths, 2^{-1/2} (two per octave, the paper's layout) or 1/2
       extra_modes: extra modes per unit line length (default: 2 s (s + 1) for s = 2 H k/(2π) - 1 > 0)
       tails      : with or without the singular tails
-      J = None gives the usual layout that fails: only the base grid, n_base × n_base per face
+      J = None gives the usual layout that fails: only the base grid, n_base × n_base per face (n_base even)
     """
+    refl = REFL
+    r_far = H * np.sqrt(3.0) + 2.0 * H
+
     def __init__(self, J, k=2 * np.pi, q=2 ** -0.5, extra_modes=None, tails=True, classes=CLASSES, n_base=8):
+        assert n_base % 2 == 0, "n_base must be even so base dipoles stay strictly inside the octants"
         self.k, self.classes, self.tails = k, [tuple(c) for c in classes], bool(tails and J is not None)
         s = max(0.0, k * 2 * H / (2 * np.pi) - 1.0)              # wavelengths per side, minus one
         m = max(1, int(round(np.log(0.5) / np.log(q))))          # depths per octave (2 for q = 2^{-1/2}, 1 for q = 1/2)
@@ -200,7 +317,7 @@ class Cube:
         ng = 2 + max(m, 1 + int(np.ceil(0.5 * s)))
         d_min = self.depths[-1] if len(self.depths) else 0.2
         levels = max(2, int(np.ceil(np.log2(H / d_min))))
-        U, V, W = graded_uv(levels, ng, 0, min(H / 4, np.pi / (2 * k)))
+        U, V, W = graded_uv(levels, ng, min(H / 4, np.pi / (2 * k)))
         f0 = np.column_stack((np.full_like(U, H), U, V))
         T0 = np.array([[0.0, 1.0, 0.0], [0.0, 0.0, 1.0]])
         self.x = np.concatenate([np.roll(f0, ax, axis=1) for ax in range(3)])
@@ -214,14 +331,13 @@ class Cube:
         if not self.classes:
             return
         orbit = orbits(self.classes)
-        todo = list(orbit)
-        oh = self._oh_tables(todo)
+        oh = self._oh_tables(list(orbit))
         M1, tri_idx, cls_idx, tri_cls, g2loc, p1 = oh["M1"], oh["tri_idx"], oh["cls_idx"], oh["tri_cls"], oh["g2loc"], oh["p1"]
         t0 = time.time()
         A_tri = self.matrix(self.x[tri_idx], (self.T[:M1] * self.rw[:M1, None, None])[tri_idx], tri_cls)
         self.t_assemble, t0 = time.time() - t0, time.time()
         for cr, js in orbit.items():
-            fac_cr = self._factor_oh(A_tri, cr, oh)
+            fac_cr = self._oh_class(A_tri, cr, oh, cls_idx)
             kp = np.nonzero(self.keep[cr])[0]
             for j in js:
                 c = cr[j:] + cr[:j]
@@ -231,6 +347,29 @@ class Cube:
                     perm = g2loc[c][p1[p1[kp]] if j == 1 else p1[kp]]
                     self.fac[c] = self._rotated_fac(fac_cr, j, perm)
         self.t_factor = time.time() - t0
+
+    def _add_vertex_tails(self, x, T, A, cmap, sgn):
+        vt_e, vt_m = self.lines[-2], self.lines[-1]
+        lo = 3 * self.slot0[-3]
+        lines.radial_tails_add(x, T, REFL, np.ascontiguousarray(vt_e.pts[None]),
+                               np.ascontiguousarray(vt_e.w[None]), np.ascontiguousarray(vt_m.w[None]),
+                               self.k, A, np.ascontiguousarray(cmap[:, lo]), np.ascontiguousarray(cmap[:, lo + 3]), sgn)
+
+    def _unpack_points(self, cl, c_all):
+        ncls, ne, nm = len(cl), len(self.pe), len(self.pm)
+        n_vt = 9 if self.tails else 0
+        y_pt = np.vstack((self.pe, self.lines[-2].pts)) if n_vt else self.pe
+        alpha = np.zeros((ncls, ne + n_vt, 3), complex)
+        beta = np.zeros((ncls, ne + n_vt, 3), complex)
+        alpha[:, :ne] = c_all[:, :3 * ne].reshape(ncls, ne, 3)
+        if nm:
+            beta[:, ne - nm:ne] = c_all[:, 3 * ne:3 * (ne + nm)].reshape(ncls, nm, 3)
+        if n_vt:
+            vt_e, vt_m = self.lines[-2], self.lines[-1]
+            lo = 3 * self.slot0[-3]
+            alpha[:, ne:] = c_all[:, lo:lo + 3][:, None, :] * vt_e.w[None, :, None]
+            beta[:, ne:] = c_all[:, lo + 3:lo + 6][:, None, :] * vt_m.w[None, :, None]
+        return np.ascontiguousarray(y_pt), np.ascontiguousarray(alpha), np.ascontiguousarray(beta)
 
     @staticmethod
     def _rotated_fac(fac_cr, j, perm):
@@ -267,10 +406,8 @@ class Cube:
 
         pt_p = np.concatenate((p_f0, 2 * M1 + p_f0, M1 + p_f0))
         row_p = np.empty(6 * M1, np.int64)
-        row_p[0::2], row_p[1::2] = 2 * pt_p + 1, 2 * pt_p
-        ir = np.arange(6 * M1)
-        r_pair = np.nonzero(ir < row_p)[0]
-        r_fp = np.nonzero(ir == row_p)[0]                        # row_s is identically +1 on all three octant faces
+        row_p[0::2], row_p[1::2] = 2 * pt_p + 1, 2 * pt_p        # e_y <-> e_z swaps even and odd rows everywhere
+        r_pair = np.nonzero(np.arange(6 * M1) < row_p)[0]
 
         tot = 3 * self.slot0[-1]
         p1 = np.empty(tot, np.int64)
@@ -321,29 +458,43 @@ class Cube:
                 if ki == 1:
                     sgn_yz[lo0:lo0 + 3] = -1.0
 
-        tri_cls = []
-        for c in todo:
-            for s in range(3):
-                cs = c[s:] + c[:s]
-                if cs not in tri_cls:
-                    tri_cls.append(cs)
+        tri_cls = list(dict.fromkeys(c[s:] + c[:s] for c in todo for s in range(3)))
         g2loc = {c: np.full(tot, -1, np.int64) for c in tri_cls}
         for c in tri_cls:
             g2loc[c][self.keep[c]] = np.arange(self.unknowns[c])
         return dict(M1=M1, tri_idx=tri_idx, hi_pts=hi_pts, hi_tri=hi_tri, m_row_tri=m_row_tri, m_row_ab=m_row_ab,
-                    row_p=row_p, r_pair=r_pair, r_fp=r_fp, p1=p1, p1_inv=np.argsort(p1), col_yz=col_yz, sgn_yz=sgn_yz,
+                    row_p=row_p, r_pair=r_pair, p1=p1, p1_inv=np.argsort(p1), col_yz=col_yz, sgn_yz=sgn_yz,
                     tri_cls=tri_cls, cls_idx={c: i for i, c in enumerate(tri_cls)}, g2loc=g2loc)
 
-    def _factor_oh(self, A_tri, c, oh):
-        """Persistent O_h-reduced factor for parity class c (C_3 Fourier split or Z_2 reflection split)"""
-        M1, g2loc, cls_idx, p1, col_yz, sgn_yz = oh["M1"], oh["g2loc"], oh["cls_idx"], oh["p1"], oh["col_yz"], oh["sgn_yz"]
+    def _oh_class(self, A_tri, c, oh, cls_idx, B=None):
+        """
+        O_h stabilizer reduction for parity class c (C_3 Fourier split or Z_2 reflection split):
+        if B is None, returns a persistent solver; if B (rows, rhs) is given, solves and frees one block at a time.
+        """
+        M1, g2loc, p1, col_yz, sgn_yz = oh["M1"], oh["g2loc"], oh["p1"], oh["col_yz"], oh["sgn_yz"]
         kp = np.nonzero(self.keep[c])[0]
+        w3 = np.exp(2j * np.pi / 3.0)
         if len(set(c)) == 1:
             pc = g2loc[c][p1[kp]]
             c0 = np.nonzero(np.vstack((np.arange(len(kp)), pc, pc[pc])).min(axis=0) == np.arange(len(kp)))[0]
             c1, c2 = pc[c0], pc[pc[c0]]
             lc_yz, sg_yz = g2loc[c][col_yz[kp]], sgn_yz[kp]
-            w3 = np.exp(2j * np.pi / 3.0)
+            if B is not None:
+                Bf = B.reshape(3, 2 * M1, B.shape[1])
+                C_out, r2 = np.zeros((len(kp), B.shape[1]), complex), 0.0
+                Bq = np.empty((2 * M1, len(c0)), np.complex128, order="F")
+                for q in range(3):
+                    lines.build_c3_tri(A_tri, cls_idx[c], oh["tri_idx"], oh["hi_pts"], oh["hi_tri"],
+                                       lc_yz, sg_yz, c0, c1, c2, complex(w3 ** q), complex(w3 ** (2 * q)), Bq)
+                    fq = factor(Bq, overwrite=True)
+                    Yq, rq = fq.solve((Bf[0] + (w3 ** (-q)) * Bf[1] + (w3 ** (-2 * q)) * Bf[2]) / 3.0, residual=True)
+                    C_out[c0] += Yq
+                    C_out[c1] += (w3 ** q) * Yq
+                    C_out[c2] += (w3 ** (2 * q)) * Yq
+                    r2 += 3.0 * float(np.sum(np.asarray(rq) ** 2))
+                    del fq
+                return C_out, r2
+
             facs = []
             for q in range(3):
                 Bq = np.empty((2 * M1, len(c0)), np.complex128, order="F")
@@ -354,11 +505,9 @@ class Cube:
             class _C3:
                 def solve(_, b, residual=False):
                     bf = b.reshape(3, 2 * M1, -1) if b.ndim > 1 else b.reshape(3, 2 * M1)
-                    coef = np.zeros((len(kp),) + b.shape[1:], complex)
-                    r2 = 0.0
+                    coef, r2 = np.zeros((len(kp),) + b.shape[1:], complex), 0.0
                     for q in range(3):
-                        bq = (bf[0] + (w3 ** (-q)) * bf[1] + (w3 ** (-2 * q)) * bf[2]) / 3.0
-                        yq, rq = facs[q].solve(bq, residual=True)
+                        yq, rq = facs[q].solve((bf[0] + (w3 ** (-q)) * bf[1] + (w3 ** (-2 * q)) * bf[2]) / 3.0, residual=True)
                         coef[c0] += yq
                         coef[c1] += (w3 ** q) * yq
                         coef[c2] += (w3 ** (2 * q)) * yq
@@ -374,177 +523,41 @@ class Cube:
         ic = np.arange(len(kp))
         c_pair = np.nonzero(ic < cp)[0]
         c_fp, c_fm = np.nonzero((ic == cp) & (cs > 0))[0], np.nonzero((ic == cp) & (cs < 0))[0]
-        r_pair, r_fp, row_p = oh["r_pair"], oh["r_fp"], oh["row_p"]
-        r_fm = np.empty(0, np.int64)
-        Ap = np.empty((len(r_pair) + len(r_fp), len(c_pair) + len(c_fp)), np.complex128, order="F")
-        Am = np.empty((len(r_pair), len(c_pair) + len(c_fm)), np.complex128, order="F")
-        lines.build_z2_tri(A_tri, cls_idx[c], cls_idx[c1_cls], cls_idx[c1_yz], oh["m_row_tri"], oh["m_row_ab"],
-                           lc_b, lc_byz, sg_byz, r_pair, r_fp, c_pair, cp, cs, c_fp, +1.0, Ap)
-        lines.build_z2_tri(A_tri, cls_idx[c], cls_idx[c1_cls], cls_idx[c1_yz], oh["m_row_tri"], oh["m_row_ab"],
-                           lc_b, lc_byz, sg_byz, r_pair, r_fm, c_pair, cp, cs, c_fm, -1.0, Am)
-        fp, fm = factor(Ap, overwrite=True), factor(Am, overwrite=True)
+        r_pair, row_p = oh["r_pair"], oh["row_p"]
         s2, np_c = np.sqrt(0.5), len(c_pair)
+
+        def make_z2(sgn_e, c_f):
+            Ab = np.empty((len(r_pair), np_c + len(c_f)), np.complex128, order="F")
+            lines.build_z2_tri(A_tri, cls_idx[c], cls_idx[c1_cls], cls_idx[c1_yz], oh["m_row_tri"], oh["m_row_ab"],
+                               lc_b, lc_byz, sg_byz, r_pair, c_pair, cp, cs, c_f, sgn_e, Ab)
+            return factor(Ab, overwrite=True)
+
+        def combine_z2(yp, ym, rp, rm, out_shape, residual=True):
+            coef = np.zeros((len(kp),) + out_shape, complex)
+            sc = cs[c_pair, None] if out_shape else cs[c_pair]
+            coef[c_pair] = s2 * (yp[:np_c] + ym[:np_c])
+            coef[cp[c_pair]] = s2 * sc * (yp[:np_c] - ym[:np_c])
+            coef[c_fp], coef[c_fm] = yp[np_c:], ym[np_c:]
+            return (coef, np.sqrt(np.asarray(rp) ** 2 + np.asarray(rm) ** 2)) if residual else coef
+
+        if B is not None:
+            fp = make_z2(1.0, c_fp)
+            Yp, rp = fp.solve(s2 * (B[r_pair] + B[row_p[r_pair]]), residual=True)
+            del fp
+            fm = make_z2(-1.0, c_fm)
+            Ym, rm = fm.solve(s2 * (B[r_pair] - B[row_p[r_pair]]), residual=True)
+            del fm
+            C_out, r_vec = combine_z2(Yp, Ym, rp, rm, (B.shape[1],))
+            return C_out, float(np.sum(r_vec ** 2))
+
+        fp, fm = make_z2(1.0, c_fp), make_z2(-1.0, c_fm)
 
         class _Z2:
             def solve(_, b, residual=False):
-                bp = np.concatenate((s2 * (b[r_pair] + b[row_p[r_pair]]), b[r_fp]), axis=0)
-                bm = s2 * (b[r_pair] - b[row_p[r_pair]])
-                yp, rp = fp.solve(bp, residual=True)
-                ym, rm = fm.solve(bm, residual=True)
-                coef = np.zeros((len(kp),) + b.shape[1:], complex)
-                sc = cs[c_pair, None] if b.ndim > 1 else cs[c_pair]
-                coef[c_pair] = s2 * (yp[:np_c] + ym[:np_c])
-                coef[cp[c_pair]] = s2 * sc * (yp[:np_c] - ym[:np_c])
-                coef[c_fp], coef[c_fm] = yp[np_c:], ym[np_c:]
-                return (coef, np.sqrt(np.asarray(rp) ** 2 + np.asarray(rm) ** 2)) if residual else coef
+                yp, rp = fp.solve(s2 * (b[r_pair] + b[row_p[r_pair]]), residual=True)
+                ym, rm = fm.solve(s2 * (b[r_pair] - b[row_p[r_pair]]), residual=True)
+                return combine_z2(yp, ym, rp, rm, b.shape[1:], residual)
         return _Z2()
-
-    def matrix(self, x, T, classes, m_lim=None):
-        """
-        Matrices of the classes, summed over the eight mirror images of the points
-          x: points (M, 3), T: rows to test with (M, nc, 3), or None for the Cartesian components
-          Returns an array (classes, M nc, columns), padded to the largest class
-        """
-        nmax = max(self.unknowns[c] for c in classes)
-        cmap = np.full((len(classes), 3 * self.slot0[-1]), -1, np.int64)   # column of each unknown in each class
-        for i, c in enumerate(classes):
-            cmap[i, self.keep[c]] = np.arange(self.unknowns[c])
-        T = np.eye(3)[None] if T is None else np.ascontiguousarray(T)
-        nc = T.shape[1]
-        A = np.moveaxis(np.zeros((len(x) * nc, nmax, len(classes)), complex, order="F"), 2, 0)   # each A[i] is F-ordered
-        sgn = np.array([[sign(c, R) for R in REFL] for c in classes])
-        x = np.ascontiguousarray(x)
-
-        # Point dipoles: electric, then magnetic
-        lines.points_add(x, T, REFL, self.pe, self.pm, self.k, A, np.ascontiguousarray(cmap[:, 0]), sgn, m_lim=m_lim)
-
-        # Lines, each electric line with its magnetic twin, and the vertex tails
-        for i, ln in enumerate(self.lines):
-            lo = 3 * self.slot0[1 + i]
-            if isinstance(ln, Line) and ln.kind == "e":          # the magnetic twin follows in the next 3 n columns
-                w = None if ln.w is None else np.stack((ln.w, self.lines[i + 1].w))
-                lines.line_add(x, T, REFL, ln.r_act, ln.t_hat, ln.mids, ln.lam, ln.d, ln.n, self.k, H, A,
-                               cmap[:, lo:lo + 6 * ln.n], sgn, rot=ln.rot, w=w, m_lim=m_lim)
-        if self.tails:
-            vt_e, vt_m = self.lines[-2], self.lines[-1]
-            lo = 3 * self.slot0[-3]
-            lines.radial_tails_add(x, T, REFL, np.ascontiguousarray(vt_e.pts[None]),
-                                   np.ascontiguousarray(vt_e.w[None]), np.ascontiguousarray(vt_m.w[None]),
-                                   self.k, A, np.ascontiguousarray(cmap[:, lo]), np.ascontiguousarray(cmap[:, lo + 3]),
-                                   sgn, m_lim=m_lim)
-        return A
-
-    def solve(self, d, p, only=None):
-        """Coefficients of each class for the wave (d, p), the relative boundary residual, and |b|²"""
-        coef, r2, b2 = {}, 0.0, 0.0
-        for c in classes_of(self.k, d, p, REFL):
-            if only is not None and c not in only:
-                continue
-            b = -np.einsum("mab,mb->ma", self.T, class_part(self.x, self.k, d, p, REFL, c)).reshape(-1) * np.repeat(self.rw, 2)
-            coef[c], res = self.fac[c].solve(b, residual=True)
-            r2, b2 = r2 + float(res) ** 2, b2 + np.linalg.norm(b) ** 2
-        return coef, np.sqrt(r2 / b2), b2
-
-    def _unpack_points(self, cl, c_all):
-        ncls, ne, nm = len(cl), len(self.pe), len(self.pm)
-        n_vt = 9 if self.tails else 0
-        y_pt = np.vstack((self.pe, self.lines[-2].pts)) if n_vt else self.pe
-        alpha = np.zeros((ncls, ne + n_vt, 3), complex)
-        beta = np.zeros((ncls, ne + n_vt, 3), complex)
-        alpha[:, :ne] = c_all[:, :3 * ne].reshape(ncls, ne, 3)
-        if nm:
-            beta[:, ne - nm:ne] = c_all[:, 3 * ne:3 * (ne + nm)].reshape(ncls, nm, 3)
-        if n_vt:
-            vt_e, vt_m = self.lines[-2], self.lines[-1]
-            lo = 3 * self.slot0[-3]
-            alpha[:, ne:] = c_all[:, lo:lo + 3][:, None, :] * vt_e.w[None, :, None]
-            beta[:, ne:] = c_all[:, lo + 3:lo + 6][:, None, :] * vt_m.w[None, :, None]
-        return np.ascontiguousarray(y_pt), np.ascontiguousarray(alpha), np.ascontiguousarray(beta)
-
-    def _unpack_lines(self, ncls, c_all):
-        """Root-panel multipole moments grouped by edge axis, for distant exterior targets and exact far fields"""
-        by_ax = {0: ([], [], []), 1: ([], [], []), 2: ([], [], [])}
-        for i, ln in enumerate(self.lines):
-            if isinstance(ln, Line) and ln.kind == "e":
-                lo = 3 * self.slot0[1 + i]
-                c_pair = c_all[:, lo:lo + 6 * ln.n].reshape(ncls, 2, 1, ln.n, 3)
-                w = np.ones((2, 1, len(ln.mids), 3)) if ln.w is None else np.stack((ln.w, self.lines[i + 1].w))
-                rot = np.eye(3) if ln.rot is None else ln.rot
-                tq, W, off, *_ = lines.build_tree(ln.lam, ln.d, ln.n, H, self.k)
-                pm_n = int(off[1])
-                c_cart = 2.0 * np.einsum("ksic,lksmc,cq->lkimq", w, c_pair, rot)
-                M0 = np.einsum("pm,lkimq->lkpiq", W[:pm_n], c_cart).reshape(ncls, 2, -1, 3)
-                ys = (ln.mids[None, :, :] + tq[:pm_n, None, None] * ln.t_hat[None, None, :]).reshape(-1, 3)
-                by_ax[ln.ax][0].append(ys)
-                by_ax[ln.ax][1].append(M0[:, 0])
-                by_ax[ln.ax][2].append(M0[:, 1])
-        return by_ax
-
-    def field(self, coef, pts, batch=1000):
-        """Scattered field at the points pts (P, 3), evaluated directly from mode coefficients without forming A"""
-        pts = np.ascontiguousarray(pts, dtype=float)
-        if not len(pts) or not coef:
-            return np.zeros((len(pts), 3), complex)
-        cl = list(coef)
-        ncls = len(cl)
-        c_all = np.zeros((ncls, 3 * self.slot0[-1]), complex)
-        for j, c in enumerate(cl):
-            c_all[j, self.keep[c]] = coef[c]
-        sgn = np.array([[sign(c, R) for R in REFL] for c in cl])
-        y_pt, alpha, beta = self._unpack_points(cl, c_all)
-        out = np.zeros((ncls, len(pts), 3), complex)
-        lines.eval_points_field(pts, REFL, sgn, y_pt, alpha, beta, float(self.k), out)
-        line_entries = [(i, ln) for i, ln in enumerate(self.lines) if isinstance(ln, Line) and ln.kind == "e"]
-        if not line_entries:
-            return out.sum(axis=0)
-
-        # Beyond H sqrt(3) + 2 H, the root panel is accepted for every line and mirror image
-        far_mask = np.linalg.norm(pts, axis=1) >= H * np.sqrt(3.0) + 2.0 * H + 1e-9
-        if np.any(far_mask):
-            pts_f = np.ascontiguousarray(pts[far_mask])
-            out_f = np.zeros((ncls, len(pts_f), 3), complex)
-            for ax, (yl, al, bl) in self._unpack_lines(ncls, c_all).items():
-                if yl:
-                    r_act = np.array([ri for ri in range(8) if REFL[ri, ax] > 0], np.int64)
-                    lines.eval_points_field(pts_f, np.ascontiguousarray(REFL[r_act]), np.ascontiguousarray(sgn[:, r_act]),
-                                            np.ascontiguousarray(np.vstack(yl)),
-                                            np.ascontiguousarray(np.concatenate(al, axis=1)),
-                                            np.ascontiguousarray(np.concatenate(bl, axis=1)), float(self.k), out_f)
-            out[:, far_mask] += out_f
-
-        if np.any(~far_mask):
-            pts_n = np.ascontiguousarray(pts[~far_mask])
-            out_n = np.zeros((ncls, len(pts_n), 3), complex)
-            for i, ln in line_entries:
-                lo = 3 * self.slot0[1 + i]
-                c_pair = c_all[:, lo:lo + 6 * ln.n].reshape(ncls, 2, 1, ln.n, 3)
-                w = None if ln.w is None else np.stack((ln.w, self.lines[i + 1].w))
-                lines.eval_line_field(pts_n, REFL, ln.r_act, sgn, ln.t_hat, ln.mids, ln.lam, ln.d, ln.n,
-                                      float(self.k), H, c_pair, out_n, rot=ln.rot, w=w)
-            out[:, ~far_mask] += out_n
-        return out.sum(axis=0)
-
-    def far(self, coef, dirs):
-        """Exact r -> infinity far-field pattern F, with E ~ F e^{ikr}/r"""
-        dirs = np.ascontiguousarray(dirs, dtype=float)
-        if not len(dirs) or not coef:
-            return np.zeros((len(dirs), 3), complex)
-        cl = list(coef)
-        ncls = len(cl)
-        c_all = np.zeros((ncls, 3 * self.slot0[-1]), complex)
-        for j, c in enumerate(cl):
-            c_all[j, self.keep[c]] = coef[c]
-        sgn = np.array([[sign(c, R) for R in REFL] for c in cl])
-        y_pt, alpha, beta = self._unpack_points(cl, c_all)
-        out = np.zeros((ncls, len(dirs), 3), complex)
-        lines.eval_far_dipoles(dirs, REFL, np.arange(8, dtype=np.int64), sgn, y_pt, alpha, beta, float(self.k), out)
-        for ax, (yl, al, bl) in self._unpack_lines(ncls, c_all).items():
-            if yl:
-                r_act = np.array([ri for ri in range(8) if REFL[ri, ax] > 0], np.int64)
-                lines.eval_far_dipoles(dirs, REFL, r_act, sgn, np.ascontiguousarray(np.vstack(yl)),
-                                       np.ascontiguousarray(np.concatenate(al, axis=1)),
-                                       np.ascontiguousarray(np.concatenate(bl, axis=1)), float(self.k), out)
-        return out.sum(axis=0)
 
 
 def solve(J, d=(0, 0, -1.0), p=(0, 1.0, 0), pts=None, k=2 * np.pi, max_gb=None, **layout):
@@ -552,7 +565,7 @@ def solve(J, d=(0, 0, -1.0), p=(0, 1.0, 0), pts=None, k=2 * np.pi, max_gb=None, 
     One plane wave at level J, using the full octahedral symmetry O_h: Green's kernels are
     evaluated once on the 1/48-cube triangle (u <= v of Face 0) across active parities, and
     each orbit is factorised into C_3 or Z_2 stabilizer blocks with reusable workspace.
-      pts: points where the scattered field is wanted
+      pts: points where the scattered field is wanted, shape (P, 3), or None
       Returns the field at pts, the wall time, and a dictionary of checks
       (unknowns, boundary residual, extinction cross-section, optical-theorem mismatch)
     """
@@ -564,11 +577,7 @@ def solve(J, d=(0, 0, -1.0), p=(0, 1.0, 0), pts=None, k=2 * np.pi, max_gb=None, 
     probe = Cube(J, k, classes=[], **layout)
     oh_all = probe._oh_tables(todo)
     M1, tri_idx, g2loc_all, p1 = oh_all["M1"], oh_all["tri_idx"], oh_all["g2loc"], oh_all["p1"]
-    col_yz, sgn_yz = oh_all["col_yz"], oh_all["sgn_yz"]
     rw2 = np.repeat(probe.rw, 2)
-    r_pair, r_fp, row_p = oh_all["r_pair"], oh_all["r_fp"], oh_all["row_p"]
-    r_fm = np.empty(0, np.int64)
-    s2, w3 = np.sqrt(0.5), np.exp(2j * np.pi / 3.0)
     nmax = max(probe.unknowns[c] for c in todo)
     lim_bytes = (1.0 if max_gb is None else 0.4 * max_gb) * 2 ** 30
     step = len(todo) if 16.0 * 2 * len(tri_idx) * nmax * len(oh_all["tri_cls"]) <= lim_bytes else 1
@@ -576,12 +585,7 @@ def solve(J, d=(0, 0, -1.0), p=(0, 1.0, 0), pts=None, k=2 * np.pi, max_gb=None, 
     coef_all, r2, b2, t_assemble, t_factor = {}, 0.0, 0.0, 0.0, 0.0
     for bi in range(0, len(todo), step):
         batch = todo[bi:bi + step]
-        tri_cls = []
-        for c in batch:
-            for s in range(3):
-                cs = c[s:] + c[:s]
-                if cs not in tri_cls:
-                    tri_cls.append(cs)
+        tri_cls = list(dict.fromkeys(c[s:] + c[:s] for c in batch for s in range(3)))
         cls_idx = {c: i for i, c in enumerate(tri_cls)}
         ta0 = time.time()
         A_tri = probe.matrix(probe.x[tri_idx], (probe.T[:M1] * probe.rw[:M1, None, None])[tri_idx], tri_cls)
@@ -594,60 +598,9 @@ def solve(J, d=(0, 0, -1.0), p=(0, 1.0, 0), pts=None, k=2 * np.pi, max_gb=None, 
             E_inc = class_part(probe.x, k, np.array([Q.T @ d for Q in Qs]), np.array([Q.T @ p for Q in Qs]), REFL, c)
             B = -np.einsum("mab,mwb->maw", probe.T, E_inc).reshape(-1, len(js)) * rw2[:, None]
             b2 += float(np.linalg.norm(B) ** 2)
+            C_out, rc2 = probe._oh_class(A_tri, c, oh_all, cls_idx, B=B)
+            r2 += rc2
             kp = np.nonzero(probe.keep[c])[0]
-            if len(set(c)) == 1:
-                pc = g2loc_all[c][p1[kp]]
-                c0 = np.nonzero(np.vstack((np.arange(len(kp)), pc, pc[pc])).min(axis=0) == np.arange(len(kp)))[0]
-                c1, c2 = pc[c0], pc[pc[c0]]
-                lc_yz, sg_yz = g2loc_all[c][col_yz[kp]], sgn_yz[kp]
-                Bf = B.reshape(3, 2 * M1, len(js))
-                C_out = np.zeros((len(kp), len(js)), complex)
-                Bq_mat = np.empty((2 * M1, len(c0)), np.complex128, order="F")
-                for q_ord in range(3):
-                    lines.build_c3_tri(A_tri, cls_idx[c], tri_idx, oh_all["hi_pts"], oh_all["hi_tri"],
-                                       lc_yz, sg_yz, c0, c1, c2, complex(w3 ** q_ord), complex(w3 ** (2 * q_ord)), Bq_mat)
-                    fac_q = factor(Bq_mat, overwrite=True)
-                    Bq = (Bf[0] + (w3 ** (-q_ord)) * Bf[1] + (w3 ** (-2 * q_ord)) * Bf[2]) / 3.0
-                    Yq, rq = fac_q.solve(Bq, residual=True)
-                    C_out[c0] += Yq
-                    C_out[c1] += (w3 ** q_ord) * Yq
-                    C_out[c2] += (w3 ** (2 * q_ord)) * Yq
-                    r2 += 3.0 * float(np.sum(np.asarray(rq) ** 2))
-                    del fac_q
-                del Bq_mat
-            else:
-                c1_cls = (c[1], c[2], c[0])
-                c1_yz = (c1_cls[0], c1_cls[2], c1_cls[1])
-                kp_b = oh_all["p1_inv"][kp]
-                lc_b, lc_byz, sg_byz = g2loc_all[c1_cls][kp_b], g2loc_all[c1_yz][col_yz[kp_b]], sgn_yz[kp_b]
-                cp, cs = g2loc_all[c][col_yz[kp]], sgn_yz[kp]
-                ic = np.arange(len(kp))
-                c_pair = np.nonzero(ic < cp)[0]
-                c_fp, c_fm = np.nonzero((ic == cp) & (cs > 0))[0], np.nonzero((ic == cp) & (cs < 0))[0]
-
-                Ap = np.empty((len(r_pair) + len(r_fp), len(c_pair) + len(c_fp)), np.complex128, order="F")
-                lines.build_z2_tri(A_tri, cls_idx[c], cls_idx[c1_cls], cls_idx[c1_yz], oh_all["m_row_tri"], oh_all["m_row_ab"],
-                                   lc_b, lc_byz, sg_byz, r_pair, r_fp, c_pair, cp, cs, c_fp, +1.0, Ap)
-                fp = factor(Ap, overwrite=True)
-                Bp = np.vstack((s2 * (B[r_pair] + B[row_p[r_pair]]), B[r_fp]))
-                Yp, rp = fp.solve(Bp, residual=True)
-                del fp, Ap
-
-                Am = np.empty((len(r_pair), len(c_pair) + len(c_fm)), np.complex128, order="F")
-                lines.build_z2_tri(A_tri, cls_idx[c], cls_idx[c1_cls], cls_idx[c1_yz], oh_all["m_row_tri"], oh_all["m_row_ab"],
-                                   lc_b, lc_byz, sg_byz, r_pair, r_fm, c_pair, cp, cs, c_fm, -1.0, Am)
-                fm = factor(Am, overwrite=True)
-                Bm = s2 * (B[r_pair] - B[row_p[r_pair]])
-                Ym, rm = fm.solve(Bm, residual=True)
-                del fm, Am
-
-                np_c = len(c_pair)
-                C_out = np.zeros((len(kp), len(js)), complex)
-                C_out[c_pair] = s2 * (Yp[:np_c] + Ym[:np_c])
-                C_out[cp[c_pair]] = s2 * cs[c_pair, None] * (Yp[:np_c] - Ym[:np_c])
-                C_out[c_fp], C_out[c_fm] = Yp[np_c:], Ym[np_c:]
-                r2 += float(np.sum(np.asarray(rp) ** 2) + np.sum(np.asarray(rm) ** 2))
-
             for idx_j, j in enumerate(js):
                 if j == 0:
                     coef_all[c] = C_out[:, idx_j]

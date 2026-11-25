@@ -69,7 +69,7 @@ def run_part(part):
         cube.solve(2, D_W, P_W, PTS, K)
         orig_guv = cube.graded_uv
         try:
-            cube.graded_uv = lambda levels, ng, n_max=0, hmax=cube.H / 4: orig_guv(levels, ng + 1, n_max, hmax)
+            cube.graded_uv = lambda levels, ng, hmax=cube.H / 4: orig_guv(levels, ng + 1, hmax)
             gc.collect()
             E8_ng6, t8_ng6, info8_ng6 = cube.solve(8, D_W, P_W, PTS, K)
             shift_ng6 = core.rel(E8_ng6, st["E_m2_J8"])

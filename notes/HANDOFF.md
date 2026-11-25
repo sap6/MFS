@@ -1,4 +1,4 @@
-# Handoff (23 November 2026)
+# Handoff (24 November 2026)
 
 Read this first, then `CLAUDE.md` and the top of `notes/NOTES.md`.
 
@@ -8,7 +8,7 @@ Read this first, then `CLAUDE.md` and the top of `notes/NOTES.md`.
   request; not merged into `main` (merge into `main` before sharing Colab
   links). Nothing was ever pushed to `sap6/mfs-paper` (it syncs to Overleaf):
   never push there without asking the author.
-- `python -m pytest tests` passes (`19` tests with `MFS_TEST_BEMPP=1`), all
+- `python -m pytest tests` passes (`20` tests with `MFS_TEST_BEMPP=1`), all
   `figures/*.py` scripts and `git diff --exit-code paper/tables` pass locally,
   and `python figures/tables.py` reproduces `paper/tables/`.
 - Layout: `mfs/` (the package), `figures/` (one script per figure, replots
@@ -38,7 +38,7 @@ experiment log). The essentials:
   2. `lines.py` vectorises `build_tree` moment panels (`~30x` faster), centers
      `x - y(t) = p_perp - (t - p_t) t_hat` orthogonally at each target's
      projection (`rel |A_new - A_orig| = 3e-16`), integrates 6 scalar radial
-     weights per panel, flushes L2-tiled (`BM = 64`) columnwise target blocks into
+     weights per panel, flushes L2-tiled (`BM = 16`) columnwise target blocks into
      F-ordered class matrices (`2.3x` faster line assembly), contracts root-panel
      moments for distant exterior targets (`~100x` faster `field()`), exact
      `r -> inf` far fields, and `@njit` exact transpose panel/moment adjoints
@@ -86,7 +86,11 @@ experiment log). The essentials:
   - **Parallel panel-tiled matrix-free kernels & beyond-`8 GB` `ScaleneTetrahedron` `LSMR` (`mfs/lines.py`, `notes/iterative_mfs_bench.py`, `data/iterative_check.npz`, Section 8):** Parallelised `_eval_line_field_kernel` and `_eval_line_adj_kernel` over 16-target panel tiles (`ntiles = (P + 15) // 16`) with thread-local register accumulators (`3.55e-15` exact, zero false sharing) and eliminated explicit `Q0` allocations via blocked in-place `zgeqrf` + `zunmqr` (`lwork = 64*n`). Ran zero-symmetry `ScaleneTetrahedron` across `J = 4..8` (`M = 25728..52224`, `N = 5478..15838`, dense `A = 2.10..12.33 GiB` vs preconditioner `P = 158..850 MiB`, `13.6--14.8x` reduction): `itn@1e-4` stays level-independent at `33, 35, 35, 33, 32` across `J = 4..8`, while tightening `J = 6..8` to `1e-5` (`120, 108, 101` iterations, `44.9--81.4 min`) matches direct `J = 6, 7` solves to `1.31e-4, 1.15e-4` and solves `J = 8` (`12.33 GiB` dense-equivalent `A`, beyond `8 GB` RAM and `Bempp`'s `N_u = 14400` limit) with `opt = 2.66e-4` and `6.06e-4` change from `J = 7`.
   - **3D non-convex L-shaped conducting polyhedron (`notes/nonconvex_check.py`, `data/nonconvex_check.npz`, Section 8, `mfs/` untouched):** Tested $\Omega_L = ([-0.5, 0.5]^2 \setminus (0, 0.5]^2) \times [-0.25, 0.25]$ at $k = 2\pi$ (wave into the $270^\circ$ notch, $z \to -z$ symmetry in both MFS and `Bempp`). Computed 5-octant saddle corner exponents $\nu_{\text{sad}} = 0.91985$, $\tau_{\text{sad}} = 0.59360$: three grounded octants screen the Dirichlet electric mode so the $90^\circ$ salient-edge Meixner tails ($\gamma = 2/3$) govern $E$. Against $J = 6$ (`N_u = 11068`, `opt = 4.49e-4`), an eroded inner copy stalls above `42.9%`, untailed medial sheets decay algebraically (`1.76e-1 -> 4.81e-2`), and medial sheets + $90^\circ$ edge/corner tails converge root-exponentially (`1.44e-2 -> 5.84e-4` at $J = 2..5$, `82x` better at $J = 5$), confirmed by watertight $z$-symmetric graded `Bempp` to `1.35e-3`.
   - **Reproducible four-wavelength (`k = 8*pi`) cube benchmark (`notes/cube_k4_check.py`, `data/cube_k4_check.npz`, Section 8):** Verified `mfs/cube.py` out of the box (`s = 3`, `24` extra modes per unit length, `5` nodes per panel) against $J = 9$ (`opt = 2.83e-5`): `1 depth/octave` reaches `3.14e-4` in `64.6 s` and `2 depths/octave` reaches `1.53e-4` in `233.6 s` at $J = 8$ (`6` nodes shifting $J = 8$ by `5.30e-5`), while $O_h$-symmetric graded `Bempp` (`N_u = 41472`) reaches `6.50e-4` in `120.3 s` (`6/8`) and `6.47e-4` in `183.1 s` (`8/10`).
-  - Verified clean-room install/tests/figures/notebooks, `notes/paper_numbers.py`, Elsevier abstract (`199 <= 250` words) & highlight (`<= 78 <= 85` chars) limits, and `paper/main_3p.pdf` (**strictly 24 journal pages**, `0` warnings, `0` bad boxes).
+  - Verified clean-room install/tests/figures/notebooks, `notes/paper_numbers.py`, Elsevier abstract (`237 <= 250` words) & highlight (`<= 78 <= 85` chars) limits, and `paper/main_3p.pdf` (**strictly 24 journal pages**, `0` warnings, `0` bad boxes).
+- **3.7 Codebase simplification, figure fix, prose/notation polish & green CI (24 Nov):**
+  - **Package simplification (`4283 -> 3625` lines across `mfs/`, `-658` lines with zero slowdown and `1e-14..1e-16` field identity):** Unified `_line_kernel_single` + `_line_kernel_multi` (`mfs/lines.py` `1201 -> 830` lines, preserving C-contiguous `_accum_modes` SIMD specialisation and both single-line 12-scalar and 9-line pre-contracted paths), unified `_points_kernel` + `_points_m_only`, shared `@njit(inline="always")` dipole/radial/untabulated-panel helpers across `lines.py` and `almond.py`, removed dead `_mode_strides`, `m_lim` and empty `r_fp`, extracted shared `Skeleton` base class (`Cube` + `Tetrahedron`), unified `Cube._factor_oh` + `cube.solve` into `_oh_class` (`B=None` vs low-RAM sequential block solve), merged `face_kites` into `_tri_kites`, deduplicated `almond._collocation_steps`, and unified `bem.Mirror.solve_orbits`, `_grid_maps` and `_square_tris`.
+  - **Figure 3 & graphical abstract cross-section fix (`figures/layouts.py`, `figures/graphical_abstract.py`):** Used `cube.graded_nodes(levels, 4, H/4)` instead of projecting 2D anisotropic `graded_uv` (`3 + 4` nodes superimposed) onto 1D, so the boundary cross-section plots the exact 4 nodes/panel stated in its label.
+  - **Manuscript & docs polish (`paper/sections/{cube,conclusion,appendix}.tex`, `paper/highlights.txt`, `README.md`, `data/README.md`, `notes/*.md`):** Defined panel strip indices `(p, q)`, mesh edge intervals `n`, and regular/singular quadrature notation; clarified the `90` corner-tail unknowns/class (`two nu+2 and tau+2`), `cond(A) < 3e7` vs block-QR preconditioning, and `1.3--5.5e-4` vs `3e-3--6e-2` field errors in Section 8; re-executed all 4 notebooks, expanded `pytest` to `20` tests, rebuilt `main.pdf` (41 pp) and `main_3p.pdf` (24 pp, 0 warnings), and verified green GitHub Actions CI.
 
 ## 4. Decisions only the author can make (asked, not yet answered)
 
@@ -112,6 +116,6 @@ experiment log). The essentials:
   - fewer modes do not pay;
   - SciPy's `lstsq` is 2 to 4 times slower than our CSNE/QR;
   - NumPy kernels are 20 to 50 times slower than the compiled ones.
-- **QR fallback:** CSNE falls back to in-place QR only when the Cholesky diagonal of $R$ spans more than four orders of magnitude (`d.min() <= 1e-4 * d.max()`); at `1--3` wavelengths with the unified mode rule, CSNE succeeds at every level `J = 4..12` (the fallback triggers e.g. at `4` wavelengths, `J = 6`).
+- **QR fallback:** CSNE (`max_cond = 3e7`) falls back to in-place QR only when the Cholesky diagonal of $R$ exceeds `dR.max() > 3e4 * dR.min()`; at `1--3` wavelengths with the unified mode rule, CSNE succeeds at every level `J = 4..12` (the fallback triggers e.g. at `4` wavelengths, `J = 6`).
 - **The author's voice:** `notes/style_profile.md` (from `thesis/`). The
   title is settled. The abstract has at most 250 words.

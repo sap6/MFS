@@ -54,7 +54,7 @@ def assemble_rows(div, k, rep=None, max_gb=0.5):
         ok = test.local_multipliers[sup] != 0                   # local functions that are not degrees of freedom have multiplier 0
         full_of[test.local2global[sup][ok]] = l2g[sup][ok]
         rows = np.nonzero(in_c[full_of])[0]
-        return test, rows[np.argsort(full_of[rows])]
+        return test, rows[np.argsort(full_of[rows])[np.argsort(np.argsort(rc))]]
 
     test, rows = (bempp.function_space(div.grid, "SNC", 0), slice(None)) if rep is None else _space(rep)
     est_rows = test.global_dof_count
@@ -115,6 +115,16 @@ def mirror_grid(pts, tris, refl):
     verts = np.array(verts)
     vmap = np.array([[key[kk] for kk in map(tuple, (np.round(verts * R, 12) + 0.0).tolist())] for R in refl])
     return bempp.Grid(verts.T, np.concatenate(elems).T.astype(np.uint32)), vmap, len(tris)
+
+
+def _grid_maps(grid, mats):
+    """Vertex and element permutation tables for coordinate transformations mats on grid"""
+    vt, el = grid.vertices.T, grid.elements.T
+    vkey = {tuple(r): i for i, r in enumerate((np.round(vt, 12) + 0.0).tolist())}
+    ekey = {tuple(sorted(e)): i for i, e in enumerate(el.tolist())}
+    vm = np.array([[vkey[tuple(r)] for r in (np.round(vt @ P.T, 12) + 0.0).tolist()] for P in mats], np.int32)
+    em = np.array([[ekey[tuple(sorted(vm[s, e].tolist()))] for e in el] for s in range(len(mats))], np.int32)
+    return vm, em
 
 
 def action(space, vmap, emap):
@@ -227,11 +237,7 @@ class Mirror(Symmetric):
             self.div = div = bempp.function_space(grid, "RWG", 0)
             self.N = N = div.global_dof_count
             s3_mats = [np.eye(3)[list(p)] for p in itertools.permutations(range(3))]
-            vt, el = grid.vertices.T, grid.elements.T
-            vkey = {tuple(r): i for i, r in enumerate((np.round(vt, 12) + 0.0).tolist())}
-            ekey = {tuple(sorted(e)): i for i, e in enumerate(el.tolist())}
-            vs3 = np.array([[vkey[tuple(r)] for r in (np.round(vt @ P.T, 12) + 0.0).tolist()] for P in s3_mats], np.int32)
-            es3 = np.array([[ekey[tuple(sorted(vs3[s, e].tolist()))] for e in el] for s in range(6)], np.int32)
+            vs3, es3 = _grid_maps(grid, s3_mats)
             self.perm, self.sgn = action(div, vmap, emap)
             ps3, ss3 = action(div, vs3, es3)
             perm48 = self.perm[:, ps3].reshape(48, N)
@@ -254,18 +260,11 @@ class Mirror(Symmetric):
             self.rot_act, self.yz_act = (ps3[i_rot], ss3[i_rot]), (ps3[i_yz], ss3[i_yz])
             return
 
-        if rot:
-            vt, el = grid.vertices.T, grid.elements.T
-            vkey = {tuple(r): i for i, r in enumerate((np.round(vt, 12) + 0.0).tolist())}
-            vr = np.array([[vkey[tuple(r)] for r in (np.round(vt @ np.linalg.matrix_power(ROT, a), 12) + 0.0).tolist()] for a in (0, 1)])
-            ekey = {tuple(sorted(e)): i for i, e in enumerate(el.tolist())}
-            er = np.array([[ekey[tuple(sorted(vr[a, e].tolist()))] for e in el] for a in range(2)])
-            self._rot_maps = (vr, er)
+        rot_maps = _grid_maps(grid, [ROT.T]) if rot else None
         super().__init__(grid, vmap, emap, k)
         if rot:
-            pr, sr = action(self.div, *self._rot_maps)
-            self.rot_act = (pr[1], sr[1])
-            del self._rot_maps
+            pr, sr = action(self.div, *rot_maps)
+            self.rot_act = (pr[0], sr[0])
 
     def _class(self, c):
         """Columns, coefficients and LU factors of the symmetrised system of class c (split by C_3 or Z_2 stabilizer)"""
@@ -274,15 +273,17 @@ class Mirror(Symmetric):
             cols = self.perm[:, self.rep]
             keep = np.nonzero(np.abs((coef * (cols == self.rep)).sum(axis=0)) > 1e-12)[0]
             cols, coef = np.ascontiguousarray(cols[:, keep]), np.ascontiguousarray(coef[:, keep])
-            if self.rot_act is not None and len(set(c)) == 1:
-                pr1, sr1 = self.rot_act
+            is_c3 = self.rot_act is not None and len(set(c)) == 1
+            is_z2 = self.yz_act is not None and len(set(c)) == 2 and c[1] == c[2]
+            if is_c3 or is_z2:
                 orb_of, orb_sgn = np.full(self.N, -1), np.zeros(self.N)
                 for ik in range(len(keep)):
                     orb_of[cols[:, ik]] = ik
                     orb_sgn[cols[:, ik]] = coef[:, ik]
                 rk = self.rep[keep]
-                p1 = orb_of[pr1[rk]]
-                s1 = sr1[rk] * orb_sgn[pr1[rk]]
+            if is_c3:
+                pr1, sr1 = self.rot_act
+                p1, s1 = orb_of[pr1[rk]], sr1[rk] * orb_sgn[pr1[rk]]
                 p2, s2 = p1[p1], s1 * s1[p1]
                 c0 = np.nonzero(np.vstack((np.arange(len(keep)), p1, p2)).min(axis=0) == np.arange(len(keep)))[0]
                 c1, c2, g1, g2 = p1[c0], p2[c0], s1[c0], s2[c0]
@@ -292,35 +293,25 @@ class Mirror(Symmetric):
                 lus = [sla.lu_factor(np.asfortranarray(B0 + (w3 ** q) * B1 + (w3 ** (2 * q)) * B2), overwrite_a=True, check_finite=False)
                        for q in range(3)]
                 self.lu[c] = (keep, cols, coef, ("c3", c0, c1, c2, g1, g2, lus))
-            elif self.yz_act is not None and len(set(c)) == 2 and c[1] == c[2]:
+            elif is_z2:
                 pyz, syz = self.yz_act
-                orb_of, orb_sgn = np.full(self.N, -1), np.zeros(self.N)
-                for ik in range(len(keep)):
-                    orb_of[cols[:, ik]] = ik
-                    orb_sgn[cols[:, ik]] = coef[:, ik]
-                rk = self.rep[keep]
-                cp = orb_of[pyz[rk]]
-                cs = syz[rk] * orb_sgn[pyz[rk]]
+                cp, cs = orb_of[pyz[rk]], syz[rk] * orb_sgn[pyz[rk]]
                 ic = np.arange(len(keep))
                 c_pair = np.nonzero(ic < cp)[0]
                 c_fp, c_fm = np.nonzero((ic == cp) & (cs > 0))[0], np.nonzero((ic == cp) & (cs < 0))[0]
                 Af = fold(self.A, keep[np.concatenate((c_pair, c_fp, c_fm))], cols, coef)
-                np_c, nfp, nfm = len(c_pair), len(c_fp), len(c_fm)
+                np_c, nfp = len(c_pair), len(c_fp)
                 sc, s2, rt2 = cs[c_pair], np.sqrt(0.5), np.sqrt(2.0)
                 Af_p, Af_fp, Af_fm = Af[:np_c], Af[np_c:np_c + nfp], Af[np_c + nfp:]
-                Ap = np.empty((np_c + nfp, np_c + nfp), complex, order="F")
-                Am = np.empty((np_c + nfm, np_c + nfm), complex, order="F")
-                Ap[:np_c, :np_c] = Af_p[:, c_pair] + sc[None, :] * Af_p[:, cp[c_pair]]
-                Ap[:np_c, np_c:] = rt2 * Af_p[:, c_fp]
-                Ap[np_c:, :np_c] = s2 * (Af_fp[:, c_pair] + sc[None, :] * Af_fp[:, cp[c_pair]])
-                Ap[np_c:, np_c:] = Af_fp[:, c_fp]
-                Am[:np_c, :np_c] = Af_p[:, c_pair] - sc[None, :] * Af_p[:, cp[c_pair]]
-                Am[:np_c, np_c:] = rt2 * Af_p[:, c_fm]
-                Am[np_c:, :np_c] = s2 * (Af_fm[:, c_pair] - sc[None, :] * Af_fm[:, cp[c_pair]])
-                Am[np_c:, np_c:] = Af_fm[:, c_fm]
-                lup = sla.lu_factor(Ap, overwrite_a=True, check_finite=False)
-                lum = sla.lu_factor(Am, overwrite_a=True, check_finite=False)
-                self.lu[c] = (keep, cols, coef, ("z2", c_pair, cp, c_fp, c_fm, sc, lup, lum))
+                lus = []
+                for sgn_z, c_f, Af_f in ((1.0, c_fp, Af_fp), (-1.0, c_fm, Af_fm)):
+                    Ab = np.empty((np_c + len(c_f), np_c + len(c_f)), complex, order="F")
+                    Ab[:np_c, :np_c] = Af_p[:, c_pair] + (sgn_z * sc)[None, :] * Af_p[:, cp[c_pair]]
+                    Ab[:np_c, np_c:] = rt2 * Af_p[:, c_f]
+                    Ab[np_c:, :np_c] = s2 * (Af_f[:, c_pair] + (sgn_z * sc)[None, :] * Af_f[:, cp[c_pair]])
+                    Ab[np_c:, np_c:] = Af_f[:, c_f]
+                    lus.append(sla.lu_factor(Ab, overwrite_a=True, check_finite=False))
+                self.lu[c] = (keep, cols, coef, ("z2", c_pair, cp, c_fp, c_fm, sc, lus[0], lus[1]))
             else:
                 lu = sla.lu_factor(fold(self.A, keep, cols, coef), overwrite_a=True, check_finite=False)
                 self.lu[c] = (keep, cols, coef, lu)
@@ -361,11 +352,27 @@ class Mirror(Symmetric):
         b, J = (self.trace(d, p) if b is None else b), np.zeros(self.N, complex)
         for c in classes_of(self.k, d, p, self.refl):
             if classes is None or c in classes:
-                keep, cols, coef, lu = self._class(c)
+                _, cols, coef, lu = self._class(c)
                 bc = (coef * b[cols]).sum(axis=0) / len(self.refl)
                 y = self._lu_solve_block(lu, bc)
                 np.add.at(J, cols, coef * y[None, :])
         return J
+
+    def solve_orbits(self, d, p, pts):
+        """Solves ROT-grouped parity orbits one LU factor in memory at a time, frees A, and evaluates the field"""
+        orbit = orbits(classes_of(self.k, d, p, self.refl))
+        turns = {j: np.linalg.matrix_power(ROT, j) for js in orbit.values() for j in js}
+        bs = {j: self.trace(Q.T @ d, Q.T @ p) for j, Q in turns.items()}
+        Js = {j: np.zeros(self.N, complex) for j in turns}
+        for c, js in orbit.items():
+            _, cols, coef, lu = self._class(c)
+            bc = np.column_stack([(coef * bs[j][cols]).sum(axis=0) / len(self.refl) for j in js])
+            Y = self._lu_solve_block(lu, bc)
+            for idx_j, j in enumerate(js):
+                np.add.at(Js[j], cols, coef * Y[:, idx_j][None, :])
+            self.lu.clear()
+        self.A = None
+        return sum(self.field(J, pts @ turns[j]) @ turns[j].T for j, J in Js.items()), self.N
 
 
 class Cyclic(Symmetric):
@@ -394,6 +401,13 @@ class Cyclic(Symmetric):
 
 # The meshes of the paper
 
+def _square_tris(m):
+    """Two triangles per cell on an (m + 1) × (m + 1) structured patch"""
+    idx = lambda i, j: i * (m + 1) + j
+    return np.array([t for i in range(m) for j in range(m)
+                     for t in ((idx(i, j), idx(i + 1, j), idx(i + 1, j + 1)), (idx(i, j), idx(i + 1, j + 1), idx(i, j + 1)))])
+
+
 def cube_grid(n, g):
     """Graded mesh of the unit cube (n intervals per edge, exponent g), made of one octant and its images"""
     m = int(n) // 2
@@ -401,36 +415,15 @@ def cube_grid(n, g):
     U, V = [x.ravel() for x in np.meshgrid(s, s, indexing="ij")]
     face = np.column_stack((np.full_like(U, 0.5), U, V))
     verts = np.concatenate([np.roll(face, a, axis=1) for a in range(3)])
-    idx = lambda i, j: i * (m + 1) + j
-    t0 = []
-    for i in range(m):
-        for j in range(m):
-            t0 += [(idx(i, j), idx(i + 1, j), idx(i + 1, j + 1)), (idx(i, j), idx(i + 1, j + 1), idx(i, j + 1))]
-    tris = np.concatenate([np.array(t0) + a * len(face) for a in range(3)])
+    t0 = _square_tris(m)
+    tris = np.concatenate([t0 + a * len(face) for a in range(3)])
     refl = group()
     return *mirror_grid(verts, tris, refl), refl
 
 
 def cube(n, g, k, d, p, pts):
-    """
-    Unit cube, n intervals per edge graded towards the edges with exponent g, with the full
-    48-element octahedral symmetry group O_h (1/48-mesh RWG assembly and C_3 / Z_2 block LU)
-      Returns the field at pts and the number of unknowns of the full mesh
-    """
-    sym = Mirror(*cube_grid(n, g), k, oh=True)
-    orbit = orbits(classes_of(k, d, p, sym.refl))
-    turns = {j: np.linalg.matrix_power(ROT, j) for js in orbit.values() for j in js}
-    bs = {j: sym.trace(Q.T @ d, Q.T @ p) for j, Q in turns.items()}
-    Js = {j: np.zeros(sym.N, complex) for j in turns}
-    for c, js in orbit.items():                                 # one LU factor in memory at a time
-        keep, cols, coef, lu = sym._class(c)
-        bc = np.column_stack([(coef * bs[j][cols]).sum(axis=0) / len(sym.refl) for j in js])
-        Y = sym._lu_solve_block(lu, bc)
-        for idx_j, j in enumerate(js):
-            np.add.at(Js[j], cols, coef * Y[:, idx_j][None, :])
-        sym.lu.clear()
-    sym.A = None
-    return sum(sym.field(J, pts @ turns[j]) @ turns[j].T for j, J in Js.items()), sym.N
+    """Unit cube, n intervals per edge graded with exponent g, under the full 48-element group O_h"""
+    return Mirror(*cube_grid(n, g), k, oh=True).solve_orbits(d, p, pts)
 
 
 def tetrahedron_grid(n, g):
@@ -438,18 +431,13 @@ def tetrahedron_grid(n, g):
     m = int(n) // 2
     xi = (np.arange(m + 1) / m) ** g
     U, V = [x.ravel() for x in np.meshgrid(xi, xi, indexing="ij")]
-    c0 = FACE0.mean(axis=0)
-    idx = lambda i, j: i * (m + 1) + j
-    t0 = []
-    for i in range(m):
-        for j in range(m):
-            t0 += [(idx(i, j), idx(i + 1, j), idx(i + 1, j + 1)), (idx(i, j), idx(i + 1, j + 1), idx(i, j + 1))]
+    c0, t0 = FACE0.mean(axis=0), _square_tris(m)
     verts, tris = [], []
     for q in range(3):
         A, M1, M2 = FACE0[q], 0.5 * (FACE0[q] + FACE0[(q + 1) % 3]), 0.5 * (FACE0[q] + FACE0[(q + 2) % 3])
         kv = ((1 - U) * (1 - V))[:, None] * A + ((1 - U) * V)[:, None] * M1 + (U * (1 - V))[:, None] * M2 + (U * V)[:, None] * c0
-        e1, e2 = kv[t0[0][1]] - kv[t0[0][0]], kv[t0[0][2]] - kv[t0[0][0]]
-        tk = np.array(t0) if np.dot(np.cross(e1, e2), -np.ones(3)) > 0 else np.array(t0)[:, [0, 2, 1]]
+        e1, e2 = kv[t0[0, 1]] - kv[t0[0, 0]], kv[t0[0, 2]] - kv[t0[0, 0]]
+        tk = t0 if np.dot(np.cross(e1, e2), -np.ones(3)) > 0 else t0[:, [0, 2, 1]]
         tris.append(tk + q * len(kv))
         verts.append(kv)
     return *mirror_grid(np.vstack(verts), np.vstack(tris), TET_REFL), TET_REFL
@@ -457,17 +445,7 @@ def tetrahedron_grid(n, g):
 
 def tetrahedron(n, g, k, d, p, pts):
     """Regular tetrahedron of unit edge length, with D_2 and the one-third turn about (1, 1, 1) (at most two classes)"""
-    sym = Mirror(*tetrahedron_grid(n, g), k, rot=True)
-    orbit = orbits(classes_of(k, d, p, sym.refl))
-    turns = {j: np.linalg.matrix_power(ROT, j) for js in orbit.values() for j in js}
-    bs = {j: sym.trace(Q.T @ d, Q.T @ p) for j, Q in turns.items()}
-    Js = {j: 0 for j in turns}
-    for c, js in orbit.items():
-        for j in js:
-            Js[j] = Js[j] + sym.solve(turns[j].T @ d, turns[j].T @ p, [c], b=bs[j])
-        sym.lu.clear()
-    sym.A = None
-    return sum(sym.field(J, pts @ turns[j]) @ turns[j].T for j, J in Js.items()), sym.N
+    return Mirror(*tetrahedron_grid(n, g), k, rot=True).solve_orbits(d, p, pts)
 
 
 def scalene_tetrahedron_grid(verts, n, g):
@@ -476,9 +454,7 @@ def scalene_tetrahedron_grid(verts, n, g):
     m = int(n) // 2
     xi = (np.arange(m + 1) / m) ** g
     U, V = [x.ravel() for x in np.meshgrid(xi, xi, indexing="ij")]
-    idx = lambda i, j: i * (m + 1) + j
-    t0 = [(idx(i, j), idx(i + 1, j), idx(i + 1, j + 1)) for i in range(m) for j in range(m)] + \
-         [(idx(i, j), idx(i + 1, j + 1), idx(i, j + 1)) for i in range(m) for j in range(m)]
+    t0 = _square_tris(m)
     v_cen = verts.mean(axis=0)
     key, v_out, e_out = {}, [], []
     for f in range(4):
@@ -495,8 +471,8 @@ def scalene_tetrahedron_grid(verts, n, g):
                     key[kk] = len(v_out)
                     v_out.append(pt)
                 loc.append(key[kk])
-            tk = np.array(loc)[np.array(t0)]
-            e_out.append(tk[:, [0, 2, 1]] if np.dot(np.cross(kv[t0[0][1]] - kv[t0[0][0]], kv[t0[0][2]] - kv[t0[0][0]]), n_out) < 0 else tk)
+            tk = np.array(loc)[t0]
+            e_out.append(tk[:, [0, 2, 1]] if np.dot(np.cross(kv[t0[0, 1]] - kv[t0[0, 0]], kv[t0[0, 2]] - kv[t0[0, 0]]), n_out) < 0 else tk)
     return bempp.Grid(np.array(v_out).T, np.vstack(e_out).T.astype(np.uint32))
 
 
@@ -507,10 +483,8 @@ def torus_grid(R, a, n):
     rho = R + a * np.cos(T)
     v = np.stack((rho * np.cos(P), rho * np.sin(P), a * np.sin(T)), axis=0).reshape(3, -1)
     idx = lambda i, j: (i % n) * m + (j % m)
-    el = []
-    for i in range(n):
-        for j in range(m):
-            el += [(idx(i, j), idx(i, j + 1), idx(i + 1, j + 1)), (idx(i, j), idx(i + 1, j + 1), idx(i + 1, j))]
+    el = [t for i in range(n) for j in range(m)
+          for t in ((idx(i, j), idx(i, j + 1), idx(i + 1, j + 1)), (idx(i, j), idx(i + 1, j + 1), idx(i + 1, j)))]
     return bempp.Grid(v, np.array(el, dtype=np.uint32).T), m
 
 

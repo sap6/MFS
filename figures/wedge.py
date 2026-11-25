@@ -16,7 +16,7 @@ ax.fill([-L, 0, 0, -L], [-L, -L, 0, 0], color=BODY, lw=0, zorder=0)
 ax.plot([0, 0], [-L, 0], color=INK, lw=1.45, zorder=3)                         # face phi = 0
 ax.plot([-L, 0], [0, 0], color=INK, lw=1.45, zorder=3)                         # face phi = 3 pi / 2
 ax.plot([0, 0.76], [0, 0.76], color=MUTED, lw=0.8, ls=(0, (4, 3)), zorder=1)   # exterior bisector, psi = 0
-ax.plot([0, -0.94], [0, -0.94], color=BLUE, lw=1.35, alpha=0.55, zorder=2)     # wall of the skeleton
+ax.plot([0, -0.75], [0, -0.75], color=BLUE, lw=1.35, alpha=0.55, zorder=2)     # wall of the skeleton
 
 # Dyadically graded boundary panels + 4 Gauss nodes per panel on both faces
 g4 = 0.5 * (1.0 + np.polynomial.legendre.leggauss(4)[0])
